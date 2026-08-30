@@ -586,20 +586,25 @@ small { opacity: .75; }
 #screen-game.p2 #opp-fan .card + .card,
 #screen-game.p2 #my-hand .card + .card { margin-left: calc(var(--card-w) * -0.4); }
 
-/* full-width strip bars: no radius, no inset ornament */
+/* full-width strip bars: no radius, no inset ornament — and a FIXED height:
+   the ribbon must never grow or shrink mid-game. Text that is too long
+   truncates with an ellipsis instead of stretching the bar. */
 #screen-game.p2 .namebar {
-  border-radius: 0; padding: 5px 10px; justify-content: flex-start;
+  border-radius: 0; padding: 4px 10px; justify-content: flex-start;
+  height: 42px; min-height: 42px; flex-wrap: nowrap;
 }
+#screen-game.p2 .nb-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #screen-game.p2 #opp-zone .namebar {
   border-left: none; border-right: none; border-top: none;
 }
 /* the bar's action cluster: ahead text + buttons, pinned right */
-.nb-acts { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.nb-acts { margin-left: auto; display: flex; align-items: center; gap: 6px; flex: 0 0 auto; max-width: 74%; }
 .ahead {
   font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px;
   font-weight: 800; color: var(--ivory); letter-spacing: .5px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto;
 }
-#screen-game.p2 .nb-acts .btn { font-size: 12px; font-weight: 800; padding: 6px 10px; border-radius: 8px; }
+#screen-game.p2 .nb-acts .btn { font-size: 12px; font-weight: 800; padding: 6px 10px; border-radius: 8px; white-space: nowrap; flex: 0 0 auto; }
 
 /* the middle becomes a vertical stack: their areas, the grid, my areas */
 #screen-game.p2 #table-middle { flex-direction: column; gap: 0; padding: 0; align-items: stretch; }
@@ -613,24 +618,28 @@ small { opacity: .75; }
 #screen-game.p2 #opp-side .area-row,
 #screen-game.p2 #my-side .area-row { flex: 0 0 auto; }
 /* THE LOCK: area slots are exactly card-sized — always identical to the
-   discard slots and the cards themselves */
+   discard slots and the cards themselves. The cards inside keep their own
+   natural size (a width:100% through the shrink-to-fit wrapper collapses to
+   zero — that bug cost us the whole area row once). */
 #screen-game.p2 .area-box {
   width: var(--card-w); min-height: 0; height: calc(var(--card-w) * 1.4);
   padding: 0; border-radius: 6px;
 }
-#screen-game.p2 .area-box .card { width: 100%; height: 100%; }
 #screen-game.p2 .area-box .build-val { width: 17px; height: 17px; font-size: 9.5px; top: -6px; right: -6px; }
 #screen-game.p2 .area-box .build-lock { font-size: 10px; }
 #screen-game.p2 .bz-cards .card { margin-left: calc(var(--card-w) * -0.62); }
 
-/* message zones: navy panels beside the area slots */
+/* message zones: navy panels beside the area slots. Lines stack vertically —
+   side-by-side would push words past the clip edge. */
 .warn-zone {
-  flex: 1; display: flex; align-items: center; justify-content: center;
+  flex: 1; display: flex; flex-direction: column; gap: 3px;
+  align-items: center; justify-content: center;
   min-height: calc(var(--card-w) * 1.4);
   border: 1px solid rgba(244,239,226,.35); border-radius: 10px;
   background: rgba(9,15,38,.8);
   font-size: 11.5px; font-weight: 600; font-style: italic; color: var(--ivory);
   padding: 4px 8px; line-height: 1.35; text-align: center;
+  overflow-wrap: break-word;
 }
 .warn-zone .panel-hint { font-size: 11.5px; padding: 0; }
 .warn-zone:empty { visibility: hidden; }
@@ -642,14 +651,19 @@ small { opacity: .75; }
 #table-cards.cols-4 { grid-template-columns: repeat(4, var(--card-w)); }
 #screen-game.p2 .grid-cell { border-radius: 6px; }
 
-/* my bar: full width under my areas; my fan packs RIGHT */
-#screen-game.p2 #bottom-row { padding: 0; }
+/* my bar: full width under my areas; my fan packs RIGHT.
+   The bar rides ABOVE the hand cards (a raised card must never cover the
+   Confirm button) with clear air beneath it for the selected card's shift. */
+#screen-game.p2 #bottom-row { padding: 0; position: relative; z-index: 40; }
 #screen-game.p2 #bottom-row #my-bar { border-left: none; border-right: none; border-bottom: none; }
 #screen-game.p2 #my-row {
   background: transparent; border: none; border-radius: 0;
-  padding: 2px 8px 6px;
+  padding: 13px 8px 6px;
 }
 #screen-game.p2 #my-hand { justify-content: flex-end; min-height: calc(var(--card-w) * 1.4 + 6px); }
+/* selection in the two-hand fan: a quiet lift — no scale, no leap over the
+   neighbours, nothing fades */
+#screen-game.p2 .card.in-hand.selected { transform: translateY(-10px); z-index: 5; }
 
 /* the floating strip is retired in the two-hand game — its content lives in
    the bar (.nb-acts) and the message zones (.warn-zone) */

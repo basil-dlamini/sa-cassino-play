@@ -74,16 +74,16 @@
   const isHumanTurn = () => g && g.phase === 'play' && g.turn === HUMAN;
 
   /* Card size — TWO HANDS: the mockup budget. Ten fan cards each showing 60%
-     must fit the column width, and five card-heights stack vertically between
-     the fixed bars (fan · areas · 2 grid rows · areas · fan). */
+     must fit the column width (a 390px phone lands exactly on the mockup's
+     58px card), with the height as a loose backstop only. */
   function fitCards() {
     const n = R.DEAL[session.numPlayers].per;
     const col = $('screen-game');
     const availW = col.clientWidth - 24;
     if (session.numPlayers === 2) {
-      const wW = Math.floor(availW / (1 + 9 * 0.6));
-      const wH = Math.floor((col.clientHeight - 300) / (5 * 1.4));
-      const w = Math.max(46, Math.min(88, Math.min(wW, wH)));
+      const wW = Math.floor((col.clientWidth - 16) / (1 + 9 * 0.6));
+      const wH = Math.floor((col.clientHeight - 260) / (5 * 1.4));
+      const w = Math.max(52, Math.min(88, Math.min(wW, wH)));
       document.documentElement.style.setProperty('--card-w', w + 'px');
       return;
     }
@@ -598,14 +598,12 @@
     const me = g.players[HUMAN];
     const hand = me.hand.slice().sort(C.compare);
     for (const id of hand) {
+      /* no dimming, ever: every hand card stays fully visible whether or not
+         it could start a move — selection is a quiet lift (owner's ruling) */
       const opts = {
         selected: selectedCard === id,
         highlight: lastAction && lastAction.card === id
       };
-      if (isHumanTurn()) {
-        if (selectedCard) { if (id !== selectedCard) opts.dim = true; }
-        else if (!humanActions.some((a) => a.card === id)) opts.dim = true;
-      }
       const el = cardEl(id, opts);
       el.classList.add('in-hand');
       box.appendChild(el);
