@@ -1,10 +1,12 @@
-/* ui.js — everything the player sees and touches (v3: mockup layout).
-   TWO-HAND layout (per the owner's edited screenshot):
+/* ui.js — everything the player sees and touches (v4: the approved mockup).
+   TWO-HAND layout (the locked design):
    - control bar (top): score coin · round · log · speed · home
-   - very top: opponent's face-down hand, then their name bar
-   - opponent's boxes flank the discard grid; mine at the bottom of the right flank
-   - middle: the DISCARD AREA as a visible cell grid (3 columns)
-   - my name bar, my overlapping hand
+   - opponent's face-down fan, then their full-width navy bar (dimmed End Turn)
+   - their area slots + their message zone · the 4-column discard grid ·
+     my message zone + my area slots — all slots exactly card-sized
+   - MY bar carries the action cluster: Confirm/Cancel while a move is armed,
+     End Turn once the turn's gate is satisfied; notes stand in my message zone
+   - my fan packs right; the ad strip sits at the foot
    THREE-HAND: Sipho (seat 1) right, Thandi (seat 2) left — anticlockwise.
    FOUR-HAND: four corners, anticlockwise — partner Thandi (seat 2) top-left,
    Sipho (seat 1) top-right, Naledi (seat 3) bottom-left, me bottom-right.
@@ -56,6 +58,7 @@
   let demoMode = false;
   let tutorialMode = false;    // coach on: guidance, hints, AI explanations
   let coachMsg = null;         // the AI's last move, explained (tutorial)
+  let oppNote = null;          // Sipho's last move, one line (two hands)
 
   function clearSelection() {
     selectedCard = null;
@@ -70,18 +73,25 @@
   function aiSpeed() { return parseInt(localStorage.getItem('sacassino.aiSpeed') || '900', 10); }
   const isHumanTurn = () => g && g.phase === 'play' && g.turn === HUMAN;
 
-  /* Card size: hands overlap (a third of each card visible), the area boxes
-     flank the discard grid, so the height budget is two hand bands + a grid
-     of at least two rows. Capped small enough to keep the discard area big. */
+  /* Card size — TWO HANDS: the mockup budget. Ten fan cards each showing 60%
+     must fit the column width, and five card-heights stack vertically between
+     the fixed bars (fan · areas · 2 grid rows · areas · fan). */
   function fitCards() {
     const n = R.DEAL[session.numPlayers].per;
     const col = $('screen-game');
     const availW = col.clientWidth - 24;
+    if (session.numPlayers === 2) {
+      const wW = Math.floor(availW / (1 + 9 * 0.6));
+      const wH = Math.floor((col.clientHeight - 300) / (5 * 1.4));
+      const w = Math.max(46, Math.min(88, Math.min(wW, wH)));
+      document.documentElement.style.setProperty('--card-w', w + 'px');
+      return;
+    }
     const wW = Math.floor(availW / (1 + (n - 1) / 3));
     /* four hands: three opponent strips crowd the column, so reserve more
        height and cap the card smaller than the two/three-hand games;
        three hands: the banners now carry area boxes underneath them */
-    const reserve = session.numPlayers === 4 ? 310 : session.numPlayers === 3 ? 330 : 240;
+    const reserve = session.numPlayers === 4 ? 310 : 330;
     const cap = session.numPlayers === 4 ? 64 : 72;
     const wH = Math.floor((col.clientHeight - reserve) / 4.8);
     const w = Math.max(52, Math.min(cap, Math.min(wW, wH)));
@@ -136,22 +146,58 @@
     el.title = C.longLabel(id);
     return el;
   }
+  /* the Motorcycle back medallion — wings, line-art bike, wordmark.
+     One tiny inline SVG, no image files (kind to slow data). */
+  const MOTO_EMBLEM =
+    '<div class="embl"><svg viewBox="0 0 72 52" aria-hidden="true">' +
+    '<g fill="none" stroke="#f4efe2" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M36 1 l1.7 2.8 -1.7 2.8 -1.7 -2.8 z" fill="#f4efe2" stroke="none"/>' +
+      '<path d="M31 6.5 Q22 1.5 13 4.5" stroke-width="1.2"/>' +
+      '<path d="M31 10 Q19 5 10 9.5" stroke-width="1.2"/>' +
+      '<path d="M31 13.5 Q17 9 7.5 14" stroke-width="1.2"/>' +
+      '<path d="M41 6.5 Q50 1.5 59 4.5" stroke-width="1.2"/>' +
+      '<path d="M41 10 Q53 5 62 9.5" stroke-width="1.2"/>' +
+      '<path d="M41 13.5 Q55 9 64.5 14" stroke-width="1.2"/>' +
+      '<circle cx="15" cy="33" r="8" stroke-width="1.6"/>' +
+      '<circle cx="15" cy="33" r="4.6" stroke-width="1.1"/>' +
+      '<path d="M5.5 31 A9.5 9.5 0 0 1 24.5 31" stroke-width="1.1"/>' +
+      '<circle cx="57" cy="33" r="8" stroke-width="1.6"/>' +
+      '<circle cx="57" cy="33" r="4.6" stroke-width="1.1"/>' +
+      '<path d="M47.5 31 A9.5 9.5 0 0 1 66.5 31" stroke-width="1.1"/>' +
+      '<circle cx="15" cy="33" r="1.7" fill="#f4efe2" stroke="none"/>' +
+      '<circle cx="57" cy="33" r="1.7" fill="#f4efe2" stroke="none"/>' +
+      '<path d="M15 33 L26 24 L28 22" stroke-width="1.5"/>' +
+      '<path d="M19 21 h10 M28 21 l-3 1" stroke-width="1.5"/>' +
+      '<path d="M29 19.5 Q38 14.5 47 18.5" stroke-width="1.5"/>' +
+      '<path d="M30 21.5 L46 21.5" stroke-width="1.2"/>' +
+      '<path d="M57 33 L50 17" stroke-width="1.5"/>' +
+      '<path d="M50 17 L49 12 M44.5 12.5 L53 10.5" stroke-width="1.4"/>' +
+      '<rect x="31" y="25" width="11" height="7.5" rx="1.2" stroke-width="1.4"/>' +
+      '<path d="M32.5 27.5 h8 M32.5 30 h8" stroke-width="1"/>' +
+      '<path d="M15 33 L31 29 M36 32 L57 33" stroke-width="1.4"/>' +
+      '<path d="M38 32.5 Q30 36 24 36.5" stroke-width="1.3"/>' +
+      '<path d="M24 36.5 L13 36" stroke-width="2.8"/>' +
+    '</g>' +
+    '<text x="36" y="49.5" font-size="5.2" letter-spacing="1.6" text-anchor="middle" fill="#f4efe2" ' +
+      'font-family="Georgia,serif">MOTORCYCLE</text>' +
+    '</svg></div>';
   function cardBack() {
     const el = document.createElement('div');
     el.className = 'card back';
-    el.innerHTML = '<div class="back-pattern"></div>';
+    el.innerHTML = MOTO_EMBLEM;
     return el;
   }
 
   /* ---------------- build zones & piles (shared by all players) ---------------- */
   /* Pile height: stacked card edges behind the top card — cheap box-shadows,
-     no images, kind to low-end phones. */
+     no images, kind to low-end phones. Honest proportions per the mockup:
+     a full 28-card pile is ~10px of edge, a half pile two layers. */
   function stackShadow(n) {
-    const layers = Math.min(Math.max(n - 1, 0), 6);
+    const layers = n >= 13 ? 4 : n >= 7 ? 2 : n >= 4 ? 1 : 0;
     if (!layers) return '';
     const parts = [];
-    for (let i = 1; i <= layers; i++) parts.push((i * 1.6) + 'px ' + (i * 1.6) + 'px 0 -1px #d9cfae');
-    parts.push((layers * 1.6 + 2) + 'px ' + (layers * 1.6 + 2) + 'px 4px rgba(0,0,0,.35)');
+    for (let i = 1; i <= layers; i++) parts.push((i * 2.4) + 'px ' + (i * 2.4) + 'px 0 -1px #d9cfae');
+    parts.push((layers * 2.4 + 1.4) + 'px ' + (layers * 2.4 + 1.4) + 'px 3px rgba(0,0,0,.3)');
     return parts.join(', ');
   }
 
@@ -233,7 +279,27 @@
       escapeHtml(p.name) + '</span><span class="nb-emblem">' + SEAT_EMBLEM[seat] + '</span>' +
       '<span class="nb-order">' + (seat + 1) + '</span>';
     if (g2.phase === 'play' && g2.turn === seat) bar.classList.add('active');
+    /* two hands: both bars show the same controls — the opponent's End Turn
+       stays dimmed until it is really their turn */
+    if (g2.numPlayers === 2 && !opts.me) {
+      bar.innerHTML += '<span class="nb-acts"><span class="btn secondary small dimmed">End Turn</span></span>';
+    }
     return bar;
+  }
+
+  /* message zones (two hands): navy panels beside the area slots */
+  function warnZone(id) {
+    const el = document.createElement('div');
+    el.className = 'warn-zone';
+    el.id = id;
+    return el;
+  }
+  /* Sipho's zone: what he is doing, or what he just did */
+  function oppWarnText() {
+    if (!g) return '';
+    if (g.phase === 'gameover') return 'Game over.';
+    if (g.phase === 'play' && g.turn === 1) return 'Sipho is thinking…';
+    return oppNote || 'Your move.';
   }
 
   function renderOppZone() {
@@ -321,15 +387,22 @@
       return;
     }
     if (g.numPlayers === 2) {
-      /* same compact, content-sized boxes as mine — keep-top pins them near
-         the opponent's banner instead of stretching to fill the column */
-      const col = areaRow(1);
-      col.classList.add('vertical', 'keep-top');
-      col.classList.toggle('active', g.phase === 'play' && g.turn === 1);
-      oppSide.appendChild(col);
+      /* their row is the mirror of mine: build box, captured pile, then the
+         message zone filling the rest (the locked mockup row) */
+      const theirs = document.createElement('div');
+      theirs.className = 'area-row';
+      {
+        const slots = R.maxSlots(g);
+        const owned = g.builds.filter((b) => b.owner === 1);
+        for (let i = 0; i < slots; i++) theirs.appendChild(buildZoneEl(1, owned[i] || null));
+        theirs.appendChild(pileEl(1));
+      }
+      oppSide.appendChild(theirs);
+      const ow = warnZone('opp-warn');
+      ow.textContent = oppWarnText();
+      oppSide.appendChild(ow);
     }
-    // my areas: bottom of the right flank in every mode — build box ABOVE the
-    // captured pile (opponents keep pile-above-build)
+    // my areas: build box ABOVE the captured pile (opponents keep pile-above-build)
     const mine = document.createElement('div');
     mine.className = 'area-row';
     {
@@ -337,6 +410,12 @@
       const owned = g.builds.filter((b) => b.owner === HUMAN);
       for (let i = 0; i < slots; i++) mine.appendChild(buildZoneEl(HUMAN, owned[i] || null));
       mine.appendChild(pileEl(HUMAN));
+    }
+    if (g.numPlayers === 2) {
+      /* my message zone comes first, then my slots — mirror of Sipho's row */
+      mySide.appendChild(warnZone('my-warn'));
+      mySide.appendChild(mine);
+      return;
     }
     mine.classList.add('vertical', 'keep-bottom');
     mine.classList.toggle('active', isHumanTurn());
@@ -410,7 +489,22 @@
     if (g.phase === 'gameover') turnText = 'game over';
     else if (g.phase === 'shiya') turnText = g.players[g.shiyaPending.caller].name + ' — Shiya window…';
     else turnText = p.isHuman ? 'your turn' : p.name + ' is thinking…';
-    $('turn-text').textContent = turnText;
+    if (g.numPlayers === 2) {
+      /* the two-hand bar carries its own action cluster — filled by
+         renderActionPanel2 (Confirm/Cancel or End Turn) */
+      myBar.innerHTML = '<span class="nb-emblem">♠</span><span class="nb-name">YOU</span>' +
+        '<span class="nb-emblem">♠</span><span class="nb-order">1</span>' +
+        '<span class="nb-acts" id="bar-acts"></span>';
+      /* Sipho's message zone: what he is doing, or what he just did */
+      const ow = $('opp-warn');
+      if (ow) ow.textContent = oppWarnText();
+    } else {
+      if (!$('turn-text')) {
+        myBar.innerHTML = '<span id="turn-text"></span><span class="nb-emblem">♠</span>' +
+          '<span class="nb-name">YOU</span><span class="nb-emblem">♠</span><span class="nb-order">1</span>';
+      }
+      $('turn-text').textContent = turnText;
+    }
     myBar.classList.toggle('active', isHumanTurn() ||
       (g.phase === 'shiya' && g.shiyaPending.caller === HUMAN));
     // live score: my side's captured points vs theirs
@@ -468,11 +562,14 @@
         }
       }
     } else {
-      /* 2/3 hands — rectangle grid, three hands four columns wide */
-      const cols = g.numPlayers === 3 ? 4 : 3;
-      if (cols === 4) area.classList.add('cols-4');
-      const rows = Math.max(3, Math.floor((wrap.clientHeight - 8) / ch));
-      const cells = Math.max(rows * cols, Math.ceil(Math.max(n, 9) / cols) * cols);
+      /* 2/3 hands — rectangle grid, four columns wide (the mockup lock) */
+      const cols = g.numPlayers === 3 || g.numPlayers === 2 ? 4 : 3;
+      area.classList.toggle('cols-4', cols === 4);
+      const minRows = g.numPlayers === 2 ? 2 : 3;
+      const rows = Math.max(minRows, Math.floor((wrap.clientHeight - 8) / ch));
+      /* cell floor: two full rows (8 cells) — the mockup's 4×2 discard area */
+      const floor = g.numPlayers === 2 ? 8 : 9;
+      const cells = Math.max(rows * cols, Math.ceil(Math.max(n, floor) / cols) * cols);
       for (let i = 0; i < cells; i++) slots.push(Math.floor(i / cols) + 1 + ' / ' + (i % cols + 1));
     }
     assignSlots(slots);
@@ -802,7 +899,126 @@
     return b;
   }
 
+  /* The End Turn button: ready once the turn's gate is satisfied. Lives in
+     the floating strip (3/4 hands) or MY bar (two hands). */
+  function mkEndTurnBtn() {
+    const canEnd = humanActions.some((a) => a.type === 'endturn');
+    const end = mkBtn(canEnd ? '✓ End Turn' : 'End Turn', (canEnd ? 'primary' : 'secondary') + ' small', () => {
+      Snd.click();
+      if (!canEnd) {
+        if (!g.turnUsed) toast('Play a card from your hand first — digs alone can\u2019t end a turn.');
+        else if (g.builds.some((b) => b.scaffold)) toast('Resolve your table-build first — capture it or top it.');
+        else if (g.builds.some((b) => b.captLock)) toast('Capture the build you dug into before ending the turn.');
+        else toast('You opened without a hand card — capture or top before ending the turn.');
+        return;
+      }
+      performAction({ type: 'endturn' }, { human: true });
+    });
+    if (!canEnd) end.classList.add('dimmed');
+    return end;
+  }
+
+  /* competitive: the specific rule enforcing the turn, stated plainly */
+  function ruleNoteNow() {
+    if (tutorialMode) return null;
+    if (g.openedCardless && !g.resolved) {
+      return 'You opened without a hand card — you must capture (or top a build) before this turn can end.';
+    }
+    if (g.builds.some((b) => b.scaffold)) {
+      return 'Your table-build must be captured or topped before this turn can end.';
+    }
+    if (g.builds.some((b) => b.captLock)) {
+      return 'You folded into their build — you must capture it before this turn can end.';
+    }
+    return null;
+  }
+
+  /* tutorial hints that belong in a message zone, whatever hosts it */
+  function appendTutorialHints(host) {
+    if (!selectedCard) {
+      if (g.turnUsed) {
+        const h = document.createElement('div');
+        h.className = 'panel-hint';
+        h.innerHTML = 'Hand card spent — dig a matching opponent pile top into a build, or end the turn.';
+        host.appendChild(h);
+      }
+      const sb = g.builds.find((b) => b.scaffold);
+      const h = document.createElement('div');
+      h.className = 'panel-hint';
+      h.innerHTML = sb
+        ? 'The <b>' + sb.value + '-build from the table must be captured or topped this turn</b> — select your ' + sb.value + '.'
+        : 'Your turn — tap a card in your hand' + (!g.turnUsed ? ', or tap table cards alone to found a build' : '') + '.';
+      host.appendChild(h);
+      const forced = humanActions.length && humanActions.every((a) => a.type === 'capture');
+      if (forced) {
+        const f = document.createElement('div');
+        f.className = 'panel-hint';
+        f.innerHTML = '<b>You own two builds — you must capture one.</b>';
+        host.appendChild(f);
+      }
+      return;
+    }
+    const h = document.createElement('div');
+    h.className = 'panel-hint';
+    h.innerHTML = !hasSideSelection()
+      ? '<b>' + C.label(selectedCard) + '</b> — tap table cards, a build, an opponent&rsquo;s pile top' +
+        ' to form a move, or tap an empty discard slot.'
+      : 'Keep tapping to adjust — or confirm the move.';
+    host.appendChild(h);
+  }
+
+  function warnLine(cls, text) {
+    const el = document.createElement('div');
+    el.className = 'panel-hint ' + (cls || '');
+    el.textContent = text;
+    return el;
+  }
+
+  /* TWO HANDS — the action cluster lives in MY bar; notes stand in my
+     message zone. Sipho's zone is filled by renderBars. */
+  function renderActionPanel2() {
+    const acts = document.getElementById('bar-acts');
+    const warn = document.getElementById('my-warn');
+    if (!acts || !warn) return;
+    acts.innerHTML = '';
+    warn.innerHTML = '';
+    if (!g || g.phase === 'gameover') return;
+    if (g.phase === 'shiya') {
+      warn.textContent = g.players[g.shiyaPending.caller].name + ' — Shiya window…';
+      return;
+    }
+    if (!isHumanTurn()) {
+      acts.appendChild(mkBtn('End Turn', 'secondary small dimmed'));
+      if (tutorialMode && coachMsg) warn.appendChild(warnLine('coach', coachMsg));
+      return;
+    }
+    /* the live confirmation: reminder + title in the bar, teaching in the zone */
+    if (pendingConfirm && pendingConfirm.matches.length) {
+      const m = pendingConfirm.matches;
+      if (pendingConfirm.reminder) warn.appendChild(warnLine('rule-note', pendingConfirm.reminder));
+      const ahead = document.createElement('span');
+      ahead.className = 'ahead';
+      ahead.textContent = m.length === 1 ? actionTitle(m[0]) : 'Choose your move';
+      acts.appendChild(ahead);
+      if (tutorialMode && m.length === 1) warn.appendChild(warnLine('confirm-note', actionExplainer(m[0])));
+      if (m.length === 1) {
+        acts.appendChild(mkBtn('Confirm', 'primary small', () => confirmAction(0)));
+      } else {
+        m.forEach((a, i) =>
+          acts.appendChild(mkBtn(actionTitle(a), (i === 0 ? 'primary' : 'default') + ' small', () => confirmAction(i))));
+      }
+      acts.appendChild(mkBtn('Cancel', 'secondary small', cancelConfirm));
+      return;
+    }
+    acts.appendChild(mkEndTurnBtn());
+    const note = ruleNoteNow();
+    if (note) warn.appendChild(warnLine('rule-note', note));
+    if (tutorialMode && coachMsg) warn.appendChild(warnLine('coach', coachMsg));
+    if (tutorialMode) appendTutorialHints(warn);
+  }
+
   function renderActionPanel() {
+    if (g && g.numPlayers === 2) { renderActionPanel2(); return; }
     const panel = $('action-panel');
     panel.innerHTML = '';
     if (!g || g.phase === 'gameover') return;
@@ -843,36 +1059,13 @@
     }
     if (isHumanTurn()) {
       /* End Turn lives here: ready once the gate is satisfied */
-      const canEnd = humanActions.some((a) => a.type === 'endturn');
-      const end = mkBtn(canEnd ? '✓ End Turn' : 'End Turn', canEnd ? 'primary' : 'secondary', () => {
-        Snd.click();
-        if (!canEnd) {
-          if (!g.turnUsed) toast('Play a card from your hand first — digs alone can\u2019t end a turn.');
-          else if (g.builds.some((b) => b.scaffold)) toast('Resolve your table-build first — capture it or top it.');
-          else if (g.builds.some((b) => b.captLock)) toast('Capture the build you dug into before ending the turn.');
-          else toast('You opened without a hand card — capture or top before ending the turn.');
-          return;
-        }
-        performAction({ type: 'endturn' }, { human: true });
-      });
-      if (!canEnd) end.classList.add('dimmed');
-      panel.appendChild(end);
-      /* competitive: the specific rule enforcing the turn, stated plainly */
-      if (!tutorialMode) {
-        let note = null;
-        if (g.openedCardless && !g.resolved) {
-          note = 'You opened without a hand card — you must capture (or top a build) before this turn can end.';
-        } else if (g.builds.some((b) => b.scaffold)) {
-          note = 'Your table-build must be captured or topped before this turn can end.';
-        } else if (g.builds.some((b) => b.captLock)) {
-          note = 'You folded into their build — you must capture it before this turn can end.';
-        }
-        if (note) {
-          const el = document.createElement('div');
-          el.className = 'panel-hint rule-note';
-          el.textContent = note;
-          panel.appendChild(el);
-        }
+      panel.appendChild(mkEndTurnBtn());
+      const note = ruleNoteNow();
+      if (note) {
+        const el = document.createElement('div');
+        el.className = 'panel-hint rule-note';
+        el.textContent = note;
+        panel.appendChild(el);
       }
     }
     const p = g.players[g.turn];
@@ -885,40 +1078,7 @@
       panel.appendChild(coach);
     }
     if (!tutorialMode) return;
-    if (!selectedCard) {
-      if (g.turnUsed && tutorialMode) {
-        const hint = document.createElement('div');
-        hint.className = 'panel-hint';
-        hint.innerHTML = 'Hand card spent — dig a matching opponent pile top into a build, or end the turn.';
-        panel.appendChild(hint);
-      }
-      if (tutorialMode) {
-        const sb = g.builds.find((b) => b.scaffold);
-        const hint = document.createElement('div');
-        hint.className = 'panel-hint';
-        hint.innerHTML = sb
-          ? 'The <b>' + sb.value + '-build from the table must be captured or topped this turn</b> — select your ' + sb.value + '.'
-          : 'Your turn — tap a card in your hand' + (!g.turnUsed ? ', or tap table cards alone to found a build' : '') + '.';
-        panel.appendChild(hint);
-      }
-      const forced = humanActions.length && humanActions.every((a) => a.type === 'capture');
-      if (forced && tutorialMode) {
-        const hint = document.createElement('div');
-        hint.className = 'panel-hint';
-        hint.innerHTML = '<b>You own two builds — you must capture one.</b>';
-        panel.appendChild(hint);
-      }
-      return;
-    }
-    const hint = document.createElement('div');
-    hint.className = 'panel-hint';
-    if (!hasSideSelection()) {
-      hint.innerHTML = '<b>' + C.label(selectedCard) + '</b> — tap table cards, a build, an opponent&rsquo;s pile top' +
-        ' to form a move, or tap an empty discard slot.';
-    } else {
-      hint.innerHTML = 'Keep tapping to adjust — or confirm the move.';
-    }
-    panel.appendChild(hint);
+    appendTutorialHints(panel);
   }
 
   /* ---------------- log ---------------- */
@@ -950,9 +1110,11 @@
     g = R.createGame({ numPlayers: n, players, dealer: session.dealer });
     clearSelection();
     lastAction = null; humanActions = [];
+    oppNote = null;
     tableSlots = {};          // fresh discard grid
     shiyaTick = null; shiyaOfferValue = null; clearTimeout(shiyaTimer);
     show('screen-game');
+    $('screen-game').classList.toggle('p2', n === 2);   // the two-hand layout
     fitCards();
     render();
     tick();
@@ -982,11 +1144,37 @@
     if (!g.players[g.turn].isHuman || demoMode) scheduleAi();
   }
 
+  /* Sipho's message-zone line — computed BEFORE the move is applied, while
+     the builds he touches are still on the table */
+  function aiNote(a) {
+    const who = g.players[g.turn].name;
+    const bVal = (a.buildIdx != null && g.builds[a.buildIdx]) ? g.builds[a.buildIdx].value : a.value;
+    switch (a.type) {
+      case 'capture':   return who + ': captured with ' + C.label(a.card) + '.';
+      case 'build':
+      case 'scaffold':
+      case 'preg':      return who + ': built ' + a.value + '.';
+      case 'augment':   return who + (a.method === 'top' ? ': topped the ' + bVal + '-build.' : ': folded cards into the ' + bVal + '-build.');
+      case 'dig':
+      case 'topdig':    return who + ': dug a pile top into the ' + bVal + '-build.';
+      case 'caugment':  return who + ': folded table cards into the ' + bVal + '-build.';
+      case 'efold':
+      case 'edig':      return who + ': folded into the ' + bVal + '-build for capture.';
+      case 'basetop':   return who + ': topped the loose ' + C.rank(a.card) + '.';
+      case 'discard':   return who + ': discarded ' + C.label(a.card) + '.';
+    }
+    return null;
+  }
+
   function scheduleAi() {
     setTimeout(() => {
       if (!g || g.phase === 'gameover') return;
       const a = AI.chooseAction(g);
       if (!a) { reportDeadlock(); return; }
+      if (g.numPlayers === 2 && !g.players[g.turn].isHuman && a.type !== 'endturn' && a.type !== 'skip') {
+        const note = aiNote(a);
+        if (note) oppNote = note;
+      }
       /* tutorial: explain the move while the board still shows the "before" */
       const why = tutorialMode && !['skip', 'shiya'].includes(a.type)
         ? AI.explain(g, a) : null;
@@ -1080,7 +1268,14 @@
       const h = AI.hint(g);
       if (h.action && h.action.card) { selectedCard = h.action.card; renderHand(); }
       renderActionPanel();
-      $('action-panel').prepend(mkBtn('💡 ' + escapeHtml(h.text), 'hint-chip'));
+      /* two hands: the hint stands in my message zone; otherwise the strip */
+      const host = (g.numPlayers === 2) ? document.getElementById('my-warn') : $('action-panel');
+      if (host) {
+        const chip = document.createElement('div');
+        chip.className = 'panel-hint coach';
+        chip.textContent = '💡 ' + h.text;
+        host.insertBefore(chip, host.firstChild);
+      }
       toast(h.text);
     };
     if (Ads.removed) { run(); return; }
