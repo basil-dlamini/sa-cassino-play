@@ -7,30 +7,31 @@
 <style>
   :root {
     --felt: radial-gradient(ellipse at 50% 25%, #27754e 0%, #1b5c3b 45%, #0d3524 100%);
-    --gold: #f0cc7a; --gold-dim: rgba(240,204,122,.4);
+    --ivory: #f4efe2; --ivory-dim: rgba(244,239,226,.4);
+    --navy: #0d1d44; --royal: #21489e; --royal-deep: #16357c;
     --card-w: 58px; --card-h: 82px;   /* THE locked size: cards, discard slots, area slots */
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: "Segoe UI", sans-serif; background: #0b2417; color: #f2efe6; padding: 24px; }
+  body { font-family: "Segoe UI", sans-serif; background: #0a1027; color: #f4efe2; padding: 24px; }
   h1 { font-size: 20px; margin-bottom: 4px; }
   p.lead { opacity: .85; font-size: 13.5px; margin-bottom: 18px; max-width: 640px; line-height: 1.5; }
   .shot { text-align: center; }
   .shot .cap { font-size: 13px; font-weight: 600; opacity: .85; margin: 10px auto 0; max-width: 430px; line-height: 1.45; }
 
-  .frame { width: 390px; height: 760px; background: var(--felt); border: 2px solid var(--gold-dim);
+  .frame { width: 390px; height: 760px; background: var(--felt); border: 2px solid var(--ivory-dim);
     border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; margin: 0 auto; }
 
-  .z-top { display: flex; align-items: center; gap: 8px; background: rgba(12,10,6,.82);
-    padding: 6px 10px; border-bottom: 1px solid var(--gold-dim); height: 40px; flex: 0 0 auto; }
-  .coin { background: radial-gradient(circle at 35% 30%, #f9f3dd, #dfc98f 70%, #c9a44e); color: #241a05;
+  .z-top { display: flex; align-items: center; gap: 8px; background: rgba(10,16,42,.92);
+    padding: 6px 10px; border-bottom: 1px solid rgba(244,239,226,.35); height: 40px; flex: 0 0 auto; }
+  .coin { background: radial-gradient(circle at 35% 30%, #fbf8ee, #efe8d2 70%, #ddd2b2); color: #14264f;
     font-weight: 800; font-size: 12.5px; letter-spacing: .3px; border-radius: 999px; padding: 3px 10px; }
-  .lbl { color: var(--gold); font-size: 11.5px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; flex: 1; }
-  .ic { width: 24px; height: 24px; border-radius: 7px; border: 1px solid var(--gold-dim); }
+  .lbl { color: var(--ivory); font-size: 11.5px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; flex: 1; }
+  .ic { width: 24px; height: 24px; border-radius: 7px; border: 1px solid var(--ivory-dim); }
 
   /* real game cards: twin corners, pips = the value in suit icons */
   .card { position: relative; width: var(--card-w); height: var(--card-h); border-radius: 6px; flex: 0 0 auto;
     background: linear-gradient(160deg, #faf6ea, #efe6cf);
-    box-shadow: 0 2px 5px rgba(0,0,0,.4), inset 0 0 0 1px rgba(0,0,0,.1), inset 0 0 0 2.5px rgba(217,164,55,.22);
+    box-shadow: 0 2px 5px rgba(0,0,0,.4), inset 0 0 0 1px rgba(0,0,0,.1), inset 0 0 0 2.5px rgba(13,29,68,.14);
     font-family: Georgia, serif; }
   .red { color: #c2232a; } .blk { color: #16181d; }
   .cor { position: absolute; font-size: 11px; font-weight: 800; line-height: 1.05; text-align: center; }
@@ -70,50 +71,50 @@
 
   /* full-width player bars — identical options for both players */
   .bar { display: flex; align-items: center; gap: 8px; padding: 5px 10px; flex: 0 0 auto;
-    background: linear-gradient(180deg, rgba(22,17,9,.92), rgba(10,8,4,.92));
-    border-top: 1px solid rgba(240,204,122,.35); border-bottom: 1px solid rgba(240,204,122,.35); }
-  .bar.active { background: linear-gradient(180deg, #b52f2a, #8f1f1c); }
+    background: linear-gradient(180deg, rgba(16,26,58,.94), rgba(9,15,38,.94));
+    border-top: 1px solid rgba(244,239,226,.35); border-bottom: 1px solid rgba(244,239,226,.35); }
+  .bar.active { background: linear-gradient(180deg, #2a54b0, #16357c); box-shadow: inset 0 0 0 1.5px rgba(244,239,226,.4); }
   .bar .name { display: flex; align-items: center; gap: 7px; font-family: 'Segoe UI', sans-serif;
     font-size: 12px; font-weight: 800; letter-spacing: 2.5px; text-transform: uppercase; }
   .tok { min-width: 17px; height: 17px; padding: 0 3px; display: inline-flex; align-items: center; justify-content: center;
-    background: linear-gradient(180deg, #f6e2a2, #d9a437); color: #241a05; border-radius: 999px; font-size: 10px; font-weight: 800; }
+    background: linear-gradient(180deg, #fbf8ee, #ddd2b2); color: #14264f; border-radius: 999px; font-size: 10px; font-weight: 800; }
   .bar .acts { margin-left: auto; display: flex; align-items: center; gap: 6px; }
-  .ahead { font-family: 'Segoe UI', sans-serif; font-size: 14px; font-weight: 800; color: #ffe9b3; letter-spacing: .5px; }
-  .btn { font-size: 12px; font-weight: 800; padding: 6px 10px; border-radius: 8px; border: 1.5px solid #b8811f; cursor: default; }
-  .btn.pri { background: linear-gradient(180deg, #f6e2a2, #d9a437); color: #241a05; }
-  .btn.sec { background: rgba(255,255,255,.08); color: #f2efe6; border-color: rgba(240,204,122,.5); }
+  .ahead { font-family: 'Segoe UI', sans-serif; font-size: 14px; font-weight: 800; color: #f4efe2; letter-spacing: .5px; }
+  .btn { font-size: 12px; font-weight: 800; padding: 6px 10px; border-radius: 8px; border: 1.5px solid rgba(13,29,68,.35); cursor: default; }
+  .btn.pri { background: linear-gradient(180deg, #faf6ea, #e9e0c7); color: #14264f; }
+  .btn.sec { background: rgba(244,239,226,.08); color: var(--ivory); border-color: rgba(244,239,226,.5); }
   .btn.dim { opacity: .55; }
-  .emb { color: var(--gold); font-size: 10px; }
+  .emb { color: var(--ivory); font-size: 10px; }
 
   /* area slots: EXACTLY card-sized — the lock */
   .areas { display: flex; gap: 8px; padding: 3px 10px; flex: 0 0 auto; align-items: flex-start; }
-  .box { border: 1.5px dashed rgba(240,204,122,.3); border-radius: 6px; background: rgba(0,0,0,.16);
+  .box { border: 1.5px dashed rgba(244,239,226,.3); border-radius: 6px; background: rgba(0,0,0,.16);
     width: var(--card-w); height: var(--card-h); position: relative; flex: 0 0 auto; }
-  .box.has { border-style: solid; border-color: rgba(240,204,122,.75); background: rgba(0,0,0,.28); }
+  .box.has { border-style: solid; border-color: rgba(244,239,226,.75); background: rgba(0,0,0,.28); }
   .box .card { width: 100%; height: 100%; }
   .tag { position: absolute; left: 0; right: 0; bottom: 2px; z-index: 3; text-align: center;
-    font-size: 9px; font-weight: 600; color: #ffe9b3; background: rgba(10,8,4,.7); border-radius: 4px;
+    font-size: 9px; font-weight: 600; color: #f4efe2; background: rgba(9,15,38,.78); border-radius: 4px;
     padding: 1px 0; line-height: 1.25; font-family: 'Segoe UI', sans-serif; pointer-events: none; }
   .badge { position: absolute; top: -6px; right: -6px; width: 17px; height: 17px; border-radius: 50%; z-index: 3;
-    background: linear-gradient(180deg, #f6e2a2, #d9a437); color: #241a05; font-size: 9.5px; font-weight: 800;
-    display: flex; align-items: center; justify-content: center; border: 1.5px solid #b8811f;
+    background: linear-gradient(180deg, #fbf8ee, #ddd2b2); color: #14264f; font-size: 9.5px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center; border: 1.5px solid rgba(13,29,68,.45);
     font-family: 'Segoe UI', sans-serif; }
   /* stack height: honest proportions — a full 28-card pile is ~10px of edge */
   .stack.s14 { box-shadow: 2.4px 2.4px 0 -1px #d9cfae, 4.8px 4.8px 0 -1px #cfc4a0, 7.2px 7.2px 0 -1px #d9cfae, 9.6px 9.6px 3px rgba(0,0,0,.3); }
   .stack.s7  { box-shadow: 2.4px 2.4px 0 -1px #d9cfae, 4.8px 4.8px 2.5px rgba(0,0,0,.28); }
   .warn { flex: 1; display: flex; align-items: center; justify-content: center; min-height: var(--card-h);
-    border: 1px solid rgba(240,204,122,.35); border-radius: 10px; background: rgba(10,8,4,.66);
-    font-size: 11.5px; font-weight: 600; font-style: italic; color: #ffd98a; padding: 4px 8px; line-height: 1.35; }
+    border: 1px solid rgba(244,239,226,.35); border-radius: 10px; background: rgba(9,15,38,.8);
+    font-size: 11.5px; font-weight: 600; font-style: italic; color: #f4efe2; padding: 4px 8px; line-height: 1.35; }
 
   .z-table { flex: 1; display: flex; align-items: center; justify-content: center; padding: 4px; min-height: 0; }
   .grid { display: grid; grid-template-columns: repeat(4, var(--card-w)); gap: 7px; }
-  .cell { width: var(--card-w); height: var(--card-h); border: 1.5px solid rgba(240,204,122,.16);
+  .cell { width: var(--card-w); height: var(--card-h); border: 1.5px solid rgba(244,239,226,.16);
     border-radius: 6px; background: rgba(0,0,0,.09); }
   .cell .card { width: 100%; height: 100%; }
 
-  .ad { flex: 0 0 auto; height: 44px; margin: 5px 8px 7px; border: 1px dashed rgba(240,204,122,.4);
+  .ad { flex: 0 0 auto; height: 44px; margin: 5px 8px 7px; border: 1px dashed rgba(244,239,226,.4);
     border-radius: 8px; background: rgba(0,0,0,.35); display: flex; align-items: center; justify-content: center;
-    font-size: 11.5px; font-weight: 700; letter-spacing: 1.5px; color: #ffd98a; }
+    font-size: 11.5px; font-weight: 700; letter-spacing: 1.5px; color: #f4efe2; }
 </style>
 </head>
 <body>
