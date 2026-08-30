@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Layout proposal — Mobile · Two hands</title>
+<style>
+  :root {
+    --felt: radial-gradient(ellipse at 50% 25%, #27754e 0%, #1b5c3b 45%, #0d3524 100%);
+    --gold: #f0cc7a; --gold-dim: rgba(240,204,122,.4);
+    --card-w: 58px; --card-h: 82px;   /* THE locked size: cards, discard slots, area slots */
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", sans-serif; background: #0b2417; color: #f2efe6; padding: 24px; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  p.lead { opacity: .85; font-size: 13.5px; margin-bottom: 18px; max-width: 640px; line-height: 1.5; }
+  .shot { text-align: center; }
+  .shot .cap { font-size: 12.5px; opacity: .8; margin: 10px auto 0; max-width: 430px; line-height: 1.45; }
+
+  .frame { width: 390px; height: 760px; background: var(--felt); border: 2px solid var(--gold-dim);
+    border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; margin: 0 auto; }
+
+  .z-top { display: flex; align-items: center; gap: 8px; background: rgba(12,10,6,.82);
+    padding: 6px 10px; border-bottom: 1px solid var(--gold-dim); height: 40px; flex: 0 0 auto; }
+  .coin { background: radial-gradient(circle at 35% 30%, #f9f3dd, #dfc98f 70%, #c9a44e); color: #241a05;
+    font-weight: 800; font-size: 12px; border-radius: 999px; padding: 3px 10px; }
+  .lbl { color: var(--gold); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; flex: 1; }
+  .ic { width: 24px; height: 24px; border-radius: 7px; border: 1px solid var(--gold-dim); }
+
+  /* real game cards: twin corners, pips = the value in suit icons */
+  .card { position: relative; width: var(--card-w); height: var(--card-h); border-radius: 6px; flex: 0 0 auto;
+    background: linear-gradient(160deg, #faf6ea, #efe6cf);
+    box-shadow: 0 2px 5px rgba(0,0,0,.4), inset 0 0 0 1px rgba(0,0,0,.1), inset 0 0 0 2.5px rgba(217,164,55,.22);
+    font-family: Georgia, serif; }
+  .red { color: #c2232a; } .blk { color: #16181d; }
+  .cor { position: absolute; font-size: 10px; font-weight: 700; line-height: 1.05; text-align: center; }
+  .cor small { display: block; font-size: 8.5px; }
+  .cor.tl { top: 3px; left: 3px; }
+  .cor.br { bottom: 3px; right: 3px; transform: rotate(180deg); }
+  .pips { position: absolute; inset: 8% 18%; }
+  .pip { position: absolute; transform: translate(-50%, -50%); font-size: 11px; line-height: 1; }
+  .pip.flip { transform: translate(-50%, -50%) rotate(180deg); }
+  .pip.ace { font-size: 26px; }
+  .card.back { background: repeating-linear-gradient(135deg, #8f241f 0 9px, #7c1f1f 9px 18px, rgba(240,204,122,.5) 18px 21px, #7c1f1f 21px 30px), #7c1f1f;
+    box-shadow: 0 2px 5px rgba(0,0,0,.45), inset 0 0 0 2px rgba(240,204,122,.65); }
+  .card.back::after { content: ""; position: absolute; inset: 7%; border-radius: 5px;
+    background: rgba(240,204,122,.12); border: 1.5px solid rgba(240,204,122,.55); }
+
+  .fan { display: flex; padding: 5px 8px; flex: 0 0 auto; }
+  .fan .card + .card { margin-left: -23px; }
+
+  /* full-width player bars — identical options for both players */
+  .bar { display: flex; align-items: center; gap: 8px; padding: 5px 10px; flex: 0 0 auto;
+    background: linear-gradient(180deg, rgba(22,17,9,.92), rgba(10,8,4,.92));
+    border-top: 1px solid rgba(240,204,122,.35); border-bottom: 1px solid rgba(240,204,122,.35); }
+  .bar.active { background: linear-gradient(180deg, #b52f2a, #8f1f1c); }
+  .bar .name { display: flex; align-items: center; gap: 7px; font-family: Georgia, serif;
+    font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
+  .tok { min-width: 17px; height: 17px; padding: 0 3px; display: inline-flex; align-items: center; justify-content: center;
+    background: linear-gradient(180deg, #f6e2a2, #d9a437); color: #241a05; border-radius: 999px; font-size: 10px; font-weight: 800; }
+  .bar .acts { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+  .ahead { font-family: Georgia, serif; font-size: 13px; font-weight: 700; color: #ffe9b3; letter-spacing: .5px; }
+  .btn { font-size: 11px; font-weight: 700; padding: 6px 10px; border-radius: 8px; border: 1.5px solid #b8811f; cursor: default; }
+  .btn.pri { background: linear-gradient(180deg, #f6e2a2, #d9a437); color: #241a05; }
+  .btn.sec { background: rgba(255,255,255,.08); color: #f2efe6; border-color: rgba(240,204,122,.5); }
+  .btn.dim { opacity: .55; }
+  .emb { color: var(--gold); font-size: 10px; }
+
+  /* area slots: EXACTLY card-sized — the lock */
+  .areas { display: flex; gap: 8px; padding: 3px 10px; flex: 0 0 auto; align-items: flex-start; }
+  .box { border: 1.5px dashed rgba(240,204,122,.3); border-radius: 6px; background: rgba(0,0,0,.16);
+    width: var(--card-w); height: var(--card-h); position: relative; flex: 0 0 auto; }
+  .box.has { border-style: solid; border-color: rgba(240,204,122,.75); background: rgba(0,0,0,.28); }
+  .box .card { width: 100%; height: 100%; }
+  .tag { position: absolute; left: 0; right: 0; bottom: 2px; z-index: 3; text-align: center;
+    font-size: 7.5px; color: #ffe9b3; background: rgba(10,8,4,.66); border-radius: 4px;
+    padding: 1px 0; line-height: 1.25; font-family: 'Segoe UI', sans-serif; pointer-events: none; }
+  .badge { position: absolute; top: -6px; right: -6px; width: 17px; height: 17px; border-radius: 50%; z-index: 3;
+    background: linear-gradient(180deg, #f6e2a2, #d9a437); color: #241a05; font-size: 9.5px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center; border: 1.5px solid #b8811f;
+    font-family: 'Segoe UI', sans-serif; }
+  /* stack height: honest proportions — a full 28-card pile is ~10px of edge */
+  .stack.s14 { box-shadow: 2.4px 2.4px 0 -1px #d9cfae, 4.8px 4.8px 0 -1px #cfc4a0, 7.2px 7.2px 0 -1px #d9cfae, 9.6px 9.6px 3px rgba(0,0,0,.3); }
+  .stack.s7  { box-shadow: 2.4px 2.4px 0 -1px #d9cfae, 4.8px 4.8px 2.5px rgba(0,0,0,.28); }
+  .warn { flex: 1; display: flex; align-items: center; justify-content: center; min-height: var(--card-h);
+    border: 1px solid rgba(240,204,122,.35); border-radius: 10px; background: rgba(10,8,4,.66);
+    font-size: 10.5px; font-style: italic; color: #ffd98a; padding: 4px 8px; line-height: 1.35; }
+
+  .z-table { flex: 1; display: flex; align-items: center; justify-content: center; padding: 4px; min-height: 0; }
+  .grid { display: grid; grid-template-columns: repeat(4, var(--card-w)); gap: 7px; }
+  .cell { width: var(--card-w); height: var(--card-h); border: 1.5px solid rgba(240,204,122,.16);
+    border-radius: 6px; background: rgba(0,0,0,.09); }
+  .cell .card { width: 100%; height: 100%; }
+
+  .ad { flex: 0 0 auto; height: 44px; margin: 5px 8px 7px; border: 1px dashed rgba(240,204,122,.4);
+    border-radius: 8px; background: rgba(0,0,0,.35); display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: #ffd98a; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+<h1>Layout proposal — Mobile · Two hands</h1>
+<p class="lead">One locked size: the cards, the discard slots and the area slots are always
+identical (58×82 here). Real game cards — the value shown inside by the number of suit icons.
+Full-width bars with the same options for both players, message zones beside the piles, and the
+ad strip at the foot.</p>
+
+<div class="shot">
+  <div class="frame">
+    <div class="z-top"><span class="coin">7 · 4</span><span class="lbl">1st Round</span><span class="ic"></span><span class="ic"></span><span class="ic"></span></div>
+
+    <!-- TOP PLAYER -->
+    <div class="fan" style="justify-content:flex-start;">
+      <div class="card back"></div><div class="card back"></div><div class="card back"></div><div class="card back"></div><div class="card back"></div>
+      <div class="card back"></div><div class="card back"></div><div class="card back"></div><div class="card back"></div><div class="card back"></div>
+    </div>
+    <div class="bar">
+      <div class="name"><span class="emb">♠</span> SIPHO <span class="emb">♠</span> <span class="tok">2</span></div>
+      <div class="acts"><span class="btn sec dim">End Turn</span></div>
+    </div>
+    <div class="areas">
+      <div class="box has">
+        <div class="card blk stack s7" data-id="8S"><span class="badge">8</span></div>
+        <div class="tag">7 cards</div>
+      </div>
+      <div class="box has">
+        <div class="card red stack s14" data-id="AH"></div>
+        <div class="tag">14 cards · 5♠ · 9pts</div>
+      </div>
+      <div class="warn">Sipho: discard 7♥ — it gives the opponents the least.</div>
+    </div>
+
+    <!-- GRID 4×2 -->
+    <div class="z-table">
+      <div class="grid">
+        <div class="cell"><div class="card red" data-id="5H"></div></div>
+        <div class="cell"><div class="card blk" data-id="3S"></div></div>
+        <div class="cell"></div>
+        <div class="cell"><div class="card blk" data-id="9C"></div></div>
+        <div class="cell"></div>
+        <div class="cell"><div class="card red" data-id="AD"></div></div>
+        <div class="cell"><div class="card blk" data-id="2S"></div></div>
+        <div class="cell"></div>
+      </div>
+    </div>
+
+    <!-- BOTTOM PLAYER -->
+    <div class="areas" style="padding: 3px 10px 12px;">
+      <div class="warn">Reserved — capture or top the 9 before this turn can end.</div>
+      <div class="box has">
+        <div class="card blk stack s7" data-id="9D"><span class="badge">9</span></div>
+        <div class="tag">7 cards</div>
+      </div>
+      <div class="box has">
+        <div class="card blk stack s14" data-id="10S"></div>
+        <div class="tag">14 cards · 6♠ · 11pts</div>
+      </div>
+    </div>
+    <div class="bar active">
+      <div class="name"><span class="emb">♠</span> YOU <span class="emb">♠</span> <span class="tok">1</span></div>
+      <div class="acts">
+        <span class="ahead">Build 9</span>
+        <span class="btn pri">Confirm</span>
+        <span class="btn sec">Cancel</span>
+      </div>
+    </div>
+    <div class="fan" style="justify-content:flex-end;">
+      <div class="card blk" data-id="9H"></div>
+      <div class="card blk" data-id="9S"></div>
+      <div class="card red" data-id="8D"></div>
+      <div class="card red" data-id="7H"></div>
+      <div class="card blk" data-id="6S"></div>
+      <div class="card red" data-id="5D"></div>
+      <div class="card blk" data-id="4C"></div>
+      <div class="card red" data-id="3H"></div>
+      <div class="card blk" data-id="AS"></div>
+      <div class="card red" data-id="AD"></div>
+    </div>
+
+    <div class="ad">AD · 320×50 · AdMob / Unity Ads</div>
+  </div>
+  <div class="cap"><b>Two hands · portrait (v7).</b> Cards, discard slots and area slots are one
+  locked size — always identical. The cards are the real design: corners plus pips that count the
+  value in suit icons (a 5 shows five hearts, a 10 shows ten spades). Stack height marks the big
+  piles; the tutorial stats overlay the slot's foot.</div>
+</div>
+
+<script>
+/* the game's own pip table — the mockup renders exactly what the game renders */
+const PIP_LAYOUT = {
+  1:  [[.5, .5]],
+  2:  [[.5, .1], [.5, .9]],
+  3:  [[.5, .1], [.5, .5], [.5, .9]],
+  4:  [[.25, .1], [.75, .1], [.25, .9], [.75, .9]],
+  5:  [[.25, .1], [.75, .1], [.5, .5], [.25, .9], [.75, .9]],
+  6:  [[.25, .1], [.75, .1], [.25, .5], [.75, .5], [.25, .9], [.75, .9]],
+  7:  [[.25, .1], [.75, .1], [.5, .3], [.25, .5], [.75, .5], [.25, .9], [.75, .9]],
+  8:  [[.25, .1], [.75, .1], [.5, .3], [.25, .5], [.75, .5], [.5, .7], [.25, .9], [.75, .9]],
+  9:  [[.25, .08], [.75, .08], [.25, .39], [.75, .39], [.5, .5], [.25, .61], [.75, .61], [.25, .92], [.75, .92]],
+  10: [[.25, .08], [.75, .08], [.5, .23], [.25, .39], [.75, .39], [.25, .61], [.75, .61], [.5, .77], [.25, .92], [.75, .92]]
+};
+const SUIT = { S: '♠', H: '♥', D: '♦', C: '♣' };
+const RANK = { 1: 'A', 2: '2', 3: '3', 4: '4', 5: '5', 6: '6', 7: '7', 8: '8', 9: '9', 10: '10' };
+document.querySelectorAll('.card[data-id]').forEach((el) => {
+  const id = el.dataset.id;
+  const suit = id.slice(-1);
+  const rr = id.slice(0, -1);
+  const rank = rr === 'A' ? 1 : parseInt(rr, 10);
+  const g = SUIT[suit];
+  const corner = '<span class="cor tl">' + RANK[rank] + '<small>' + g + '</small></span>' +
+                 '<span class="cor br">' + RANK[rank] + '<small>' + g + '</small></span>';
+  const pips = PIP_LAYOUT[rank].map(([x, y]) =>
+    '<span class="pip' + (y > 0.55 ? ' flip' : '') + (rank === 1 ? ' ace' : '') +
+    '" style="left:' + x * 100 + '%;top:' + y * 100 + '%">' + g + '</span>').join('');
+  el.insertAdjacentHTML('beforeend', corner + '<span class="pips">' + pips + '</span>');
+});
+</script>
+</body>
+</html>

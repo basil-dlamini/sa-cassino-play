@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>South African Cassino</title>
+<link rel="stylesheet" href="css/style.css?v=18">
+</head>
+<body>
+
+<!-- ================= MAIN MENU ================= -->
+<section id="screen-menu" class="screen menu-screen">
+  <div class="menu-card">
+    <div class="menu-suits"><span class="red">♥</span><span>♠</span><span class="red">♦</span><span>♣</span></div>
+    <h1>South African<br>Cassino</h1>
+    <p class="tagline">Capture, build, top, dig - and steal.</p>
+    <button id="btn-play" class="btn primary big">▶ Play</button>
+    <button id="btn-how" class="btn big">📖 How to Play</button>
+    <button id="btn-settings-menu" class="btn big">⚙ Settings</button>
+    <button id="btn-quit" class="btn big subtle">✕ Quit</button>
+    <div id="session-tally" class="session-tally"></div>
+  </div>
+</section>
+
+<!-- ================= SETUP ================= -->
+<section id="screen-setup" class="screen hidden setup-screen">
+  <div class="menu-card">
+    <h2>New game</h2>
+    <h3>Game mode</h3>
+    <div id="mode-row" class="choice-row">
+      <button class="choice" data-mode="tutorial">Tutorial<br><small>learn with a coach</small></button>
+      <button class="choice" data-mode="competitive">Competitive<br><small>you vs the AI</small></button>
+    </div>
+    <h3>How many players?</h3>
+    <div id="player-count" class="choice-row">
+      <button class="choice" data-n="2">2 players<br><small>you vs Sipho</small></button>
+      <button class="choice" data-n="3">3 players<br><small>you vs Sipho &amp; Thandi</small></button>
+      <button class="choice" data-n="4">4 players<br><small>pairs: you + Thandi vs Sipho + Naledi</small></button>
+    </div>
+    <p id="setup-preview" class="setup-preview"></p>
+    <div class="btn-row">
+      <button id="btn-setup-back" class="btn secondary">← Back</button>
+      <button id="btn-start" class="btn primary">Deal cards</button>
+    </div>
+  </div>
+</section>
+
+<!-- ================= HOW TO PLAY ================= -->
+<section id="screen-how" class="screen hidden how-screen">
+  <div class="how-card">
+    <h2>How to Play</h2>
+    <p><b>The deck:</b> 40 cards — Aces count 1, number cards count face value. No Jacks, Queens or Kings.</p>
+    <p><b>The goal:</b> capture cards, then win the scoring categories at the end. 11 points are in play for 2 players and for the 4-player pairs game; 7 points for 3 singles. <b>The four-hand game is always played in pairs</b> — opposite players are partners.</p>
+    <p><b>The turn:</b> a turn is a series of moves and only ends when you press <b>End Turn</b>. Exactly <b>one move per turn may use a card from your hand</b> — a dig that folds in an opponent's pile top uses no hand card and may come before or after it. You cannot end the turn before your hand card has been played.</p>
+    <ul>
+      <li><b>Capture</b> — take discard-area cards (and builds) whose values sum exactly to your card. A build belongs to the player who made it: only that player (or an opponent) may capture it — never their partner.</li>
+      <li><b>Build</b> — play a card onto discard-area cards and declare the total. The build's owner must hold a card of that value. If your partner still "virtually owns" a value, you may even build it for them without holding it yourself.</li>
+      <li><b>Top / Augment</b> — grow a build without changing its value: top it with an equal card, add a hand card plus discard-area cards that complete the value, <b>double-dig</b> — play a hand card matching an opponent's pile top and fold both into a build of double that value — or <b>pile-top dig</b> — fold the matching top card of an opponent's pile straight into a live own-side build of the same value, using no hand card at all. Only your own side may augment; the owner needs a spare capture card to top. Once augmented, a build's value locks.</li>
+      <li><b>Preg</b> — raise an unaugmented build to a higher value by adding a card (plus discard cards) while holding the new value. An enemy build you preg becomes yours.</li>
+      <li><b>Discard</b> — drop a card into the discard area (the middle). While any build is live, cards of its value may NOT be discarded by anyone — capture, top, dig or keep them. In the two-hand game's first round, a player with a live build cannot discard at all.</li>
+      <li><b>Shiya</b> (pairs only) — when your partner captures, you may call "leave it": the capture turns into a build in YOUR area. Ask via the tick box when they build, or in the 3-second window after any capture. Owning two builds then forces you to capture one on your next turn.</li>
+    </ul>
+    <p><b>Steal:</b> after any capture you may take the top card of an opponent's pile if it matches the value you just played — never from a partner.</p>
+    <p><b>End of the game:</b> when the stock and all hands are empty, the last player who captured sweeps any leftover table cards. Then score:</p>
+    <ul class="score-list">
+      <li>Most cards — 2 pts &nbsp;·&nbsp; Most spades — 2 pts <small>(2-player / partnership games only)</small></li>
+      <li>2 of Spades (“spy two”) — 1 pt &nbsp;·&nbsp; 10 of Diamonds (“mummy”) — 2 pts &nbsp;·&nbsp; each Ace — 1 pt</li>
+    </ul>
+    <p>Ties in a “most” category score nothing for anyone; a tied game is a shared win.</p>
+    <button id="btn-how-back" class="btn secondary">← Back</button>
+  </div>
+</section>
+
+<!-- ================= GAME ================= -->
+<section id="screen-game" class="screen hidden game-screen">
+  <div id="control-bar">
+    <span id="score-box" title="points captured — you · them">0 · 0</span>
+    <span id="round-label">1st Round</span>
+    <button id="btn-hint" class="cbtn hidden" title="hint — watch an ad (tutorial only)">
+      <svg viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 1 6 6c0 2.2-1.2 3.6-2.4 4.6-.9.8-1.6 1.4-1.6 2.4h-4c0-1-.7-1.6-1.6-2.4C7.2 12.6 6 11.2 6 9a6 6 0 0 1 6-6z"/><path d="M10 19h4M10.5 21.5h3"/></svg>
+    </button>
+    <button id="btn-log" class="cbtn" title="game log">
+      <svg viewBox="0 0 24 24"><path d="M6 3h12v13l-2-1.5-2 1.5-2-1.5-2 1.5-2-1.5-2 1.5z"/><path d="M9 7h6M9 10h6"/></svg>
+    </button>
+    <button id="btn-speed" class="cbtn" title="AI speed">
+      <svg viewBox="0 0 24 24"><path d="M13 2L5 13h5l-1 9 8-11h-5z"/></svg>
+    </button>
+    <button id="btn-home" class="cbtn" title="main menu">
+      <svg viewBox="0 0 24 24"><path d="M5 21V4a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v17"/><path d="M3 21h16"/><path d="M12 12h8M17 9l3 3-3 3"/></svg>
+    </button>
+  </div>
+  <div id="opp-zone"></div>
+  <div id="table-middle">
+    <div id="opp-side"></div>
+    <div id="discard-grid-wrap">
+      <div id="table-cards"></div>
+    </div>
+    <div id="my-side"></div>
+    <!-- floating, translucent — overlaps the discard area, never shifts layout -->
+    <div id="action-panel"></div>
+  </div>
+  <div id="bottom-row">
+    <div id="opp-corner-bl" class="hidden"></div>
+    <div class="namebar me" id="my-bar"><span id="turn-text"></span><span class="nb-emblem">♠</span><span id="my-name">YOU</span><span class="nb-emblem">♠</span><span class="nb-order">1</span></div>
+  </div>
+  <div id="my-row"><div id="my-hand"></div></div>
+  <aside id="log-panel">
+    <div class="log-head">
+      <h3>Game log</h3>
+      <button id="btn-log-close" title="close the log">✕</button>
+    </div>
+    <div id="log-entries"></div>
+  </aside>
+</section>
+
+<!-- ================= SHIYA MODAL ================= -->
+<div id="modal-shiya" class="modal hidden">
+  <div class="modal-card">
+    <h2>🤝 Call Shiya?</h2>
+    <p id="shiya-text"></p>
+    <div class="btn-row">
+      <button id="btn-shiya-skip" class="btn secondary">Let it stand</button>
+      <button id="btn-shiya-call" class="btn primary">Call SHIYA — leave it to me</button>
+    </div>
+    <div class="shiya-countdown" id="shiya-countdown"></div>
+  </div>
+</div>
+
+<!-- ================= SHIYA OFFER (partner built) ================= -->
+<div id="modal-shiya-offer" class="modal hidden">
+  <div class="modal-card">
+    <h2 id="shiya-offer-title">Shiya?</h2>
+    <p id="shiya-offer-text"></p>
+    <div class="btn-row">
+      <button id="btn-shiya-offer-no" class="btn secondary">Not now</button>
+      <button id="btn-shiya-offer-yes" class="btn primary">Call SHIYA</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= ALERT (legality notices / special cases) ================= -->
+<div id="modal-alert" class="modal hidden">
+  <div class="modal-card">
+    <h2 id="alert-title"></h2>
+    <p id="alert-text"></p>
+    <div class="btn-row">
+      <button id="btn-alert-ok" class="btn primary">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= RESULTS MODAL ================= -->
+<div id="modal-results" class="modal hidden">
+  <div class="modal-card wide">
+    <h2>Game over</h2>
+    <div id="results-body"></div>
+    <div class="btn-row">
+      <button id="btn-results-menu" class="btn secondary">Main menu</button>
+      <button id="btn-again" class="btn primary">Play again →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= SETTINGS MODAL ================= -->
+<div id="modal-settings" class="modal hidden">
+  <div class="modal-card">
+    <h2>Settings</h2>
+    <div class="settings-grid">
+      <button id="snd-toggle" class="btn default">Sound: ON</button>
+      <label>AI speed
+        <select id="speed-select">
+          <option value="400">Fast</option>
+          <option value="900" selected>Normal</option>
+          <option value="1600">Relaxed</option>
+        </select>
+      </label>
+      <button id="btn-remove-ads" class="btn accent">Remove ads — $2.99 (one-time)</button>
+      <button id="btn-reset-session" class="btn subtle">Reset session tally</button>
+    </div>
+    <div class="btn-row">
+      <button id="btn-settings-close" class="btn primary">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= BANNER AD ================= -->
+<div id="banner-ad"><div id="banner-ad-slot"></div></div>
+
+<div id="toast"></div>
+
+<script>
+/* Surface any script error on screen instead of failing silently. */
+window.addEventListener('error', function (e) {
+  var t = document.getElementById('toast');
+  if (t) {
+    t.textContent = '⚠ ' + (e.message || 'script error') + ' @ ' +
+      (e.filename || '').split('/').pop() + ':' + e.lineno;
+    t.classList.add('show');
+  }
+  document.title = 'ERR: ' + (e.message || 'script error');
+  window.__LAST_ERROR__ = { message: e.message, filename: e.filename, lineno: e.lineno, stack: e.error && e.error.stack };
+});
+window.addEventListener('unhandledrejection', function (e) {
+  var t = document.getElementById('toast');
+  if (t) { t.textContent = '⚠ ' + ((e.reason && e.reason.message) || 'async error'); t.classList.add('show'); }
+  document.title = 'ERR: ' + ((e.reason && e.reason.message) || 'async rejection');
+});
+</script>
+
+<script src="js/cards.js?v=18"></script>
+<script src="js/rules.js?v=18"></script>
+<script src="js/ai.js?v=18"></script>
+<script src="js/ads.js?v=18"></script>
+<script src="js/audio.js?v=18"></script>
+<script src="js/ui.js?v=18"></script>
+<script>UI.init();</script>
+</body>
+</html>
