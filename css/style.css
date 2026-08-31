@@ -578,13 +578,10 @@ small { opacity: .75; }
    message zone + my areas · my bar (Confirm / End Turn live here) · my fan ·
    ad strip. Cards, discard slots and area slots are ONE locked size. */
 #screen-game.p2 #opp-zone { padding: 0; gap: 0; }
-#screen-game.p2 #opp-fan {
-  justify-content: flex-start;
-  min-height: 0; padding: 5px 8px;
-}
-/* fans show ~60% of each card — ten cards fit a phone row (mockup: −23px at 58px) */
-#screen-game.p2 #opp-fan .card + .card,
-#screen-game.p2 #my-hand .card + .card { margin-left: calc(var(--card-w) * -0.4); }
+/* the fan always spans the full row: ui.js sets --fan-shift per hand size so
+   the neighbours land exactly edge to edge (overlapping early, spreading
+   apart as the hand empties) */
+#screen-game.p2 #my-hand .card + .card { margin-left: var(--fan-shift, calc(var(--card-w) * -0.4)); }
 
 /* full-width strip bars: no radius, no inset ornament — and a FIXED height:
    the ribbon must never grow or shrink mid-game. Text that is too long
@@ -645,9 +642,9 @@ small { opacity: .75; }
 .warn-zone:empty { visibility: hidden; }
 
 /* the discard grid: 4 columns, exactly card-sized cells, centred.
-   Content pins to the top — on a tight viewport the wrap may shrink, and a
-   centred grid would slide UP under the areas row (clipped, untappable). */
-#screen-game.p2 #discard-grid-wrap { padding: 4px 0; justify-content: flex-start; }
+   It never shrinks — a squeezed wrap once let the bottom row slide under
+   the areas below. Content pins to the top regardless. */
+#screen-game.p2 #discard-grid-wrap { padding: 4px 0; justify-content: flex-start; flex: 0 0 auto; }
 #table-cards.cols-4 { grid-template-columns: repeat(4, var(--card-w)); }
 #screen-game.p2 .grid-cell { border-radius: 6px; }
 
@@ -660,7 +657,7 @@ small { opacity: .75; }
   background: transparent; border: none; border-radius: 0;
   padding: 13px 8px 6px;
 }
-#screen-game.p2 #my-hand { justify-content: flex-end; min-height: calc(var(--card-w) * 1.4 + 6px); }
+#screen-game.p2 #my-hand { justify-content: flex-end; min-height: calc(var(--card-w) * 1.4 + 6px); min-width: 0; }
 /* selection in the two-hand fan: a quiet lift — no scale, no leap over the
    neighbours, nothing fades */
 #screen-game.p2 .card.in-hand.selected { transform: translateY(-10px); z-index: 5; }

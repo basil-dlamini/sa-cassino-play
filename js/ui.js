@@ -73,18 +73,20 @@
   function aiSpeed() { return parseInt(localStorage.getItem('sacassino.aiSpeed') || '900', 10); }
   const isHumanTurn = () => g && g.phase === 'play' && g.turn === HUMAN;
 
-  /* Card size — TWO HANDS: the mockup budget. Ten fan cards each showing 60%
-     must fit the column width (a 390px phone lands exactly on the mockup's
-     58px card), with the height as a loose backstop only. */
+  /* Card size — TWO HANDS: the mockup budget. Ten fan cards span the column
+     width exactly (a 390px phone lands on the mockup's 58px card); the height
+     formula (no opponent fan in the budget) is the backstop for short
+     screens. */
   function fitCards() {
     const n = R.DEAL[session.numPlayers].per;
     const col = $('screen-game');
     const availW = col.clientWidth - 24;
     if (session.numPlayers === 2) {
       const wW = Math.floor((col.clientWidth - 16) / (1 + 9 * 0.6));
-      const wH = Math.floor((col.clientHeight - 260) / (5 * 1.4));
+      const wH = Math.floor((col.clientHeight - 235) / (5 * 1.4));
       const w = Math.max(52, Math.min(88, Math.min(wW, wH)));
       document.documentElement.style.setProperty('--card-w', w + 'px');
+      if (g) renderHand();   // the fan's overlap follows the card size
       return;
     }
     const wW = Math.floor(availW / (1 + (n - 1) / 3));
@@ -279,11 +281,6 @@
       escapeHtml(p.name) + '</span><span class="nb-emblem">' + SEAT_EMBLEM[seat] + '</span>' +
       '<span class="nb-order">' + (seat + 1) + '</span>';
     if (g2.phase === 'play' && g2.turn === seat) bar.classList.add('active');
-    /* two hands: both bars show the same controls — the opponent's End Turn
-       stays dimmed until it is really their turn */
-    if (g2.numPlayers === 2 && !opts.me) {
-      bar.innerHTML += '<span class="nb-acts"><span class="btn secondary small dimmed">End Turn</span></span>';
-    }
     return bar;
   }
 
@@ -307,11 +304,8 @@
     zone.innerHTML = '';
     zone.className = 'mode-' + g.numPlayers;
     if (g.numPlayers === 2) {
-      const fan = document.createElement('div');
-      fan.id = 'opp-fan';
-      const opp = g.players[1];
-      for (let i = 0; i < opp.hand.length; i++) fan.appendChild(cardBack());
-      zone.appendChild(fan);
+      /* no face-down fan (owner's ruling) — Sipho is his banner, his slots and
+         his message zone; his card count follows from the turn sequence */
       zone.appendChild(nameBar(g, 1, {}));
     } else if (g.numPlayers === 3) {
       /* Anticlockwise play: seat 1 (Sipho) sits RIGHT, seat 2 (Thandi) LEFT.
@@ -387,15 +381,15 @@
       return;
     }
     if (g.numPlayers === 2) {
-      /* their row is the mirror of mine: build box, captured pile, then the
-         message zone filling the rest (the locked mockup row) */
+      /* Sipho's row: captured pile, build box, then the message zone —
+         the mirror of mine (owner's ruling) */
       const theirs = document.createElement('div');
       theirs.className = 'area-row';
+      theirs.appendChild(pileEl(1));
       {
         const slots = R.maxSlots(g);
         const owned = g.builds.filter((b) => b.owner === 1);
         for (let i = 0; i < slots; i++) theirs.appendChild(buildZoneEl(1, owned[i] || null));
-        theirs.appendChild(pileEl(1));
       }
       oppSide.appendChild(theirs);
       const ow = warnZone('opp-warn');
@@ -607,6 +601,24 @@
       const el = cardEl(id, opts);
       el.classList.add('in-hand');
       box.appendChild(el);
+    }
+    /* two hands: the fan always spans the full row width — neighbours shift
+       by exactly (width − card) / (n − 1), overlapping early in the round and
+       spreading apart as the hand empties. The width is measured on the ROW,
+       never on the hand itself: the hand's own box follows its content, and a
+       stale shift would feed back into the measurement and grow unbounded. */
+    if (g.numPlayers === 2 && box.children.length > 1) {
+      const row = $('my-row');
+      if (row) {
+        const avail = row.clientWidth - 16;   // the row's 8px side padding
+        const w = box.children[0].offsetWidth;
+        if (w > 0 && avail > w) {
+          /* the margin is the OVERLAP: the visible slice per neighbour minus
+             the full card width (negative early, positive gaps late) */
+          const slice = Math.floor((avail - w) / (box.children.length - 1));
+          box.style.setProperty('--fan-shift', (slice - w) + 'px');
+        }
+      }
     }
   }
 
@@ -1541,6 +1553,13 @@
       session = freshSession(); saveSession(); refreshMenu(); toast('Session tally reset.');
     });
     window.addEventListener('resize', fitCards);
+    /* the column's own box is the truth: a scrollbar appearing or vanishing,
+       the pane resizing, rotation — all resize the column without firing the
+       window event. Size the cards off the real box every time it changes. */
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(() => { if (g) { fitCards(); } });
+      ro.observe($('screen-game'));
+    }
 
     refreshMenu();
 
