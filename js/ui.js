@@ -1001,7 +1001,8 @@
       return;
     }
     if (!isHumanTurn()) {
-      acts.appendChild(mkBtn('End Turn', 'secondary small dimmed'));
+      /* his turn, his business: NOTHING of the opponent's reflects in my
+         ribbon — it lights up only when the turn is mine (owner's ruling) */
       if (tutorialMode && coachMsg) warn.appendChild(warnLine('coach', coachMsg));
       return;
     }
