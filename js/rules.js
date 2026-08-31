@@ -705,7 +705,9 @@
       const taken = a.loose.slice();
       removeFromTable(g, a.loose);
       const buildCards = [];
+      const buildWorth = [];
       for (const idx of a.buildIds.slice().sort((x, y) => y - x)) {
+        buildWorth.push(g.builds[idx].value);
         buildCards.push(...g.builds[idx].cards);
         g.builds.splice(idx, 1);
       }
@@ -715,8 +717,11 @@
       g.lastCapturer = me.id;
       if (g.openedCardless) g.resolved = true;   // a capture settles a cardless debt
       g.capturedThisTurn = true;                 // …and closes the taking for the turn
+      /* the build is captured at its WORTH — say so, or the face cards look
+         like they fail to sum to the capturing card */
       const desc = a.buildIds.length
-        ? (buildCards.length + a.loose.length ? fmt(buildCards.concat(a.loose)) : '') + ' (build' + (a.buildIds.length > 1 ? 's' : '') + ')'
+        ? fmt(buildCards) + ' as ' + (a.buildIds.length > 1 ? 'builds worth ' : 'a build worth ') +
+          buildWorth.join(' + ') + (a.loose.length ? ' + ' + fmt(a.loose) : '')
         : fmt(a.loose);
       addLog(g, 'capture', act(me, 'played', 'played') + ' ' + C.label(a.card) + ' and captured ' + (desc || '—') + '.');
       if (g.table.length === 0 && g.builds.length === 0) addLog(g, 'sweep', act(me, 'sweeps', 'sweep') + ' the table!');

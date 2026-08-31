@@ -1168,7 +1168,17 @@
     const who = g.players[g.turn].name;
     const bVal = (a.buildIdx != null && g.builds[a.buildIdx]) ? g.builds[a.buildIdx].value : a.value;
     switch (a.type) {
-      case 'capture':   return who + ': captured with ' + C.label(a.card) + '.';
+      case 'capture': {
+        /* builds enter the set at their WORTH — say so plainly */
+        const worth = (a.buildIds || []).map((i) => (g.builds[i] ? g.builds[i].value : null)).filter((v) => v != null);
+        const parts = [];
+        if (worth.length) parts.push('the ' + worth.join('+') + (worth.length > 1 ? '-builds' : '-build'));
+        if (a.loose && a.loose.length) {
+          const labels = a.loose.map((id) => C.label(id));
+          parts.push(labels.length > 3 ? labels.slice(0, 3).join(' ') + '…' : labels.join(' '));
+        }
+        return who + ': captured ' + (parts.join(' + ') || 'cards') + ' with ' + C.label(a.card) + '.';
+      }
       case 'build':
       case 'scaffold':
       case 'preg':      return who + ': built ' + a.value + '.';
