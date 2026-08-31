@@ -626,7 +626,6 @@ small { opacity: .75; }
 }
 #screen-game.p2 .area-box .build-val { width: 17px; height: 17px; font-size: 9.5px; top: -6px; right: -6px; }
 #screen-game.p2 .area-box .build-lock { font-size: 10px; }
-#screen-game.p2 .bz-cards .card { margin-left: calc(var(--card-w) * -0.62); }
 
 /* message zones: navy panels beside the area slots. Lines stack vertically —
    side-by-side would push words past the clip edge. */
