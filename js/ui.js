@@ -916,7 +916,9 @@
      the floating strip (3/4 hands) or MY bar (two hands). */
   function mkEndTurnBtn() {
     const canEnd = humanActions.some((a) => a.type === 'endturn');
-    const end = mkBtn(canEnd ? '✓ End Turn' : 'End Turn', (canEnd ? 'primary' : 'secondary') + ' small', () => {
+    /* no ✓ glyph in the label — on phones it renders as a green emoji; the
+       filled (ready) vs dimmed (waiting) style carries the state */
+    const end = mkBtn('End Turn', (canEnd ? 'primary' : 'secondary') + ' small', () => {
       Snd.click();
       if (!canEnd) {
         if (!g.turnUsed) toast('Play a card from your hand first — digs alone can\u2019t end a turn.');
@@ -1217,6 +1219,7 @@
     lastAction = (a.type === 'skip' || a.type === 'shiya') ? null : a;
     clearSelection();
     pendingConfirm = null;
+    humanActions = [];   // stale actions must not flash into the next player's ribbon
     coachMsg = (opts && opts.why) || null;
     if (a.type === 'capture') Snd.capture();
     else if (a.type === 'build' || a.type === 'augment' || a.type === 'preg') Snd.build();
