@@ -73,18 +73,20 @@
   function aiSpeed() { return parseInt(localStorage.getItem('sacassino.aiSpeed') || '900', 10); }
   const isHumanTurn = () => g && g.phase === 'play' && g.turn === HUMAN;
 
-  /* Card size — TWO HANDS: ten cards span the column width with each card
-     showing just enough of its neighbour to read the corner number (45% of
-     the card). The height formula (no opponent fan in the budget) is the
-     backstop for short screens. */
+  /* Card size — TWO HANDS: as big as the screen physically allows. The fans
+     overlap deeply (a 25% slice assumed here — the real overlap settles
+     deeper or shallower as needed to fill the row); the true ceilings are
+     the 4-column discard grid fitting edge to edge and the vertical budget
+     (five card-heights of table between the fixed bars and the ad strip). */
   function fitCards() {
     const n = R.DEAL[session.numPlayers].per;
     const col = $('screen-game');
     const availW = col.clientWidth - 24;
     if (session.numPlayers === 2) {
-      const wW = Math.floor((col.clientWidth - 16) / (1 + 9 * 0.45));
+      const wDeep = Math.floor((col.clientWidth - 16) / (1 + 9 * 0.25));
+      const wGrid = Math.floor((col.clientWidth - 16 - 21) / 4);
       const wH = Math.floor((col.clientHeight - 235) / (5 * 1.4));
-      const w = Math.max(52, Math.min(88, Math.min(wW, wH)));
+      const w = Math.max(52, Math.min(104, Math.min(wDeep, wGrid, wH)));
       document.documentElement.style.setProperty('--card-w', w + 'px');
       if (g) renderHand();   // the fan's overlap follows the card size
       return;
