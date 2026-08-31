@@ -429,9 +429,10 @@ small { opacity: .75; }
 
 /* --- select-then-confirm play: highlights + droppable slots --- */
 #table-cards .card { cursor: pointer; }
+/* a selected table card stays dead-centre in its slot — only the ivory ring
+   marks it, never a positional shift */
 .card.sel-table {
-  transform: translateY(-8px);
-  box-shadow: 0 0 0 3px rgba(244,239,226,.95), 0 6px 14px rgba(0,0,0,.4);
+  box-shadow: 0 0 0 4px rgba(244,239,226,.95), 0 3px 10px rgba(0,0,0,.4);
 }
 .build-box.selected, .pile-box.selected {
   border-color: var(--ivory);
