@@ -73,16 +73,16 @@
   function aiSpeed() { return parseInt(localStorage.getItem('sacassino.aiSpeed') || '900', 10); }
   const isHumanTurn = () => g && g.phase === 'play' && g.turn === HUMAN;
 
-  /* Card size — TWO HANDS: the mockup budget. Ten fan cards span the column
-     width exactly (a 390px phone lands on the mockup's 58px card); the height
-     formula (no opponent fan in the budget) is the backstop for short
-     screens. */
+  /* Card size — TWO HANDS: ten cards span the column width with each card
+     showing just enough of its neighbour to read the corner number (45% of
+     the card). The height formula (no opponent fan in the budget) is the
+     backstop for short screens. */
   function fitCards() {
     const n = R.DEAL[session.numPlayers].per;
     const col = $('screen-game');
     const availW = col.clientWidth - 24;
     if (session.numPlayers === 2) {
-      const wW = Math.floor((col.clientWidth - 16) / (1 + 9 * 0.6));
+      const wW = Math.floor((col.clientWidth - 16) / (1 + 9 * 0.45));
       const wH = Math.floor((col.clientHeight - 235) / (5 * 1.4));
       const w = Math.max(52, Math.min(88, Math.min(wW, wH)));
       document.documentElement.style.setProperty('--card-w', w + 'px');
