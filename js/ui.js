@@ -73,19 +73,20 @@
   function aiSpeed() { return parseInt(localStorage.getItem('sacassino.aiSpeed') || '900', 10); }
   const isHumanTurn = () => g && g.phase === 'play' && g.turn === HUMAN;
 
-  /* Card size — TWO HANDS: as big as the screen physically allows. The fans
-     overlap deeply (a 25% slice assumed here — the real overlap settles
-     deeper or shallower as needed to fill the row); the true ceilings are
-     the 4-column discard grid fitting edge to edge and the vertical budget
-     (five card-heights of table between the fixed bars and the ad strip). */
+  /* Card size — TWO HANDS: as big as the screen allows. The overlap runs as
+     deep as the locked sizes permit; the ceilings are the 4-column discard
+     grid fitting edge to edge and the vertical stack (five card-heights
+     between the bars and the ad) fitting EXACTLY — the reserve is the real
+     chrome, measured (the ad strip lives outside the game screen and is
+     therefore NOT subtracted here). */
   function fitCards() {
     const n = R.DEAL[session.numPlayers].per;
     const col = $('screen-game');
     const availW = col.clientWidth - 24;
     if (session.numPlayers === 2) {
       const wDeep = Math.floor((col.clientWidth - 16) / (1 + 9 * 0.25));
-      const wGrid = Math.floor((col.clientWidth - 16 - 21) / 4);
-      const wH = Math.floor((col.clientHeight - 235) / (5 * 1.4));
+      const wGrid = Math.floor((col.clientWidth - 16 - 15) / 4);
+      const wH = Math.floor((col.clientHeight - 175) / (5 * 1.4));
       const w = Math.max(52, Math.min(104, Math.min(wDeep, wGrid, wH)));
       document.documentElement.style.setProperty('--card-w', w + 'px');
       if (g) renderHand();   // the fan's overlap follows the card size
@@ -542,7 +543,7 @@
     area.innerHTML = '';
     const n = g.table.length;
     const cw = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--card-w')) || 70;
-    const ch = cw * 1.4 + 7;
+    const ch = cw * 1.4 + 5;
     let slots = [];
     if (g.numPlayers === 4) {
       /* FOUR HANDS — plus-shaped grid: 3 columns, no corner slots. The top
