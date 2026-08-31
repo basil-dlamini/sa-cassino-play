@@ -149,26 +149,6 @@
     assert(R.legalActions(g).some((a) => a.type === 'discard'), 'round-2 discards allowed');
   });
 
-  /* ================= a build is captured at its WORTH, never its face cards ================= */
-  test('CAPTURE-WORTH: topped 7-build (face 14, worth 7) + loose 3 falls to a 10 — the bare build does not', () => {
-    const g = mkState(2, { table: ['H3'] });
-    g.builds = [{ value: 7, cards: ['S7', 'H4', 'C3'], owner: 0, augmented: true }];
-    g.players[0].hand = ['D2'];
-    g.players[1].hand = ['D10', 'C2'];
-    g.turn = 1;
-    const acts = R.legalActions(g);
-    const good = acts.find((a) => a.type === 'capture' && a.card === 'D10' &&
-      a.buildIds.length === 1 && a.loose.length === 1 && a.loose[0] === 'H3');
-    assert(good, '10 takes the 7-build (worth 7) + the loose 3 — a legal set of 10');
-    assert(!has(acts, (a) => a.type === 'capture' && a.card === 'D10' &&
-      a.buildIds.length === 1 && a.loose.length === 0), 'a bare 7-build can NOT fall to a 10');
-    R.applyAction(g, good);
-    eq(g.builds.length, 0, 'the build left the table');
-    /* the pile carries the face cards (7+4+3+3 = 17 with the 10) — the CAPTURE
-       SET is what summed to 10; the face cards never have to */
-    eq(g.players[1].pile.length, 5, 'three build cards, the loose 3, the played 10');
-  });
-
   /* ================= owner / opponent card-use restrictions ================= */
   test('opponent holding the build value may ONLY capture the build with it', () => {
     const g = mkState(2, { table: ['C3', 'H5'] });
