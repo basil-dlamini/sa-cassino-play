@@ -603,6 +603,13 @@ small { opacity: .75; }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto;
 }
 #screen-game.p2 .nb-acts .btn { font-size: 12px; font-weight: 800; padding: 6px 10px; border-radius: 8px; white-space: nowrap; flex: 0 0 auto; }
+/* multiple move options: compact buttons so every choice + Cancel fits the
+   ribbon — smaller font, tighter padding, ellipsis as the last resort */
+#screen-game.p2 .nb-acts.multi { gap: 4px; max-width: 88%; }
+#screen-game.p2 .nb-acts.multi .btn {
+  font-size: 11px; padding: 5px 7px; border-radius: 7px;
+  min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis;
+}
 
 /* the middle becomes a vertical stack: their areas, the grid, my areas.
    Content pins to the TOP — centring split the leftover space into gaps

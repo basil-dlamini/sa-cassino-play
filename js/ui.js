@@ -1012,14 +1012,16 @@
     if (pendingConfirm && pendingConfirm.matches.length) {
       const m = pendingConfirm.matches;
       if (pendingConfirm.reminder) warn.appendChild(warnLine('rule-note', pendingConfirm.reminder));
-      const ahead = document.createElement('span');
-      ahead.className = 'ahead';
-      ahead.textContent = m.length === 1 ? actionTitle(m[0]) : 'Choose your move';
-      acts.appendChild(ahead);
-      if (tutorialMode && m.length === 1) warn.appendChild(warnLine('confirm-note', actionExplainer(m[0])));
       if (m.length === 1) {
+        const ahead = document.createElement('span');
+        ahead.className = 'ahead';
+        ahead.textContent = actionTitle(m[0]);
+        acts.appendChild(ahead);
+        if (tutorialMode) warn.appendChild(warnLine('confirm-note', actionExplainer(m[0])));
         acts.appendChild(mkBtn('Confirm', 'primary small', () => confirmAction(0)));
       } else {
+        /* several options: compact buttons, no caption — they must all fit */
+        acts.classList.add('multi');
         m.forEach((a, i) =>
           acts.appendChild(mkBtn(actionTitle(a), (i === 0 ? 'primary' : 'default') + ' small', () => confirmAction(i))));
       }
