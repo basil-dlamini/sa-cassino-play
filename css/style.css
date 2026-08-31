@@ -660,9 +660,11 @@ small { opacity: .75; }
   padding: 11px 8px 5px;
 }
 #screen-game.p2 #my-hand { justify-content: flex-end; min-height: calc(var(--card-w) * 1.4 + 6px); min-width: 0; }
-/* selection in the two-hand fan: a quiet lift — no scale, no leap over the
-   neighbours, nothing fades */
-#screen-game.p2 .card.in-hand.selected { transform: translateY(-10px); z-index: 5; }
+/* selection in the two-hand fan: the card slides towards the banner and
+   stays UNDER its overlapping neighbour — it must never cover it (z-index
+   auto keeps the fan's natural stacking; the lift is pure position) */
+#screen-game.p2 .card.in-hand.selected { transform: translateY(-10px); z-index: auto; }
+#screen-game.p2 .card.in-hand:hover { transform: translateY(-6px); z-index: auto; }
 
 /* the floating strip is retired in the two-hand game — its content lives in
    the bar (.nb-acts) and the message zones (.warn-zone) */
