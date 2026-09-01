@@ -61,6 +61,7 @@
   let coachMsg = null;         // the AI's last move, explained (tutorial)
   let oppNote = null;          // Sipho's last move, one line (two hands)
   let lastWinnerSeat = null;   // the last game's solo winner — the loser leads the rematch
+  let turnArmed = false;       // the human's moves are computed — the turn is LIVE
 
   function clearSelection() {
     selectedCard = null;
@@ -511,7 +512,7 @@
       }
       $('turn-text').textContent = turnText;
     }
-    myBar.classList.toggle('active', isHumanTurn() ||
+    myBar.classList.toggle('active', (isHumanTurn() && turnArmed) ||
       (g.phase === 'shiya' && g.shiyaPending.caller === HUMAN));
     // live score: my side's captured points vs theirs
     const teams = R.teamsOf(g) || g.players.map((p2) => [p2.id]);
@@ -799,21 +800,21 @@
     Snd.click();
   }
 
-  /* --- selection toggles --- */
+  /* --- selection toggles: nothing is selectable until the turn is LIVE --- */
   function toggleTableSel(id) {
-    if (!isHumanTurn() || humanBusy) return;   // loose cards pair with a hand card or found a cardless build
+    if (!isHumanTurn() || humanBusy || !turnArmed) return;   // loose cards pair with a hand card or found a cardless build
     if (tableSel.has(id)) tableSel.delete(id); else tableSel.add(id);
     Snd.click();
     afterSelectionChange();
   }
   function toggleBuildSel(idx) {
-    if (!isHumanTurn()) return;
+    if (!isHumanTurn() || !turnArmed) return;
     buildSel = buildSel === idx ? null : idx;
     Snd.click();
     afterSelectionChange();
   }
   function togglePileSel(seat) {
-    if (!isHumanTurn()) return;
+    if (!isHumanTurn() || !turnArmed) return;
     pileTopSel = pileTopSel === seat ? null : seat;
     Snd.click();
     afterSelectionChange();
@@ -821,7 +822,7 @@
 
   /* --- discard: tap an empty slot with a hand card selected --- */
   function tryDiscardTo(areaStr) {
-    if (!isHumanTurn() || !selectedCard || hasSideSelection()) return;
+    if (!isHumanTurn() || !turnArmed || !selectedCard || hasSideSelection()) return;
     const card = selectedCard;
     if (discardLegalFor(card)) {
       pendingConfirm = { matches: [{ type: 'discard', card }], discardArea: areaStr };
@@ -1043,6 +1044,7 @@
       if (tutorialMode && coachMsg) warn.appendChild(warnLine('coach', coachMsg));
       return;
     }
+    if (!turnArmed) return;   // the turn is not live yet — no controls appear
     /* the live confirmation: reminder + title in the bar, teaching in the zone */
     if (pendingConfirm && pendingConfirm.matches.length) {
       const m = pendingConfirm.matches;
@@ -1163,6 +1165,7 @@
     g = R.createGame({ numPlayers: n, players, dealer: session.dealer % n });
     clearSelection();
     lastAction = null; humanActions = [];
+    turnArmed = false;
     oppNote = null;
     tableSlots = {};          // fresh discard grid
     shiyaTick = null; shiyaOfferValue = null; clearTimeout(shiyaTimer);
@@ -1189,6 +1192,7 @@
       return;
     }
     humanActions = R.legalActions(g);
+    turnArmed = true;             // the turn is live — selections and controls may open
     if (!humanActions.length) { reportDeadlock(); return; }
     pendingConfirm = null;
     selectedCard = null;
@@ -1261,6 +1265,7 @@
     clearSelection();
     pendingConfirm = null;
     humanActions = [];   // stale actions must not flash into the next player's ribbon
+    turnArmed = false;   // and the incoming turn is not live until its moves are computed
     coachMsg = (opts && opts.why) || null;
     if (a.type === 'capture') Snd.capture();
     else if (a.type === 'build' || a.type === 'augment' || a.type === 'preg') Snd.build();
@@ -1277,7 +1282,7 @@
         setTimeout(() => openShiyaOffer(v), 450);
       }
     }
-    setTimeout(tick, 320);
+    setTimeout(tick, 200);
   }
 
   /* ---------------- Shiya offer (partner completed a build) ---------------- */
@@ -1521,7 +1526,7 @@
     });
     $('my-hand').addEventListener('click', (e) => {
       const el = e.target.closest('.card');
-      if (!el || !isHumanTurn() || humanBusy) return;
+      if (!el || !isHumanTurn() || humanBusy || !turnArmed) return;
       if (g.turnUsed) {           // the turn's one hand card is already spent
         if (tutorialMode) toast('You already used your hand card this turn — dig or end the turn.');
         return;
