@@ -26,7 +26,8 @@
   const personalityOf = (key) => (AI && AI.PERSONALITIES && AI.PERSONALITIES[key]) || null;
 
   /* ---------------- persistent session ---------------- */
-  function freshSession() { return { numPlayers: 2, mode: 'competitive', dealer: 1, wins: [0, 0, 0, 0], games: 0 }; }
+  /* the deal is drawn at random when a session begins — no seat is born to lead */
+  function freshSession() { return { numPlayers: 2, mode: 'competitive', dealer: Math.floor(Math.random() * 4), wins: [0, 0, 0, 0], games: 0 }; }
   function loadSession() {
     try {
       const s = JSON.parse(localStorage.getItem('sacassino.session'));
@@ -59,6 +60,7 @@
   let tutorialMode = false;    // coach on: guidance, hints, AI explanations
   let coachMsg = null;         // the AI's last move, explained (tutorial)
   let oppNote = null;          // Sipho's last move, one line (two hands)
+  let lastWinnerSeat = null;   // the last game's solo winner — the loser leads the rematch
 
   function clearSelection() {
     selectedCard = null;
@@ -276,13 +278,19 @@
 
   /* ---------------- opponent zone (rendered per mode) ---------------- */
   const SEAT_EMBLEM = ['♠', '♥', '♣', '♦'];
+  /* the ribbon chip is the PLAYING ORDER of this deal: whoever moves first
+     is 1, the rotation follows — not the chair number */
+  function playOrder(g2, seat) {
+    const first = (g2.dealer + 1) % g2.numPlayers;
+    return ((seat - first + g2.numPlayers) % g2.numPlayers) + 1;
+  }
   function nameBar(g2, seat, opts) {
     const bar = document.createElement('div');
     bar.className = 'namebar' + (opts.me ? ' me' : '');
     const p = g2.players[seat];
     bar.innerHTML = '<span class="nb-emblem">' + SEAT_EMBLEM[seat] + '</span><span class="nb-name">' +
       escapeHtml(p.name) + '</span><span class="nb-emblem">' + SEAT_EMBLEM[seat] + '</span>' +
-      '<span class="nb-order">' + (seat + 1) + '</span>';
+      '<span class="nb-order">' + playOrder(g2, seat) + '</span>';
     if (g2.phase === 'play' && g2.turn === seat) bar.classList.add('active');
     return bar;
   }
@@ -490,7 +498,7 @@
       /* the two-hand bar carries its own action cluster — filled by
          renderActionPanel2 (Confirm/Cancel or End Turn) */
       myBar.innerHTML = '<span class="nb-emblem">♠</span><span class="nb-name">YOU</span>' +
-        '<span class="nb-emblem">♠</span><span class="nb-order">1</span>' +
+        '<span class="nb-emblem">♠</span><span class="nb-order">' + playOrder(g, HUMAN) + '</span>' +
         '<span class="nb-acts" id="bar-acts"></span>';
       /* Sipho's message zone: what he is doing, or what he just did */
       const ow = $('opp-warn');
@@ -498,7 +506,8 @@
     } else {
       if (!$('turn-text')) {
         myBar.innerHTML = '<span id="turn-text"></span><span class="nb-emblem">♠</span>' +
-          '<span class="nb-name">YOU</span><span class="nb-emblem">♠</span><span class="nb-order">1</span>';
+          '<span class="nb-name">YOU</span><span class="nb-emblem">♠</span><span class="nb-order">' +
+          playOrder(g, HUMAN) + '</span>';
       }
       $('turn-text').textContent = turnText;
     }
@@ -1151,7 +1160,7 @@
     tutorialMode = session.mode === 'tutorial';
     const players = [{ name: 'You', isHuman: true }];
     for (let i = 1; i < n; i++) players.push(Object.assign({}, AI_SEATS[i], { isHuman: false }));
-    g = R.createGame({ numPlayers: n, players, dealer: session.dealer });
+    g = R.createGame({ numPlayers: n, players, dealer: session.dealer % n });
     clearSelection();
     lastAction = null; humanActions = [];
     oppNote = null;
@@ -1359,7 +1368,11 @@
 
   function showResults(res) {
     const box = $('results-body');
-    const verb = (res.winners.length > 1 || res.winners[0] === 'You' || res.winners[0].indexOf('&') >= 0) ? ' win!' : ' wins!';
+    /* rematch is a two-hand privilege (the lobby flow keeps 3/4-hand tables
+       turning); the loser of the last game always plays first — the winner deals */
+    const soloWinner = res.stats.find((t) => res.winners.includes(t.name) && t.members.length === 1);
+    lastWinnerSeat = soloWinner ? soloWinner.members[0] : null;
+    $('btn-again').classList.toggle('hidden', g.numPlayers !== 2);    const verb = (res.winners.length > 1 || res.winners[0] === 'You' || res.winners[0].indexOf('&') >= 0) ? ' win!' : ' wins!';
     let html = res.tie
       ? '<div class="results-banner tie">It&rsquo;s a tie — ' + escapeHtml(res.winners.join(' and ')) + ' share it!</div>'
       : '<div class="results-banner win">' + escapeHtml(res.winners[0]) + verb + '</div>';
@@ -1570,7 +1583,11 @@
 
     $('btn-again').addEventListener('click', () => {
       $('modal-results').classList.add('hidden');
-      session.dealer = (session.dealer + 1) % session.numPlayers;
+      if (session.numPlayers === 2 && lastWinnerSeat != null) {
+        session.dealer = lastWinnerSeat;   // the winner deals — the loser plays first
+      } else {
+        session.dealer = (session.dealer + 1) % session.numPlayers;
+      }
       saveSession(); Snd.click(); newGame();
     });
     $('btn-results-menu').addEventListener('click', () => {
