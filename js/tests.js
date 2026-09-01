@@ -98,17 +98,23 @@
     assert(sc, 'scaffold 7+2 offered');
     R.applyAction(g, sc);
     eq(g.builds[0].cards.join(), 'C9,H7,S2', 'base 9 beneath the founding set');
-    // preg: raise my 6-build to 8 while an 8 lies loose
+    // preg: a HAND CARD ALONE raises the ENEMY 6-build to 8 (6+2), an 8 lies loose
     const g2 = mkState(2, { table: ['C8'] });
-    g2.builds = [{ value: 6, cards: ['H4', 'S2'], owner: 0, augmented: false }];
+    g2.builds = [{ value: 6, cards: ['H4', 'S2'], owner: 1, augmented: false }];
     g2.players[0].hand = ['D2', 'D8'];
     g2.players[1].hand = ['C3'];
     const pg = R.legalActions(g2).find((a) => a.type === 'preg' && a.value === 8);
-    assert(pg, 'preg 6→8 offered');
+    assert(pg, 'preg 6→8 offered (enemy build, hand card alone)');
     R.applyAction(g2, pg);
     eq(g2.builds[0].value, 8, 'raised');
+    eq(g2.builds[0].owner, 0, 'now the pregger\u2019s');
     assert(g2.builds[0].cards.includes('C8'), 'the loose 8 joined');
     eq(g2.builds[0].cards[0], 'C8', 'at the very bottom, as the base');
+    // own-side preg is NEVER offered — the law binds every player equally
+    const g3 = mkState(2, { table: ['C8'] });
+    g3.builds = [{ value: 6, cards: ['H4', 'S2'], owner: 0, augmented: false }];
+    g3.players[0].hand = ['D2', 'D8'];
+    assert(!has(R.legalActions(g3), (a) => a.type === 'preg'), 'you cannot preg your own build');
   });
 
   test('BASE (Shiya exception): a Shiya build does NOT absorb a loose base', () => {
@@ -262,6 +268,126 @@
     assert(!has(R.legalActions(g), (a) => a.type === 'preg'), 'own-build owner cannot preg an enemy build');
   });
 
+  /* ================= the v6 table law (as taught by the owner) ================= */
+  test('v6 CAPTURE: a build NEVER joins a sum — only its exact value takes it', () => {
+    // the owner's original report, now law: topped 7-build + loose 3 vs a 10
+    const g = mkState(2, { table: ['H3'] });
+    g.builds = [{ value: 7, cards: ['S7', 'H4', 'C3'], owner: 0, augmented: true }];
+    g.players[0].hand = ['D2'];
+    g.players[1].hand = ['D10', 'C2'];
+    g.turn = 1;
+    assert(!has(R.legalActions(g), (a) => a.type === 'capture' && a.card === 'D10'),
+      'the 10 may not take the 7-build + 3 — builds never enter a sum');
+    // a held 7 takes the build alone — never the loose 3 with it
+    g.players[1].hand = ['D7', 'C2'];
+    const cap = R.legalActions(g).find((a) => a.type === 'capture' && a.card === 'D7');
+    assert(cap, 'the exact 7 captures the build');
+    eq(cap.buildIds.length, 1, 'the build alone');
+    eq(cap.loose.length, 0, 'no floor cards swept along');
+    R.applyAction(g, cap);
+    assert(g.table.includes('H3'), 'the loose 3 stays on the table');
+  });
+
+  test('v6 CAPTURE: floor cards fall ONE SET per capture — never two sets at once', () => {
+    const g = mkState(2, { table: ['H2', 'H5', 'C3', 'C4'] });
+    g.players[0].hand = ['D7'];
+    g.players[1].hand = ['C9'];
+    const caps = R.legalActions(g).filter((a) => a.type === 'capture' && a.card === 'D7');
+    assert(caps.some((a) => a.loose.length === 2 && a.loose.includes('H2') && a.loose.includes('H5')), '2+5 offered');
+    assert(caps.some((a) => a.loose.length === 2 && a.loose.includes('C3') && a.loose.includes('C4')), '3+4 offered');
+    assert(!caps.some((a) => a.loose.length === 4), 'all four in ONE capture — never two sets at once');
+    caps.forEach((a) => eq(a.loose.reduce((n, id) => n + C.rank(id), 0), 7, 'set sums to the card'));
+  });
+
+  test('v6 PREG: a HAND CARD ALONE — floor and pile cards never join', () => {
+    const g = mkState(2, { table: ['C2'] });
+    g.builds = [{ value: 6, cards: ['H4', 'S2'], owner: 1, augmented: false }];
+    g.players[0].hand = ['D2', 'D8', 'H9'];
+    const pregs = R.legalActions(g).filter((a) => a.type === 'preg');
+    assert(pregs.length > 0, 'preg offered (the held 2 raises 6 to 8)');
+    pregs.forEach((a) => eq((a.loose || []).length, 0, 'no floor cards in a preg'));
+    assert(pregs.every((a) => a.value === 8), 'landing = target + hand card only');
+  });
+
+  test('v6 PREG landings: merge into own side, partner merge, virtual restart, silence on enemy-live', () => {
+    // B: landing on MY OWN live 7 folds the enemy 6 into it and locks it
+    const g = mkState(2);
+    g.builds = [
+      { value: 6, cards: ['H4', 'S2'], owner: 1, augmented: false },
+      { value: 7, cards: ['H3', 'S4'], owner: 0, augmented: false }
+    ];
+    g.players[0].hand = ['S1', 'H9'];           // the ace raises 6 to 7 — my own live value
+    g.players[1].hand = ['C9'];
+    const m = R.legalActions(g).find((a) => a.type === 'preg' && a.value === 7);
+    assert(m && m.mergeInto != null, 'the merge is offered');
+    R.applyAction(g, m);
+    eq(g.builds.length, 1, 'the 6 is gone — one build stands');
+    eq(g.builds[0].value, 7, 'the 7 survived');
+    eq(g.builds[0].owner, 0, 'still mine');
+    eq(g.builds[0].augmented, true, 'the merge locked it');
+    assert(g.builds[0].cards.includes('H4') && g.builds[0].cards.includes('S1'),
+      'absorbed the enemy cards and the ace');
+
+    // E: the landing value live on the ENEMY side — the game offers NOTHING
+    const g2 = mkState(4);
+    g2.builds = [
+      { value: 6, cards: ['H4', 'S2'], owner: 1, augmented: false },   // enemy target
+      { value: 7, cards: ['H3', 'S4'], owner: 3, augmented: false }    // enemy-live 7
+    ];
+    g2.players[0].hand = ['S1', 'H9'];
+    g2.turn = 0;
+    assert(!has(R.legalActions(g2), (a) => a.type === 'preg' && a.value === 7),
+      'silence: no preg onto an enemy-live value');
+
+    // C: landing on the PARTNER's live 7 folds into his build
+    const g3 = mkState(4);
+    g3.builds = [
+      { value: 6, cards: ['H4', 'S2'], owner: 1, augmented: false },
+      { value: 7, cards: ['H3', 'S4'], owner: 2, augmented: false }
+    ];
+    g3.players[0].hand = ['S1', 'H9'];
+    g3.turn = 0;
+    const c = R.legalActions(g3).find((a) => a.type === 'preg' && a.value === 7);
+    assert(c && c.mergeInto != null, 'partner merge offered');
+    R.applyAction(g3, c);
+    eq(g3.builds.length, 1, 'merged into the partner\u2019s 7');
+    eq(g3.builds[0].owner, 2, 'the partner\u2019s build');
+
+    // D: partner VIRTUAL restart — his earlier 7 returns as HIS virgin build
+    const g4 = mkState(4);
+    g4.builds = [{ value: 6, cards: ['H4', 'S2'], owner: 1, augmented: false }];
+    g4.players[2].virtual[7] = true;            // partner virtually owns 7
+    g4.players[0].hand = ['S1', 'H9'];
+    g4.turn = 0;
+    const d = R.legalActions(g4).find((a) => a.type === 'preg' && a.value === 7);
+    assert(d && d.owner === 2, 'restart registered to the partner');
+    R.applyAction(g4, d);
+    eq(g4.builds[0].owner, 2, 'his build');
+    eq(g4.builds[0].value, 7, 'his value');
+    eq(g4.builds[0].augmented, false, 'virgin — preggable again');
+  });
+
+  test('v6 REGISTRATION: one build per player in 2 hands — no scaffold, no second build', () => {
+    const g = mkState(2, { table: ['C3', 'H4'] });
+    g.builds = [{ value: 8, cards: ['H3', 'S5'], owner: 0, augmented: false }];
+    g.players[0].hand = ['D7', 'C7'];
+    assert(!has(R.legalActions(g), (a) => a.type === 'scaffold'), 'no scaffolding while owning a build');
+    assert(!has(R.legalActions(g), (a) => a.type === 'build'), 'no second self-made build');
+  });
+
+  test('v6 SHIYA: a caller holding two builds gets no window — three is impossible', () => {
+    const g = mkState(4, { table: ['H6'] });
+    g.builds = [
+      { value: 5, cards: ['H2', 'S3'], owner: 0, augmented: false },
+      { value: 9, cards: ['C3', 'S6'], owner: 0, augmented: false }
+    ];
+    g.players[0].hand = ['D6'];        // the would-be caller holds the 6
+    g.players[2].hand = ['S6', 'H9'];  // partner captures with the 6
+    g.turn = 2;
+    R.applyAction(g, R.legalActions(g).find((a) => a.type === 'capture' && a.card === 'S6'));
+    assert(g.phase === 'play', 'no Shiya window for a caller already holding two');
+  });
+
   /* ================= captures incl. builds & partner rule ================= */
   test('in 4 hands you cannot capture your own partner\'s build', () => {
     const g = mkState(4, { table: [] });
@@ -397,11 +523,11 @@
   });
 
   /* ================= scaffolds & the resolution law (v4) ================= */
-  test('SCENARIO A: scaffold 7+A → dig Sipho\u2019s 8 → capture with the held 8 → end turn', () => {
+  test('SCENARIO A (v6 law): scaffold 7+A — the stack takes NO additions; capture ends it', () => {
     const g = mkState(2, { table: ['H7', 'S1'] });
     g.players[0].hand = ['D8', 'H5'];
     g.players[1].hand = ['C9'];
-    g.players[1].pile = ['H9', 'C8'];       // Sipho's top: 8♣ — diggable
+    g.players[1].pile = ['H9', 'C8'];       // Sipho's top: 8♣
     // fresh turn: the cardless scaffold is offered (8 held)
     const sc = R.legalActions(g).find((a) => a.type === 'scaffold' && a.value === 8);
     assert(sc, 'scaffold 8 from 7+A offered');
@@ -412,22 +538,20 @@
     eq(g.openedCardless, true, 'opened cardless');
     eq(g.turnUsed, false, 'no hand card spent');
     assert(!has(R.legalActions(g), (a) => a.type === 'endturn'), 'no end turn with scaffold live');
-    // hand is LOCKED: only capture/top of the scaffold — not the 5
+    // hand is LOCKED: only capture/graduation of the scaffold — not the 5
     const acts = R.legalActions(g);
     assert(!acts.some((a) => a.card === 'H5'), 'other hand cards locked');
-    // dig Sipho's 8♣ (cardless)
-    const dig = acts.find((a) => a.type === 'topdig' && a.victim === 1);
-    assert(dig, 'pile-top dig offered');
-    R.applyAction(g, dig);
-    assert(g.builds[0].cards.includes('C8'), 'dug card joined the build');
-    eq(g.builds[0].augmented, true, 'dig locked the build');
-    // capture the scaffold with the held 8
-    const cap = R.legalActions(g).find((a) => a.type === 'capture' && a.card === 'D8');
-    assert(cap, 'capture of the scaffold offered');
+    // the stack is unregistered: it takes NO additions — not even Sipho's 8♣
+    assert(!acts.some((a) => a.type === 'topdig'), 'no dig into a scaffold');
+    assert(!acts.some((a) => a.type === 'caugment' || a.type === 'efold'), 'no folds into a scaffold');
+    // capture the scaffold with the held 8 — the whole stack, one set
+    const cap = acts.find((a) => a.type === 'capture' && a.card === 'D8');
+    assert(cap && cap.scaffoldCap, 'capture of the scaffold offered');
     R.applyAction(g, cap);
     eq(g.builds.length, 0, 'scaffold captured (gone)');
-    eq(g.players[0].pile.length, 4, '7, A, the dug 8 — and the played 8 on top');
+    eq(g.players[0].pile.length, 3, '7, A — and the played 8 on top');
     eq(g.resolved, true, 'capture settled the cardless debt');
+    eq(g.players[1].pile.length, 2, 'Sipho\u2019s pile untouched — the dig is gone from the law');
     assert(has(R.legalActions(g), (a) => a.type === 'endturn'), 'end turn now offered');
     R.applyAction(g, { type: 'endturn' });
     eq(g.turn, 1, 'turn passes');
@@ -860,6 +984,40 @@
                 assert(R.sameSide(g, b.owner, g.turn), 'pile-top dig into an enemy build');
                 assert(!R.sameSide(g, a.victim, g.turn), 'pile-top dig from a partner');
                 assert(C.rank(top) === b.value, 'pile top does not match the build value');
+                assert(!b.scaffold, 'pile-top dig into a scaffold');
+              }
+              if (a.type === 'capture') {
+                /* the v6 capture law: a build falls ONLY to its exact value,
+                   floor cards fall ONE SET per capture — never mixed */
+                if (a.scaffoldCap) {
+                  assert(g.builds[a.buildIds[0]].scaffold, 'scaffoldCap on a non-scaffold');
+                  eq(a.loose.length, 0, 'scaffold capture with loose cards');
+                } else if (a.buildIds.length) {
+                  eq(a.buildIds.length, 1, 'a capture takes at most one build');
+                  eq(a.loose.length, 0, 'a build capture never sweeps floor cards');
+                  eq(g.builds[a.buildIds[0]].value, C.rank(a.card), 'build taken by a NON-matching card');
+                } else {
+                  assert(a.loose.length >= 1, 'empty capture offered');
+                  eq(a.loose.reduce((n, id) => n + C.rank(id), 0), C.rank(a.card),
+                    'floor set does not sum to the card');
+                }
+              }
+              if (a.type === 'preg') {
+                /* a hand card alone, an enemy virgin target, the landing decides */
+                eq((a.loose || []).length, 0, 'preg using floor cards');
+                const t = g.builds[a.buildIdx];
+                assert(!R.sameSide(g, t.owner, g.turn), 'own-side preg offered');
+                assert(!t.augmented && !t.scaffold, 'preg on a non-virgin target');
+                if (a.mergeInto != null) {
+                  const live = g.builds[a.mergeInto];
+                  assert(R.sameSide(g, live.owner, g.turn), 'merge into an enemy build');
+                  eq(live.value, a.value, 'merge landing value mismatch');
+                } else {
+                  eq(t.value + C.rank(a.card), a.value, 'preg arithmetic broken');
+                }
+              }
+              if (a.type === 'caugment' || a.type === 'efold') {
+                assert(!g.builds[a.buildIdx].scaffold, 'fold into a scaffold');
               }
             }
             // scaffolds never coexist with a spent hand card (they resolve first)
@@ -890,7 +1048,18 @@
                 }
               }
             }
-            const owned = g.builds.filter((b) => b.owner === g.turn).length;
+            /* the registration law: no two builds ever share a value, and the
+               per-player caps hold (one build; two in 4 hands, Shiya-given) */
+            const valSeen = {};
+            for (const b of g.builds) {
+              assert(!valSeen[b.value], 'two builds share a value');
+              valSeen[b.value] = true;
+            }
+            for (const p of g.players) {
+              const reg = g.builds.filter((b) => b.owner === p.id && !b.scaffold).length;
+              assert(reg <= (g.numPlayers === 4 ? 2 : 1), 'build cap broken');
+            }
+            const owned = g.builds.filter((b) => b.owner === g.turn && !b.scaffold).length;
             if (owned >= 2) {
               forcesSeen++;
               const handActs = acts.filter((a) => !['topdig', 'caugment', 'scaffold', 'endturn'].includes(a.type));

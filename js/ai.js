@@ -252,7 +252,12 @@
       }
       case 'basetop': return n + ': top the loose ' + C.rank(a.base) + ' — a live build.';
       case 'endturn': return '';
-      case 'preg': return n + ': preg the ' + g.builds[a.buildIdx].value + '-build up to ' + a.value + '.';
+      case 'preg': {
+        const b = g.builds[a.buildIdx];
+        return a.mergeInto != null
+          ? n + ': preg the ' + b.value + '-build into the ' + a.value + '-build — absorbed and locked.'
+          : n + ': preg the ' + b.value + '-build up to ' + a.value + '.';
+      }
       case 'discard': return n + ': discard ' + C.label(a.card) + ' — it gives the opponents the least.';
       case 'shiya': return n + ': call SHIYA — take the build!';
       case 'skip': return n + ': pass.';

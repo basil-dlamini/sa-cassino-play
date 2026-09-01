@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>South African Cassino</title>
-<link rel="stylesheet" href="css/style.css?v=31">
+<link rel="stylesheet" href="css/style.css?v=33">
 </head>
 <body>
 
@@ -51,16 +51,16 @@
     <h2>How to Play</h2>
     <p><b>The deck:</b> 40 cards — Aces count 1, number cards count face value. No Jacks, Queens or Kings.</p>
     <p><b>The goal:</b> capture cards, then win the scoring categories at the end. 11 points are in play for 2 players and for the 4-player pairs game; 7 points for 3 singles. <b>The four-hand game is always played in pairs</b> — opposite players are partners.</p>
-    <p><b>The turn:</b> a turn is a series of moves and only ends when you press <b>End Turn</b>. Exactly <b>one move per turn may use a card from your hand</b> — a dig that folds in an opponent's pile top uses no hand card and may come before or after it. You cannot end the turn before your hand card has been played.</p>
+    <p><b>The turn:</b> a turn is a series of moves and only ends when you press <b>End Turn</b>. Exactly <b>one move per turn may use a card from your hand</b> — digs, folds and scaffold foundings use no hand card and may come before or after it. You cannot end the turn before your hand card has been played.</p>
     <ul>
-      <li><b>Capture</b> — take discard-area cards (and builds) whose values sum exactly to your card. A build belongs to the player who made it: only that player (or an opponent) may capture it — never their partner.</li>
-      <li><b>Build</b> — play a card onto discard-area cards and declare the total. The build's owner must hold a card of that value. If your partner still "virtually owns" a value, you may even build it for them without holding it yourself.</li>
-      <li><b>Top / Augment</b> — grow a build without changing its value: top it with an equal card, add a hand card plus discard-area cards that complete the value, <b>double-dig</b> — play a hand card matching an opponent's pile top and fold both into a build of double that value — or <b>pile-top dig</b> — fold the matching top card of an opponent's pile straight into a live own-side build of the same value, using no hand card at all. Only your own side may augment; the owner needs a spare capture card to top. Once augmented, a build's value locks.</li>
-      <li><b>Preg</b> — raise an unaugmented build to a higher value by adding a card (plus discard cards) while holding the new value. An enemy build you preg becomes yours.</li>
-      <li><b>Discard</b> — drop a card into the discard area (the middle). While any build is live, cards of its value may NOT be discarded by anyone — capture, top, dig or keep them. In the two-hand game's first round, a player with a live build cannot discard at all.</li>
-      <li><b>Shiya</b> (pairs only) — when your partner captures, you may call "leave it": the capture turns into a build in YOUR area. Ask via the tick box when they build, or in the 3-second window after any capture. Owning two builds then forces you to capture one on your next turn.</li>
+      <li><b>Capture</b> — take <b>one set</b> of discard-area cards whose values sum exactly to your card — or take a <b>build</b> with a card of exactly its value. A build is never part of a sum: a 7-build falls only to a 7, never to a 10 padded with table cards. The game takes exactly what you highlighted — nothing more.</li>
+      <li><b>Build</b> — play a hand card onto discard-area cards and declare the total. The build registers to its owner (who must hold a card of that value) and stands in their area. No two live builds share a value, and each player holds one build (in pairs, briefly two — the second only via Shiya, and one must be captured before that turn ends).</li>
+      <li><b>Top / Augment</b> — grow your own side's build without changing its value: top it with an equal card, or fold table cards in. A hand card never enters an opponent's build. Once augmented, a build's value locks forever.</li>
+      <li><b>Preg</b> — raise an <b>opponent's</b> unaugmented build with a <b>hand card alone</b> (never your own build, never a partner's, never with table cards). If the new value is free the build becomes yours; if your own side already holds that value live, the enemy build folds into it and it locks; if your partner virtually owns the value, the build restarts as his.</li>
+      <li><b>Scaffold</b> — found a stack from table cards alone, of a value you hold. It is <b>not</b> a build: it stands in the discard area, registered to nobody, and must be <b>captured</b> (with your held value) or <b>topped into a live build</b> before the turn ends. A base card of the value folds beneath automatically; founding with an opponent's pile top requires that base.</li>
+      <li><b>Discard</b> — drop a card into the discard area. While any build is live, cards of its value may NOT be discarded — capture, top, or keep them. In the two-hand game's first round, a player with a live build cannot discard at all.</li>
+      <li><b>Shiya</b> (pairs only) — when your partner captures and you hold the matching value, you may call "leave it": the captured set becomes a <b>live build registered to you</b>, standing in your build area.</li>
     </ul>
-    <p><b>Steal:</b> after any capture you may take the top card of an opponent's pile if it matches the value you just played — never from a partner.</p>
     <p><b>End of the game:</b> when the stock and all hands are empty, the last player who captured sweeps any leftover table cards. Then score:</p>
     <ul class="score-list">
       <li>Most cards — 2 pts &nbsp;·&nbsp; Most spades — 2 pts <small>(2-player / partnership games only)</small></li>
@@ -207,12 +207,12 @@ window.addEventListener('unhandledrejection', function (e) {
 });
 </script>
 
-<script src="js/cards.js?v=31"></script>
-<script src="js/rules.js?v=31"></script>
-<script src="js/ai.js?v=31"></script>
-<script src="js/ads.js?v=31"></script>
-<script src="js/audio.js?v=31"></script>
-<script src="js/ui.js?v=31"></script>
+<script src="js/cards.js?v=33"></script>
+<script src="js/rules.js?v=33"></script>
+<script src="js/ai.js?v=33"></script>
+<script src="js/ads.js?v=33"></script>
+<script src="js/audio.js?v=33"></script>
+<script src="js/ui.js?v=33"></script>
 <script>UI.init();</script>
 </body>
 </html>

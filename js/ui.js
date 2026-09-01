@@ -268,7 +268,7 @@
     const row = document.createElement('div');
     row.className = 'area-row';
     const slots = R.maxSlots(g);
-    const owned = g.builds.filter((b) => b.owner === seat);
+    const owned = g.builds.filter((b) => b.owner === seat && !b.scaffold);
     row.appendChild(pileEl(seat));
     for (let i = 0; i < slots; i++) row.appendChild(buildZoneEl(seat, owned[i] || null));
     return row;
@@ -391,7 +391,7 @@
       theirs.appendChild(pileEl(1));
       {
         const slots = R.maxSlots(g);
-        const owned = g.builds.filter((b) => b.owner === 1);
+        const owned = g.builds.filter((b) => b.owner === 1 && !b.scaffold);
         for (let i = 0; i < slots; i++) theirs.appendChild(buildZoneEl(1, owned[i] || null));
       }
       oppSide.appendChild(theirs);
@@ -404,7 +404,7 @@
     mine.className = 'area-row';
     {
       const slots = R.maxSlots(g);
-      const owned = g.builds.filter((b) => b.owner === HUMAN);
+      const owned = g.builds.filter((b) => b.owner === HUMAN && !b.scaffold);
       for (let i = 0; i < slots; i++) mine.appendChild(buildZoneEl(HUMAN, owned[i] || null));
       mine.appendChild(pileEl(HUMAN));
     }
@@ -431,7 +431,7 @@
   function cornerTrio(seat, corner) {
     const trio = document.createElement('div');
     trio.className = 'trio trio-' + corner;
-    const owned = g.builds.filter((b) => b.owner === seat);
+    const owned = g.builds.filter((b) => b.owner === seat && !b.scaffold);
     const place = TRIO_PLACE[corner];
     const pile = pileEl(seat);
     const b1 = buildZoneEl(seat, owned[0] || null);
@@ -527,11 +527,14 @@
      slot (opening table cards, AI discards) fill free slots in reading order. */
   function assignSlots(slots) {
     const live = new Set(g.table);
+    for (const sc of g.builds) {
+      if (sc.scaffold) live.add(sc.cards[sc.cards.length - 1]);   // scaffold anchors hold their slots
+    }
     for (const k of Object.keys(tableSlots)) if (!live.has(k)) delete tableSlots[k];
     const occupied = new Set(Object.values(tableSlots));
     const free = slots.filter((a) => !occupied.has(a));
     let fi = 0;
-    for (const id of g.table) {
+    for (const id of live) {
       if (tableSlots[id]) continue;
       tableSlots[id] = free[fi++];
     }
@@ -585,6 +588,26 @@
         el.style.gridArea = s;
       }
       area.appendChild(el);
+    }
+    /* the scaffold: an UNREGISTERED stack standing in the discard area —
+       the founding cards slid together, the base beneath them all. Tapping
+       the stack selects it (for its capture, or its graduation by topping) */
+    const scBuild = g.builds.find((b) => b.scaffold);
+    if (scBuild) {
+      const anchor = scBuild.cards[scBuild.cards.length - 1];
+      if (!tableSlots[anchor]) tableSlots[anchor] = slots[0];
+      const z = document.createElement('div');
+      z.className = 'area-box build-box has-build scaffold';
+      z.dataset.idx = g.builds.indexOf(scBuild);
+      z.style.gridArea = tableSlots[anchor];
+      const el = cardEl(anchor);
+      el.style.boxShadow = stackShadow(scBuild.cards.length);
+      z.appendChild(el);
+      const badge = document.createElement('span');
+      badge.className = 'build-val';
+      badge.textContent = scBuild.value;
+      el.appendChild(badge);
+      area.appendChild(z);
     }
   }
 

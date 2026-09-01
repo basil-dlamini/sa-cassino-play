@@ -1,42 +1,48 @@
-/* rules.js — South African Cassino rules engine (v3: multi-move turns).
+/* rules.js — South African Cassino rules engine (v6: the owner's table law).
    Pure logic, no DOM — everything legal or illegal is decided here.
 
-   THE TURN (v3): a turn is a SEQUENCE of moves, ended by the player's
-   explicit END TURN. Exactly ONE move per turn may use a card from the
-   hand. No-hand-card moves — DIGS — may come before or after it:
-   - PILE-TOP DIG: fold the top card of an opponent's capture pile into a
-     live own-side build of the SAME value (10 into a 10-build). No hand
-     card; the build becomes augmented (locked).
-   The turn may not be ended until the one hand-card move has been made.
+   THE TABLE LAW (as taught by the owner):
+   - CAPTURE: a registered build falls ONLY to a card of its exact value —
+     never as part of a sum. Floor cards fall ONE SET per capture, the set
+     summing exactly to the played card. Never a build mixed into a sum,
+     never two sets in one capture, and the game never takes anything the
+     player did not highlight.
+   - PREG: a HAND CARD ALONE raises an ENEMY's virgin build (never your own,
+     never a partner's). The landing decides: free value → new virgin build
+     owned by the pregger (who must hold the value); own side's live value →
+     the enemy build folds into it and it locks; partner's virtual value →
+     restarted as the partner's virgin build; enemy-live value → not offered.
+   - SCAFFOLD: an UNREGISTERED construct standing in the discard area. Founded
+     cardless from floor cards (a loose base of the value joins beneath;
+     dig-founding an opponent's pile top REQUIRES that base), it owes same-
+     turn resolution: capture with the held value, or graduate by topping
+     (only while owning no registered build) into a real, registered build.
+   - REGISTRATION: no two registered builds share a value, table-wide. A
+     player owns at most ONE registered build (TWO in four hands, and the
+     second is temporary — the force demands capturing one before the turn
+     may end; the loop makes a third impossible).
+   - SHIYA (4 hands): the caller's held value converts a partner's capture
+     into a REGISTERED live build standing in the CALLER's area.
 
-   TERMS (as spoken at the table):
-   - DISCARD: play a card into the discard area (middle of the table).
-   - TOP / AUGMENT: add cards to a build keeping its value: (a) an equal-value
-     card from hand, (b) a hand card plus discard-area cards summing with it
-     to the build value, (c) DOUBLE DIG — a hand card plus the matching top
-     card of an opponent's capture pile, together worth double, into a build
-     of that value. Any augment locks the build's value forever.
-   - PREG: raise a build to a higher value (only BEFORE it is augmented).
-   - SHIYA: a partner's call to "leave it" — converts a partner's capture into
-     a build owned by the caller (4 hands only).
-   - VIRTUAL OWNERSHIP: creating (or receiving via Shiya) a build of value V
-     marks that player as the V-owner until they play a V card; a partner may
-     then create a V-build that belongs to them without holding a V.
+   THE TURN: a turn is a SEQUENCE of moves, ended by explicit END TURN.
+   Exactly ONE move per turn may use a hand card; no-hand-card moves (digs,
+   folds, scaffold foundings) may come before or after. A capture closes the
+   taking — only End Turn follows. The turn may not end before the hand card
+   is spent and every debt (scaffold, cardless opening, enemy-fold lock,
+   two-build force) is settled.
 
    HOUSE RULES ENCODED (as settled with the owner):
-   1. While a build is live, NO player may discard a card of its value.
+   1. While a registered build is live, NO player may discard a card of its
+      value.
    2. A build's owner may only spend a matching card to capture that build,
       augment it, or while still holding another card of that value.
-   3. Opponents may use a matching card ONLY to capture the build (never to
-      top/augment it, never elsewhere while it lives). Partners may top and
-      augment freely; only the owner (or opponents) may capture it.
-   4. No two live builds share a value. A player owns at most one self-made
-      build (two in 4 hands, the second only via Shiya).
+   3. Opponents may use a matching card ONLY to capture the build. Partners
+      may top and augment freely; only the owner (or opponents) may capture.
+   4. A hand card NEVER enters an opponent's build — only cardless folds of
+      floor cards, folded in for capture.
    5. Two-hand game: in round one, a player with a live build cannot discard
       anything — they must capture, top, or dig.
-   6. Owning two builds forces the capture of (at least) one before the turn
-      may be ended.
-   7. Digging only ever takes from OPPONENTS' piles, never a partner's. */
+   6. Digging only ever takes from OPPONENTS' piles, never a partner's. */
 (function (root) {
   const C = root.Cards;
 
@@ -167,16 +173,19 @@
   }
   function isTeammate(g, a, b) { return sameSide(g, a, b); }
   function maxSlots(g) { return g.numPlayers === 4 ? 2 : 1; }
-  function buildsOwned(g, seat) { return g.builds.filter((b) => b.owner === seat).length; }
+  /* Registration: only registered builds count toward a player's holdings —
+     a scaffold is registered to nobody */
+  function buildsOwned(g, seat) { return g.builds.filter((b) => b.owner === seat && !b.scaffold).length; }
 
-  /* Master card-use rule (header points 1–3 + the loose-twin ban). */
+  /* Master card-use rule (header points 1–3 + the loose-twin ban). Scaffolds
+     are unregistered — they restrict nobody's card use. */
   function cardUseLegal(g, seat, card, use) {
     const v = C.rank(card);
     const holdsAnother = g.players[seat].hand.some((h) => h !== card && C.rank(h) === v);
-    const ownVB = g.builds.find((b) => b.value === v && b.owner === seat);
+    const ownVB = g.builds.find((b) => b.value === v && b.owner === seat && !b.scaffold);
     if (use.type === 'discard') {
-      return !g.builds.some((b) => b.value === v) &&    // never a live build's value
-        !g.table.some((t) => C.rank(t) === v);          // never a loose twin
+      return !g.builds.some((b) => b.value === v && !b.scaffold) &&  // never a live build's value
+        !g.table.some((t) => C.rank(t) === v);                        // never a loose twin
     }
     if (ownVB) {
       if (use.type === 'capture' && use.buildIds && use.buildIds.includes(g.builds.indexOf(ownVB))) return true;
@@ -185,28 +194,9 @@
       if (augOwn) return true;
       return holdsAnother;
     }
-    const enemyV = g.builds.find((b) => b.value === v && !sameSide(g, seat, b.owner));
+    const enemyV = g.builds.find((b) => b.value === v && !sameSide(g, seat, b.owner) && !b.scaffold);
     if (enemyV && !(use.type === 'capture' && use.buildIds && use.buildIds.includes(g.builds.indexOf(enemyV)))) return false;
     return true;
-  }
-
-  /* Enumerate subsets of mixed units (loose cards + builds) summing to target. */
-  function unitSubsets(units, target, cap) {
-    cap = cap || 40;
-    const out = [];
-    const n = units.length;
-    const suffix = new Array(n + 1).fill(0);
-    for (let i = n - 1; i >= 0; i--) suffix[i] = suffix[i + 1] + units[i].r;
-    let nodes = 0;
-    function rec(i, need, acc) {
-      if (out.length >= cap || ++nodes > 20000) return;
-      if (need === 0) { out.push(acc.slice()); return; }
-      if (i >= n || suffix[i] < need) return;
-      rec(i + 1, need, acc);
-      if (units[i].r <= need) { acc.push(units[i]); rec(i + 1, need - units[i].r, acc); acc.pop(); }
-    }
-    rec(0, target, []);
-    return out;
   }
 
   /* ---------- legal actions ---------- */
@@ -224,10 +214,8 @@
     const me = g.turn;
     const P = g.players[me];
     const idxOf = (b) => g.builds.indexOf(b);
-    const acts = [];
 
-    /* Capturable builds: mine always; opponents' (never my partner's) always. */
-    const capturable = (b) => b.owner === me || !sameSide(g, me, b.owner);
+    const acts = [];
 
     /* live obligations: an unresolved scaffold locks the hand to itself; a
        cardless opening owes a capture-or-top before the turn may end; an
@@ -236,16 +224,17 @@
     const lock = g.builds.find((b) => b.captLock) || null;
     const gate = g.openedCardless && !g.resolved;
 
-    /* scaffold lock: the only hand moves are capturing it, or topping it with
-       a spare matching card while owning no other live build */
+    /* scaffold lock: the stack stands in the discard area owing resolution.
+       Capture it with the held value, or graduate it by topping — a top
+       founds a registered build, so only while owning none */
     if (!g.turnUsed && scaffold) {
       const si = idxOf(scaffold);
       const heldV = P.hand.filter((h) => C.rank(h) === scaffold.value);
       for (const card of heldV) {
-        const cap = { type: 'capture', card, loose: [], buildIds: [si] };
+        const cap = { type: 'capture', card, loose: [], buildIds: [si], scaffoldCap: true };
         if (cardUseLegal(g, me, card, cap)) acts.push(cap);
       }
-      if (heldV.length >= 2 && buildsOwned(g, me) - 1 === 0) {
+      if (heldV.length >= 2 && buildsOwned(g, me) === 0) {
         const top = { type: 'augment', buildIdx: si, card: heldV[0], loose: [], method: 'top' };
         if (cardUseLegal(g, me, heldV[0], top)) acts.push(top);
       }
@@ -264,23 +253,25 @@
     /* hand-card moves exist only until the turn's one card is spent */
     if (!g.turnUsed && !scaffold && !lock) {
 
-      /* ---- captures ---- */
-      const units = [
-        ...g.table.map((id) => ({ kind: 'card', id, r: C.rank(id) })),
-        ...g.builds.filter(capturable).map((b) => ({ kind: 'build', idx: idxOf(b), r: b.value }))
-      ];
+      /* ---- captures: a registered build falls ONLY to its exact value;
+             floor cards fall ONE SET per capture, the set summing exactly to
+             the played card. Never a build mixed into a sum, never two sets
+             in one capture — the game takes exactly what was highlighted ---- */
       const byRank = {};
       for (const card of P.hand) (byRank[C.rank(card)] = byRank[C.rank(card)] || []).push(card);
       for (const r in byRank) {
         /* EVERY copy of the rank gets its actions — the player selects the
            actual card, so a second 10 must work exactly like the first */
         for (const card of byRank[r]) {
-          for (const combo of unitSubsets(units, Number(r))) {
-            const use = {
-              type: 'capture', card,
-              loose: combo.filter((u) => u.kind === 'card').map((u) => u.id),
-              buildIds: combo.filter((u) => u.kind === 'build').map((u) => u.idx)
-            };
+          for (const set of allSubsets(g.table, Number(r), 12)) {
+            if (!set.length) continue;
+            const use = { type: 'capture', card, loose: set, buildIds: [] };
+            if (cardUseLegal(g, me, card, use)) acts.push(use);
+          }
+          for (const b of g.builds) {
+            if (b.scaffold || b.value !== Number(r)) continue;
+            if (!(b.owner === me || !sameSide(g, me, b.owner))) continue;
+            const use = { type: 'capture', card, loose: [], buildIds: [idxOf(b)] };
             if (cardUseLegal(g, me, card, use)) acts.push(use);
           }
         }
@@ -314,7 +305,9 @@
             const tm = teammate(g, me);
             const partnerVirtual = tm != null && g.players[tm].virtual[V];
             if (partnerVirtual) owner = tm;
-            if (buildsOwned(g, owner) >= 1) continue;  // one self-made build max — a second only via Shiya
+            if (buildsOwned(g, owner) >= 1) continue;  /* a SECOND registered build
+               arrives only via Shiya — a self-made second spends the hand card
+               and leaves the capture force unsatisfiable (a deadlock trap) */
             const ownerHoldsV = g.players[owner].hand.some((h) => h !== card && C.rank(h) === V);
             if (!ownerHoldsV) continue;                          // the owner must be able to capture it
             if (!cardUseLegal(g, me, card, { type: 'build', card })) continue;
@@ -350,9 +343,11 @@
         acts.push({ type: 'basetop', card, base });
       }
 
-      /* ---- augment own-side builds (top / combine / double dig) ---- */
+      /* ---- augment own-side REGISTERED builds (top / combine / double dig);
+             a scaffold takes no additions — only its resolution ---- */
       for (const b of g.builds) {
-        if (!sameSide(g, b.owner, me)) continue;   // never augment an enemy build
+        if (b.scaffold) continue;                     // never fold onto a scaffold
+        if (!sameSide(g, b.owner, me)) continue;      // never augment an enemy build
         const bi = idxOf(b);
         for (const card of P.hand) {
           const r = C.rank(card);
@@ -389,27 +384,32 @@
         }
       }
 
-      /* ---- preg (raise) — only unaugmented builds ---- */
+      /* ---- preg: a HAND CARD ALONE raises an ENEMY's virgin build. Never
+             your own, never a partner's — the rules bind every player
+             equally. The landing value (target + card) decides everything ---- */
       for (const b of g.builds) {
-        if (b.augmented) continue;
-        const ownSide = sameSide(g, b.owner, me);
-        // Own-side: ONLY the owner may preg their own build (ownership stays put
-        // and the owner must hold the new value — a partner preg would leave the
-        // owner unable to capture it). Enemy builds transfer to the pregger.
-        if (ownSide && b.owner !== me) continue;
-        if (!ownSide && buildsOwned(g, me) >= 1) continue;  // a 2nd own build only via Shiya
+        if (b.scaffold) continue;
+        if (b.augmented) continue;                       // virgin targets only
+        if (sameSide(g, b.owner, me)) continue;          // enemy builds only
         const bi = idxOf(b);
         for (const card of P.hand) {
-          const r = C.rank(card);
-          for (let V = b.value + r; V <= 10; V++) {
-            if (g.builds.some((x) => x.value === V)) continue;             // no duplicate values
-            if (!P.hand.some((h) => h !== card && C.rank(h) === V)) continue; // must hold new value
-            const need = V - b.value - r;
-            const subs = need === 0 ? [[]] : allSubsets(g.table, need, 8);
-            for (const sub of subs) {
-              const use = { type: 'preg', buildIdx: bi, card, loose: sub, value: V };
-              if (cardUseLegal(g, me, card, use)) acts.push(use);
-            }
+          const V = b.value + C.rank(card);
+          if (V > 10) continue;                          // a preg always raises, 10 is the ceiling
+          const liveV = g.builds.find((x) => x.value === V && !x.scaffold);
+          if (liveV && !sameSide(g, liveV.owner, me)) continue;   // E: enemy-live value — silence
+          if (liveV) {
+            /* B/C: the enemy build folds into the own-side live build of V,
+               which locks — a merge, not a second build */
+            const use = { type: 'preg', buildIdx: bi, card, value: V, mergeInto: idxOf(liveV) };
+            if (cardUseLegal(g, me, card, use)) acts.push(use);
+          } else {
+            const tm = teammate(g, me);
+            const partnerVirtual = tm != null && g.players[tm].virtual[V];
+            const owner = partnerVirtual ? tm : me;              // D: partner's restart / A: mine
+            if (owner === me && !P.hand.some((h) => h !== card && C.rank(h) === V)) continue; // must hold V
+            if (buildsOwned(g, owner) >= 1) continue;             // second builds arrive only via Shiya
+            const use = { type: 'preg', buildIdx: bi, card, value: V, owner };
+            if (cardUseLegal(g, me, card, use)) acts.push(use);
           }
         }
       }
@@ -429,19 +429,21 @@
     }
 
     /* ---- end turn gate: hand card spent, no scaffold live, no enemy-fold
-       lock owed, and any cardless debt settled by a capture or a top. NO
-       safety valve — an empty action list is a detectable special case ---- */
-    if (g.turnUsed && !scaffold && !lock && (!g.openedCardless || g.resolved)) {
+       lock owed, any cardless debt settled, and the two-build force (4 hands,
+       second via Shiya) satisfied. NO safety valve — an empty action list is
+       a detectable special case ---- */
+    if (g.turnUsed && !scaffold && !lock && (!g.openedCardless || g.resolved) && buildsOwned(g, me) < 2) {
       acts.push({ type: 'endturn' });
     }
     return acts;
   }
 
-  /* Pile-top digs: fold an opponent's pile top into an own-side build whose
-     value it matches. These are the no-hand-card moves of a turn. */
+  /* Pile-top digs: fold an opponent's pile top into a REGISTERED own-side
+     build whose value it matches. These are the no-hand-card moves of a turn. */
   function pileTopDigs(g, me, idxOf) {
     const out = [];
     for (const b of g.builds) {
+      if (b.scaffold) continue;                     // a scaffold takes no additions
       if (!sameSide(g, b.owner, me)) continue;
       const bi = idxOf(b);
       for (let seat = 0; seat < g.numPlayers; seat++) {
@@ -466,32 +468,39 @@
     const scaffoldLive = g.builds.some((b) => b.scaffold);
 
     /* scaffold: combine table cards summing to V — or a single base card of
-       value V — into a build of a value you hold; it must be captured or
-       topped before the turn ends, so it can only be FOUNDED before the hand
-       card is spent (the resolution itself is a hand move) */
+       value V — into an UNREGISTERED stack in the discard area, of a value
+       you hold; it must be captured or graduated before the turn ends, so it
+       can only be FOUNDED before the hand card is spent. One scaffold at a
+       time, no founding over a fold debt, and the founder must hold a free
+       build slot (none at all in 2/3 hands — the graduation top requires
+       owning nothing anyway) */
     if (!scaffoldLive && !g.builds.some((b) => b.captLock) && !g.turnUsed) {
-      const heldVals = [...new Set(P.hand.map((id) => C.rank(id)))];
-      for (const V of heldVals) {
-        if (g.builds.some((b) => b.value === V)) continue;   // no duplicate values
-        /* pure table scaffolds: 2+ cards summing to V — a lone card is
-           NEVER a build */
-        for (const sub of allSubsets(g.table, V, 12)) {
-          if (sub.length < 2) continue;
-          out.push({ type: 'scaffold', cards: sub, value: V });
-        }
-        /* dig-foundings: an opponent's pile top (+ table cards) summing to V —
-           only onto a loose BASE of V, which makes it a real build */
-        const base = g.table.find((t) => C.rank(t) === V);
-        if (base) {
-          for (let seat = 0; seat < g.numPlayers; seat++) {
-            if (sameSide(g, seat, me)) continue;
-            const top = g.players[seat].pile[g.players[seat].pile.length - 1];
-            if (!top) continue;
-            const rest = V - C.rank(top);
-            if (rest < 0) continue;
-            const subs = rest === 0 ? [[]] : allSubsets(g.table, rest, 8);
-            for (const sub of subs) {
-              out.push({ type: 'scaffold', cards: sub, value: V, victim: seat });
+      const slotFree = g.numPlayers === 4 ? buildsOwned(g, me) <= 1 : buildsOwned(g, me) === 0;
+      if (slotFree) {
+        const heldVals = [...new Set(P.hand.map((id) => C.rank(id)))];
+        for (const V of heldVals) {
+          if (g.builds.some((b) => b.value === V)) continue;   // no duplicate values
+          /* pure table scaffolds: 2+ cards summing to V — a lone card is
+             NEVER a build */
+          for (const sub of allSubsets(g.table, V, 12)) {
+            if (sub.length < 2) continue;
+            out.push({ type: 'scaffold', cards: sub, value: V });
+          }
+          /* dig-foundings: an opponent's pile top (+ table cards) summing to V —
+             ONLY onto a loose BASE of V (the owner's law: no base, no prompt).
+             A lone pile top on its base is a legal two-card founding */
+          const base = g.table.find((t) => C.rank(t) === V);
+          if (base) {
+            for (let seat = 0; seat < g.numPlayers; seat++) {
+              if (sameSide(g, seat, me)) continue;
+              const top = g.players[seat].pile[g.players[seat].pile.length - 1];
+              if (!top) continue;
+              const rest = V - C.rank(top);
+              if (rest < 0) continue;
+              const subs = rest === 0 ? [[]] : allSubsets(g.table, rest, 8);
+              for (const sub of subs) {
+                out.push({ type: 'scaffold', cards: sub, value: V, victim: seat });
+              }
             }
           }
         }
@@ -499,8 +508,9 @@
     }
 
     /* table-fold: fold table cards summing to a build's value into an
-       own-side build (value unchanged, build locks) */
+       own-side REGISTERED build (value unchanged, build locks) */
     for (const b of g.builds) {
+      if (b.scaffold) continue;                 // a scaffold takes no additions
       if (!sameSide(g, b.owner, me)) continue;
       for (const sub of allSubsets(g.table, b.value, 8)) {
         out.push({ type: 'caugment', buildIdx: idxOf(b), loose: sub });
@@ -517,7 +527,8 @@
     const lockLive = g.builds.some((b) => b.captLock);
     if (!scaffoldLive) {
       for (const b of g.builds) {
-        if (sameSide(g, b.owner, me)) continue;            // enemy builds only
+        if (b.scaffold) continue;                       // a scaffold takes no additions
+        if (sameSide(g, b.owner, me)) continue;         // enemy builds only
         if (!b.captLock && lockLive) continue;             // one enemy lock at a time
         if (g.turnUsed) continue;                          // the capture needs the hand card
         if (!P.hand.some((h) => C.rank(h) === b.value)) continue;
@@ -702,22 +713,31 @@
     if (a.type === 'capture') {
       takeFromHand(me, a.card);
       playedVirtual(g, me.id, a.card);
-      const taken = a.loose.slice();
-      removeFromTable(g, a.loose);
-      const buildCards = [];
-      for (const idx of a.buildIds.slice().sort((x, y) => y - x)) {
-        buildCards.push(...g.builds[idx].cards);
-        g.builds.splice(idx, 1);
+      let taken, desc;
+      if (a.scaffoldCap) {
+        /* the scaffold stack leaves the discard area as one captured set */
+        const sc = g.builds[a.buildIds[0]];
+        taken = sc.cards.slice();
+        desc = fmt(taken) + ' (the ' + sc.value + '-scaffold)';
+        g.builds.splice(a.buildIds[0], 1);
+      } else {
+        taken = a.loose.slice();
+        removeFromTable(g, a.loose);
+        const buildCards = [];
+        for (const idx of a.buildIds.slice().sort((x, y) => y - x)) {
+          buildCards.push(...g.builds[idx].cards);
+          g.builds.splice(idx, 1);
+        }
+        taken.push(...buildCards);
+        desc = a.buildIds.length
+          ? (buildCards.length + a.loose.length ? fmt(buildCards.concat(a.loose)) : '') + ' (build' + (a.buildIds.length > 1 ? 's' : '') + ')'
+          : fmt(a.loose);
       }
-      taken.push(...buildCards);
       me.pile.push(...sortDesc(taken));   // this capture's set, sorted — played card on top
       me.pile.push(a.card);
       g.lastCapturer = me.id;
       if (g.openedCardless) g.resolved = true;   // a capture settles a cardless debt
       g.capturedThisTurn = true;                 // …and closes the taking for the turn
-      const desc = a.buildIds.length
-        ? (buildCards.length + a.loose.length ? fmt(buildCards.concat(a.loose)) : '') + ' (build' + (a.buildIds.length > 1 ? 's' : '') + ')'
-        : fmt(a.loose);
       addLog(g, 'capture', act(me, 'played', 'played') + ' ' + C.label(a.card) + ' and captured ' + (desc || '—') + '.');
       if (g.table.length === 0 && g.builds.length === 0) addLog(g, 'sweep', act(me, 'sweeps', 'sweep') + ' the table!');
 
@@ -825,21 +845,29 @@
 
     if (a.type === 'preg') {
       const b = g.builds[a.buildIdx];
-      const wasEnemy = !sameSide(g, b.owner, me.id);
       takeFromHand(me, a.card);
       playedVirtual(g, me.id, a.card);
-      removeFromTable(g, a.loose);
-      b.cards.push(a.card, ...a.loose);
-      b.value = a.value;
-      if (wasEnemy) {
-        b.owner = me.id;                // a pregged enemy build becomes the pregger's
-        addLog(g, 'build', act(me, 'pregs', 'preg') + ' the build to ' + a.value + ' — now theirs!');
+      if (a.mergeInto != null) {
+        /* B/C: the enemy build's cards plus the hand card fold into the
+           own-side live build of V — a merge that locks the survivor */
+        const live = g.builds[a.mergeInto];
+        live.cards.push(...sortDesc([a.card, ...b.cards]));
+        live.augmented = true;
+        g.builds.splice(a.buildIdx, 1);
+        addLog(g, 'build', act(me, 'pregs', 'preg') + ' the ' + b.value + '-build into ' +
+          names(g, live.owner) + '\u2019s ' + a.value + '-build — absorbed and locked.');
       } else {
-        addLog(g, 'build', act(me, 'pregs', 'preg') + ' the build to ' + a.value + '.');
+        /* A/D: the build rises to V — the pregger's, or restarted as the
+           partner's when he virtually owns the value */
+        b.cards.push(...sortDesc([a.card]));
+        b.value = a.value;
+        b.owner = a.owner;
+        const pregBases = absorbBases(g, a.value);       // a loose V joins as the base
+        if (pregBases.length) b.cards.unshift(...pregBases);
+        g.players[a.owner].virtual[a.value] = true;
+        addLog(g, 'build', act(me, 'pregs', 'preg') + ' the build up to ' + a.value +
+          (a.owner !== me.id ? ' — it stands with ' + names(g, a.owner) + '.' : ' — now theirs!'));
       }
-      const pregBases = absorbBases(g, a.value);         // a loose V joins as the base
-      if (pregBases.length) b.cards.unshift(...pregBases);
-      g.players[b.owner].virtual[a.value] = true;
       return;
     }
 
@@ -866,6 +894,9 @@
   function sameAction(x, y) {
     if (x.type !== y.type) return false;
     if (x.card !== y.card) return false;
+    if ((!!x.scaffoldCap) !== (!!y.scaffoldCap)) return false;
+    if ((x.mergeInto != null) !== (y.mergeInto != null)) return false;
+    if (x.mergeInto != null && y.mergeInto != null && x.mergeInto !== y.mergeInto) return false;
     if ((x.victim != null) !== (y.victim != null)) return false;
     if (x.victim != null && y.victim != null && x.victim !== y.victim) return false;
     if (x.base !== y.base) return false;
