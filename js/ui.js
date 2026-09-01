@@ -874,7 +874,7 @@
   function actionExplainer(a) {
     switch (a.type) {
       case 'discard': return 'The card drops face-up — anyone may capture it later.';
-      case 'capture': return 'Your card takes table cards (and builds) that add up to it exactly.';
+      case 'capture': return 'A build falls to its exact match — or take one set of table cards summing to your card.';
       case 'build':   return 'Together they count ' + a.value + ' — capture them later with a ' + a.value + '.';
       case 'augment':
         return a.method === 'top'
@@ -1524,7 +1524,9 @@
       const cell = e.target.closest('.grid-cell');
       if (cell) { tryDiscardTo(cell.dataset.area); return; }
       const el = e.target.closest('.card');
-      if (el) toggleTableSel(el.dataset.id);
+      /* a scaffold stack's face is the STACK, not a loose card — toggling it
+         into the table selection poisoned the capture match and froze the game */
+      if (el && !el.closest('.build-box')) toggleTableSel(el.dataset.id);
     });
     $('screen-game').addEventListener('click', (e) => {
       const bz = e.target.closest('.build-box.has-build');
