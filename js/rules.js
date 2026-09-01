@@ -369,6 +369,21 @@
               if (cardUseLegal(g, me, card, use)) acts.push(use);
             }
           }
+          /* THREE-SOURCE COMBINE: a hand card + an opponent's pile top +
+             table cards TOGETHER complete the value (3 + his Ace + the 6 into
+             a live 10). Folds into a live own-side build ONLY — a captured
+             card never helps FOUND a build (founding needs the loose base) */
+          for (let seat = 0; seat < g.numPlayers; seat++) {
+            if (sameSide(g, seat, me)) continue;
+            const pt = g.players[seat].pile[g.players[seat].pile.length - 1];
+            if (!pt) continue;
+            const need = b.value - r - C.rank(pt);
+            if (need <= 0) continue;
+            for (const sub of allSubsets(g.table, need, 8)) {
+              const use = { type: 'augment', buildIdx: bi, card, loose: sub, victim: seat, method: 'combine' };
+              if (cardUseLegal(g, me, card, use)) acts.push(use);
+            }
+          }
           if (2 * r === b.value) {
               for (let seat = 0; seat < g.numPlayers; seat++) {
                 if (sameSide(g, seat, me)) continue;  // never dig a partner's pile

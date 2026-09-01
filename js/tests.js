@@ -268,6 +268,32 @@
     assert(!has(R.legalActions(g), (a) => a.type === 'preg'), 'own-build owner cannot preg an enemy build');
   });
 
+  test('v6 THREE-SOURCE COMBINE: hand 3 + table 6 + his Ace fold into the live 10-build', () => {
+    const g = mkState(2, { table: ['C6'] });
+    g.builds = [{ value: 10, cards: ['S10', 'H5', 'C5'], owner: 0, augmented: false }];
+    g.players[0].hand = ['D3', 'H7'];
+    g.players[1].hand = ['C2'];
+    g.players[1].pile = ['H9', 'S1'];      // Sipho's top: the Ace
+    const a = R.legalActions(g).find((x) => x.type === 'augment' && x.method === 'combine' &&
+      x.card === 'D3' && x.victim === 1 && x.loose.includes('C6'));
+    assert(a, 'the three-source combine is offered');
+    R.applyAction(g, a);
+    const b = g.builds[0];
+    eq(b.value, 10, 'value unchanged');
+    assert(b.cards.includes('D3') && b.cards.includes('C6') && b.cards.includes('S1'), 'all three folded in');
+    eq(b.augmented, true, 'locked');
+    eq(g.players[1].pile.length, 1, 'his Ace is gone from the pile');
+    eq(g.turnUsed, true, 'the hand card was spent');
+    /* and the same three sources may NOT found a new build without a base */
+    const g2 = mkState(2, { table: ['C6'] });
+    g2.players[0].hand = ['D3', 'H10', 'H7'];
+    g2.players[1].hand = ['C2'];
+    g2.players[1].pile = ['H9', 'S1'];
+    assert(!has(R.legalActions(g2), (x) => x.type === 'build' && x.victim != null &&
+      x.loose.includes('C6') && x.card === 'D3'),
+      'captured cards never help found a build — founding needs the loose base');
+  });
+
   /* ================= the v6 table law (as taught by the owner) ================= */
   test('v6 CAPTURE: a build NEVER joins a sum — only its exact value takes it', () => {
     // the owner's original report, now law: topped 7-build + loose 3 vs a 10
@@ -1022,6 +1048,14 @@
             }
             // scaffolds never coexist with a spent hand card (they resolve first)
             assert(!(g.builds.some((b) => b.scaffold) && g.turnUsed), 'scaffold outlived the hand card');
+            // three-source combines: hand card + pile top + table set = the build's value
+            for (const a of acts) {
+              if (a.type === 'augment' && a.method === 'combine' && a.victim != null && a.loose.length) {
+                const pt = g.players[a.victim].pile[g.players[a.victim].pile.length - 1];
+                eq(C.rank(a.card) + C.rank(pt) + a.loose.reduce((n, id) => n + C.rank(id), 0),
+                  g.builds[a.buildIdx].value, 'three-source combine arithmetic');
+              }
+            }
             // an enemy-fold lock: the capture is owed, the hand is narrowed to it
             const lockB = g.builds.find((b) => b.captLock);
             if (lockB) {
