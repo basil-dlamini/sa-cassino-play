@@ -414,6 +414,56 @@
     assert(g.phase === 'play', 'no Shiya window for a caller already holding two');
   });
 
+  /* ============ folds fatten your own scaffold — the mixed cardless fold ============ */
+  test('v6 DIGFOLD: his dug 2 + the table 8 fold into the 10-Scaffold — the debt stands', () => {
+    // the owner's table: scaffold 10 founded by digging a 10 onto a base 10
+    const g = mkState(2, { table: ['C8'] });
+    g.builds = [{ value: 10, cards: ['S10', 'D10'], owner: 0, augmented: false, scaffold: true }];
+    g.players[0].hand = ['H10', 'H5'];
+    g.players[1].hand = ['C2'];
+    g.players[1].pile = ['H9', 'C2'];      // Sipho's top: the 2
+    g.openedCardless = true;               // the scaffold debt is live
+    const df = R.legalActions(g).find((a) => a.type === 'digfold' && a.victim === 1 &&
+      a.loose.length === 1 && a.loose[0] === 'C8');
+    assert(df, 'the mixed fold is offered: his 2 + the 8 into the 10-scaffold');
+    R.applyAction(g, df);
+    const b = g.builds[0];
+    eq(b.value, 10, 'value unchanged');
+    eq(b.scaffold, true, 'still a scaffold — the fold resolved nothing');
+    assert(b.cards.includes('C2') && b.cards.includes('C8'), 'both folded in');
+    eq(g.players[1].pile.length, 1, 'his 2 left his pile');
+    eq(g.turnUsed, false, 'no hand card spent');
+    assert(!has(R.legalActions(g), (a) => a.type === 'endturn'), 'the capture-or-top debt still stands');
+    // …and is settled by capturing the fattened stack with the held 10
+    const cap = R.legalActions(g).find((a) => a.type === 'capture' && a.card === 'H10');
+    assert(cap && cap.scaffoldCap, 'capture of the scaffold offered');
+    R.applyAction(g, cap);
+    eq(g.builds.length, 0, 'the stack is gone');
+    eq(g.players[0].pile.length, 5, '10, 10, 2, 8 — and the played 10 on top');
+  });
+
+  test('v6 DIGFOLD: the mixed fold also fattens a registered own build, never a partner pile', () => {
+    const g = mkState(2, { table: ['C8'] });
+    g.builds = [{ value: 10, cards: ['S10', 'H5', 'C5'], owner: 0, augmented: false }];
+    g.players[0].hand = ['D10', 'H7'];
+    g.players[1].hand = ['C4'];
+    g.players[1].pile = ['H9', 'C2'];
+    const df = R.legalActions(g).find((a) => a.type === 'digfold' && a.victim === 1 && a.loose[0] === 'C8');
+    assert(df, 'mixed fold into the live 10 offered');
+    R.applyAction(g, df);
+    const b = g.builds[0];
+    eq(b.augmented, true, 'a fold locks a registered build');
+    assert(b.cards.includes('C2') && b.cards.includes('C8'), 'folded in');
+    // partner piles are never dug (4 hands)
+    const g4 = mkState(4, { table: ['C8'] });
+    g4.builds = [{ value: 10, cards: ['S10', 'H5', 'C5'], owner: 0, augmented: false }];
+    g4.players[2].pile = ['H9', 'C2'];    // partner's top is the 2 too
+    g4.players[0].hand = ['D10'];
+    g4.turn = 0;
+    assert(!has(R.legalActions(g4), (a) => a.type === 'digfold' && a.victim === 2),
+      'never dig a partner\u2019s pile');
+  });
+
   /* ================= captures incl. builds & partner rule ================= */
   test('in 4 hands you cannot capture your own partner\'s build', () => {
     const g = mkState(4, { table: [] });
@@ -567,9 +617,10 @@
     // hand is LOCKED: only capture/graduation of the scaffold — not the 5
     const acts = R.legalActions(g);
     assert(!acts.some((a) => a.card === 'H5'), 'other hand cards locked');
-    // the stack is unregistered: it takes NO additions — not even Sipho's 8♣
-    assert(!acts.some((a) => a.type === 'topdig'), 'no dig into a scaffold');
-    assert(!acts.some((a) => a.type === 'caugment' || a.type === 'efold'), 'no folds into a scaffold');
+    // the stack is unregistered: no dig into it and no ENEMY folds — but the
+    // owner's own cardless folds DO fatten it (settled after this test was written)
+    assert(!acts.some((a) => a.type === 'topdig'), 'no pile-top dig of the equal value here');
+    assert(!acts.some((a) => a.type === 'efold'), 'no enemy folds on the table');
     // capture the scaffold with the held 8 — the whole stack, one set
     const cap = acts.find((a) => a.type === 'capture' && a.card === 'D8');
     assert(cap && cap.scaffoldCap, 'capture of the scaffold offered');
@@ -1042,8 +1093,8 @@
                   eq(t.value + C.rank(a.card), a.value, 'preg arithmetic broken');
                 }
               }
-              if (a.type === 'caugment' || a.type === 'efold') {
-                assert(!g.builds[a.buildIdx].scaffold, 'fold into a scaffold');
+              if (a.type === 'efold') {
+                assert(!g.builds[a.buildIdx].scaffold, 'enemy fold into a scaffold');
               }
             }
             // scaffolds never coexist with a spent hand card (they resolve first)
@@ -1054,6 +1105,14 @@
                 const pt = g.players[a.victim].pile[g.players[a.victim].pile.length - 1];
                 eq(C.rank(a.card) + C.rank(pt) + a.loose.reduce((n, id) => n + C.rank(id), 0),
                   g.builds[a.buildIdx].value, 'three-source combine arithmetic');
+              }
+              if (a.type === 'digfold') {
+                const b = g.builds[a.buildIdx];
+                assert(R.sameSide(g, b.owner, g.turn), 'digfold into an enemy build');
+                assert(!R.sameSide(g, a.victim, g.turn), 'digfold from a partner pile');
+                const pt = g.players[a.victim].pile[g.players[a.victim].pile.length - 1];
+                eq(C.rank(pt) + a.loose.reduce((n, id) => n + C.rank(id), 0), b.value,
+                  'digfold arithmetic');
               }
             }
             // an enemy-fold lock: the capture is owed, the hand is narrowed to it

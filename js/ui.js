@@ -670,6 +670,7 @@
         return 'Dig ' + (top ? C.label(top) : g.builds[a.buildIdx].value) + ' for capture';
       }
       case 'preg':    return 'Build ' + a.value;
+      case 'digfold': return 'Build ' + g.builds[a.buildIdx].value;
       case 'discard': return 'Discard ' + C.label(a.card);
     }
     return a.type;
@@ -696,16 +697,18 @@
     if (!selectedCard) {
       /* cardless moves: pile-top digs, scaffolds from table cards, folds */
       if (pileTopSel != null) {
-        /* own-side pile-top digs, enemy digs-for-capture, dig-foundings onto a base */
+        /* cardless moves: pile-top digs, mixed folds, scaffolds from table cards, folds */
         const sameCards = (arr) => tableSel.size === (arr || []).length && (arr || []).every((x) => tableSel.has(x));
         const digs = humanActions.filter((a) => a.type === 'topdig' && a.victim === pileTopSel &&
           (buildSel == null || a.buildIdx === buildSel));
+        const digfolds = humanActions.filter((a) => a.type === 'digfold' && a.victim === pileTopSel &&
+          sameCards(a.loose) && (buildSel == null || a.buildIdx === buildSel));
         const edigs = humanActions.filter((a) => a.type === 'edig' &&
           a.victims.includes(pileTopSel) && sameCards(a.loose) &&
           (buildSel == null || a.buildIdx === buildSel));
         const scaffs = humanActions.filter((a) => a.type === 'scaffold' &&
           a.victim === pileTopSel && sameCards(a.cards));
-        const all = digs.concat(edigs).concat(scaffs);
+        const all = digs.concat(digfolds).concat(edigs).concat(scaffs);
         if (all.length) return all;
       }
       if (tableSel.size) {
@@ -886,6 +889,7 @@
       case 'efold':    return 'Table cards join THEIR build — then your ' + g.builds[a.buildIdx].value + ' captures all of it.';
       case 'edig':     return 'Their card joins THEIR build — then your ' + g.builds[a.buildIdx].value + ' captures all of it.';
       case 'basetop':  return 'Your card tops the loose base — a live build, locked at ' + C.rank(a.card) + '.';
+      case 'digfold':  return 'The dug card and the table set fold in — the value stays ' + g.builds[a.buildIdx].value + '.';
       case 'preg':    return 'The build rises to ' + a.value + (g.builds[a.buildIdx].owner !== HUMAN ? ' — and becomes yours.' : '.');
     }
     return '';
@@ -1202,6 +1206,10 @@
       case 'edig':      return who + ': folded into the ' + bVal + '-build for capture.';
       case 'basetop':   return who + ': topped the loose ' + C.rank(a.card) + '.';
       case 'discard':   return who + ': discarded ' + C.label(a.card) + '.';
+      case 'digfold': {
+        const dug = g.players[a.victim].pile[g.players[a.victim].pile.length - 1];
+        return who + ': dug ' + C.label(dug) + ' into the ' + bVal + '-build.';
+      }
     }
     return null;
   }

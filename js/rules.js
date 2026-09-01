@@ -523,12 +523,30 @@
     }
 
     /* table-fold: fold table cards summing to a build's value into an
-       own-side REGISTERED build (value unchanged, build locks) */
+       own-side build OR SCAFFOLD (value unchanged; for a scaffold the
+       capture-or-top debt stays exactly as it was — a fold never resolves it) */
     for (const b of g.builds) {
-      if (b.scaffold) continue;                 // a scaffold takes no additions
       if (!sameSide(g, b.owner, me)) continue;
       for (const sub of allSubsets(g.table, b.value, 8)) {
         out.push({ type: 'caugment', buildIdx: idxOf(b), loose: sub });
+      }
+    }
+
+    /* MIXED cardless fold: an opponent's pile top + table cards together
+       summing to an own-side build's value — his dug 2 + the table 8 into
+       the 10-scaffold. Own side only; never a partner's pile */
+    for (const b of g.builds) {
+      if (!sameSide(g, b.owner, me)) continue;
+      const bi2 = idxOf(b);
+      for (let seat = 0; seat < g.numPlayers; seat++) {
+        if (sameSide(g, seat, me)) continue;
+        const top = g.players[seat].pile[g.players[seat].pile.length - 1];
+        if (!top) continue;
+        const rest = b.value - C.rank(top);
+        if (rest <= 0) continue;               // the pure equal pile top is a topdig
+        for (const sub of allSubsets(g.table, rest, 8)) {
+          out.push({ type: 'digfold', buildIdx: bi2, victim: seat, loose: sub });
+        }
       }
     }
 
@@ -591,6 +609,10 @@
       for (const id of move.cards) table.splice(table.indexOf(id), 1);
       builds.push({ value: move.value, cards: move.cards.slice(), owner: me, augmented: false, scaffold: true });
     } else if (move.type === 'caugment') {
+      for (const id of move.loose) table.splice(table.indexOf(id), 1);
+      builds[move.buildIdx].cards.push(...move.loose);
+      builds[move.buildIdx].augmented = true;
+    } else if (move.type === 'digfold') {
       for (const id of move.loose) table.splice(table.indexOf(id), 1);
       builds[move.buildIdx].cards.push(...move.loose);
       builds[move.buildIdx].augmented = true;
@@ -696,6 +718,19 @@
       if (!g.turnUsed) g.openedCardless = true;
       addLog(g, 'build', act(me, 'folds', 'fold') + ' ' + fmt(sortDesc(a.loose)) + ' into the ' + b.value + '-build.');
       return;                       // no hand card spent — the turn continues
+    }
+
+    if (a.type === 'digfold') {
+      const b = g.builds[a.buildIdx];
+      const dug = g.players[a.victim].pile.pop();
+      removeFromTable(g, a.loose);
+      b.cards.push(...sortDesc([dug, ...a.loose]));
+      b.augmented = true;               // a fold locks a registered build; on a
+                                        // scaffold it is honest state, nothing more
+      if (!g.turnUsed) g.openedCardless = true;
+      addLog(g, 'steal', act(me, 'digs', 'dig') + ' ' + C.label(dug) + ' from ' + names(g, a.victim) +
+        '\u2019s pile with ' + fmt(a.loose) + ' into the ' + b.value + '-build.');
+      return;                           // no hand card spent — the debt stands
     }
 
     if (a.type === 'efold') {

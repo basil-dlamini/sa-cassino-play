@@ -169,6 +169,13 @@
         why = 'fattens the capture';
       }
 
+      if (a.type === 'digfold') {
+        const dug = g.players[a.victim].pile[g.players[a.victim].pile.length - 1];
+        const set = (a.loose || []).concat([dug]);
+        s += w.build * (0.3 + 0.3 * pilePointsOf(set)) + w.steal * (C.points(dug) * 1.1 + 0.4);
+        why = 'digs a card into the build';
+      }
+
       if (a.type === 'discard') {
         const c = C.parse(a.card);
         s -= 2.6 * C.points(a.card);
@@ -208,10 +215,10 @@
 
     /* multi-move turns: once the hand card is spent, only free cardless moves
        and the turn's end remain — rob worthwhile digs, then end */
-    const free = ['topdig', 'caugment', 'edig', 'efold', 'endturn'];
+    const free = ['topdig', 'caugment', 'digfold', 'edig', 'efold', 'endturn'];
     const playActs = acts.filter((a) => !free.includes(a.type));
     if (!playActs.length) {
-      const worth = acts.filter((a) => (a.type === 'topdig' || a.type === 'edig') && (() => {
+      const worth = acts.filter((a) => (a.type === 'topdig' || a.type === 'edig' || a.type === 'digfold') && (() => {
         const tops = (a.victims || [a.victim]).map((v) => g.players[v].pile[g.players[v].pile.length - 1]).filter(Boolean);
         return tops.some((top) => C.points(top) > 0 || C.rank(top) >= 8);   // rob points or a big card
       })());
@@ -246,6 +253,10 @@
       case 'scaffold': return n + ': build ' + a.value + ' from the table alone — it must be captured or topped this turn.';
       case 'caugment': return n + ': fold table cards into the ' + g.builds[a.buildIdx].value + '-build.';
       case 'efold': return n + ': fold table cards into the enemy ' + g.builds[a.buildIdx].value + '-build — for capture.';
+      case 'digfold': {
+        const dug = g.players[a.victim].pile[g.players[a.victim].pile.length - 1];
+        return n + ': dig ' + C.label(dug) + ' + table cards into the ' + g.builds[a.buildIdx].value + '-build.';
+      }
       case 'edig': {
         const from = (a.victims || []).map((v) => g.players[v].name).join(' and ');
         return n + ': dig from ' + from + '\u2019s pile into the enemy ' + g.builds[a.buildIdx].value + '-build — for capture.';
