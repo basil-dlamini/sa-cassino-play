@@ -488,6 +488,55 @@
       'never dig a partner\u2019s pile');
   });
 
+  /* ============ the pairs reservation — a pair summing to a live own-side build ============ */
+  test('v6 PAIRS: a 4+4 pair with a live own 8 is reserved — no Capture 4, only Build 8', () => {
+    const g = mkState(2, { table: ['S4'] });
+    g.builds = [{ value: 8, cards: ['H3', 'S5'], owner: 0, augmented: false }];
+    g.players[0].hand = ['D4', 'H7'];
+    g.players[1].hand = ['C2'];
+    const acts = R.legalActions(g);
+    assert(!has(acts, (a) => a.type === 'capture' && a.card === 'D4' && a.loose.includes('S4')),
+      'Capture 4 offered — the pair belongs to the 8-build');
+    const aug = acts.find((a) => a.type === 'augment' && a.method === 'combine' &&
+      a.card === 'D4' && a.loose.length === 1 && a.loose[0] === 'S4');
+    assert(aug, 'Build 8 (the augment) offered instead');
+    R.applyAction(g, aug);
+    const b = g.builds[0];
+    eq(b.value, 8, 'value unchanged');
+    eq(b.augmented, true, 'locked');
+    assert(b.cards.includes('D4') && b.cards.includes('S4'), 'both folded in');
+    /* a pair that does NOT sum to a live own-side build stays capturable */
+    const g2 = mkState(2, { table: ['S4'] });
+    g2.builds = [{ value: 9, cards: ['H3', 'S6'], owner: 0, augmented: false }];
+    g2.players[0].hand = ['D4', 'H7'];
+    assert(has(R.legalActions(g2), (a) => a.type === 'capture' && a.card === 'D4' && a.loose.includes('S4')),
+      '4+4=8 against a 9-build — the capture is free');
+    /* an ENEMY live build of that value never triggers the bar */
+    const g3 = mkState(2, { table: ['S4'] });
+    g3.builds = [{ value: 8, cards: ['H3', 'S5'], owner: 1, augmented: false }];
+    g3.players[0].hand = ['D4', 'H7'];
+    g3.turn = 0;
+    assert(has(R.legalActions(g3), (a) => a.type === 'capture' && a.card === 'D4' && a.loose.includes('S4')),
+      'enemy 8-build — the pair capture stays legal');
+    /* a PARTNER's live build triggers the bar, and the augment feeds his build */
+    const g4 = mkState(4, { table: ['S4'] });
+    g4.builds = [{ value: 8, cards: ['H3', 'S5'], owner: 2, augmented: false }];
+    g4.players[0].hand = ['D4', 'H7'];
+    g4.turn = 0;
+    assert(!has(R.legalActions(g4), (a) => a.type === 'capture' && a.card === 'D4' && a.loose.includes('S4')),
+      'partner 8-build — the pair is reserved');
+    const aug4 = R.legalActions(g4).find((a) => a.type === 'augment' && a.method === 'combine' &&
+      a.card === 'D4' && a.loose[0] === 'S4');
+    assert(aug4 && g4.builds[aug4.buildIdx].owner === 2, 'the augment feeds the partner\u2019s build');
+    /* the bar names REGISTERED builds only — a live own SCAFFOLD of 8 does not
+       trigger it (its resolution law already locks the hand that turn) */
+    const g5 = mkState(2, { table: ['S4'] });
+    g5.builds = [{ value: 8, cards: ['H3', 'S5'], owner: 0, augmented: false, scaffold: true }];
+    g5.players[0].hand = ['D8'];
+    assert(has(R.legalActions(g5), (a) => a.type === 'capture' && a.scaffoldCap),
+      'scaffold turn: the hand is locked to resolving it');
+  });
+
   /* ================= captures incl. builds & partner rule ================= */
   test('in 4 hands you cannot capture your own partner\'s build', () => {
     const g = mkState(4, { table: [] });
@@ -623,7 +672,7 @@
   });
 
   /* ================= scaffolds & the resolution law (v4) ================= */
-  test('SCENARIO A (v6 law): scaffold 7+A — the stack takes NO additions; capture ends it', () => {
+  test('SCENARIO A (v6 law): scaffold 7+A — enemy folds never, own folds fatten, capture ends it', () => {
     const g = mkState(2, { table: ['H7', 'S1'] });
     g.players[0].hand = ['D8', 'H5'];
     g.players[1].hand = ['C9'];
@@ -641,18 +690,25 @@
     // hand is LOCKED: only capture/graduation of the scaffold — not the 5
     const acts = R.legalActions(g);
     assert(!acts.some((a) => a.card === 'H5'), 'other hand cards locked');
-    // the stack is unregistered: no dig into it and no ENEMY folds — but the
-    // owner's own cardless folds DO fatten it (settled after this test was written)
-    assert(!acts.some((a) => a.type === 'topdig'), 'no pile-top dig of the equal value here');
-    assert(!acts.some((a) => a.type === 'efold'), 'no enemy folds on the table');
+    assert(!acts.some((a) => a.type === 'efold'), 'enemy folds never touch a scaffold');
+    // the owner's own cardless folds DO fatten the stack — Sipho's top 8 is
+    // the equal pile-top dig, but the fold never resolves the debt (v41 law)
+    const td = acts.find((a) => a.type === 'topdig' && a.victim === 1);
+    assert(td, 'the equal pile-top dig folds into the scaffold');
+    R.applyAction(g, td);
+    eq(g.builds[0].value, 8, 'value unchanged');
+    eq(g.builds[0].scaffold, true, 'still a scaffold');
+    assert(g.builds[0].cards.includes('C8'), 'his 8 folded in');
+    eq(g.turnUsed, false, 'no hand card spent');
+    assert(!has(R.legalActions(g), (a) => a.type === 'endturn'), 'the debt still stands');
     // capture the scaffold with the held 8 — the whole stack, one set
-    const cap = acts.find((a) => a.type === 'capture' && a.card === 'D8');
+    const cap = R.legalActions(g).find((a) => a.type === 'capture' && a.card === 'D8');
     assert(cap && cap.scaffoldCap, 'capture of the scaffold offered');
     R.applyAction(g, cap);
     eq(g.builds.length, 0, 'scaffold captured (gone)');
-    eq(g.players[0].pile.length, 3, '7, A — and the played 8 on top');
+    eq(g.players[0].pile.length, 4, '7, A, his 8 — and the played 8 on top');
     eq(g.resolved, true, 'capture settled the cardless debt');
-    eq(g.players[1].pile.length, 2, 'Sipho\u2019s pile untouched — the dig is gone from the law');
+    eq(g.players[1].pile.length, 1, 'only the 9 left on Sipho\u2019s pile');
     assert(has(R.legalActions(g), (a) => a.type === 'endturn'), 'end turn now offered');
     R.applyAction(g, { type: 'endturn' });
     eq(g.turn, 1, 'turn passes');
@@ -1100,6 +1156,13 @@
                   assert(a.loose.length >= 1, 'empty capture offered');
                   eq(a.loose.reduce((n, id) => n + C.rank(id), 0), C.rank(a.card),
                     'floor set does not sum to the card');
+                  /* the pairs reservation: an identical pair is never offered
+                     when it sums to a live own-side registered build */
+                  if (a.loose.length === 1 && C.rank(a.loose[0]) === C.rank(a.card)) {
+                    const V = 2 * C.rank(a.card);
+                    assert(!g.builds.some((b) => !b.scaffold && b.value === V &&
+                      R.sameSide(g, b.owner, g.turn)), 'pairs reservation violated');
+                  }
                 }
               }
               if (a.type === 'preg') {

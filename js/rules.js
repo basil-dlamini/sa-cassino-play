@@ -259,12 +259,21 @@
              in one capture — the game takes exactly what was highlighted ---- */
       const byRank = {};
       for (const card of P.hand) (byRank[C.rank(card)] = byRank[C.rank(card)] || []).push(card);
+      /* PAIRS RESERVATION (owner's law): when your card and its identical
+         twin on the table sum to the value of a live REGISTERED build on
+         your side, the pair is reserved for that build — the capture stays
+         silent and only the augment speaks */
+      const pairReserved = (r) => g.builds.some((b) => !b.scaffold &&
+        b.value === 2 * r && sameSide(g, b.owner, me));
       for (const r in byRank) {
         /* EVERY copy of the rank gets its actions — the player selects the
            actual card, so a second 10 must work exactly like the first */
         for (const card of byRank[r]) {
           for (const set of allSubsets(g.table, Number(r), 12)) {
             if (!set.length) continue;
+            /* a single-card set IS the identical twin — reserved when the
+               pair sums to a live own-side build */
+            if (set.length === 1 && pairReserved(Number(r))) continue;
             const use = { type: 'capture', card, loose: set, buildIds: [] };
             if (cardUseLegal(g, me, card, use)) acts.push(use);
           }
