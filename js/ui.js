@@ -1150,6 +1150,10 @@
 
   function render() {
     if (!g) return;
+    /* the whole board's interactivity state in one class: hover lifts,
+       cursors, affordances — everything that says "you may touch this"
+       exists only while the human's turn is LIVE */
+    $('screen-game').classList.toggle('turn-live', isHumanTurn() && turnArmed);
     renderBars(); renderOppZone(); renderSides(); renderBottomCorner(); renderTable(); renderHand(); renderActionPanel(); renderLog();
     applySelClasses();
   }

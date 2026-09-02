@@ -380,7 +380,10 @@ small { opacity: .75; }
 #my-hand .card { margin-left: calc(var(--card-w) * -0.6667); }
 #my-hand .card:first-child { margin-left: 0; }
 .card.in-hand { cursor: pointer; }
-.card.in-hand:hover { transform: translateY(-10px); z-index: 30; }
+/* the lift exists only while the turn is LIVE — on touch screens a tap fires
+   a sticky hover, and a liftable card reads as selectable during the
+   opponent's turn (owner's ruling: nothing selectable before your ribbon lights) */
+#screen-game.turn-live .card.in-hand:hover { transform: translateY(-10px); z-index: 30; }
 .card.in-hand.selected { transform: translateY(-16px) scale(1.05); z-index: 31; }
 .card.in-hand.dim { opacity: .55; }
 
@@ -672,7 +675,7 @@ small { opacity: .75; }
    stays UNDER its overlapping neighbour — it must never cover it (z-index
    auto keeps the fan's natural stacking; the lift is pure position) */
 #screen-game.p2 .card.in-hand.selected { transform: translateY(-10px); z-index: auto; }
-#screen-game.p2 .card.in-hand:hover { transform: translateY(-6px); z-index: auto; }
+#screen-game.p2.turn-live .card.in-hand:hover { transform: translateY(-6px); z-index: auto; }
 
 /* the floating strip is retired in the two-hand game — its content lives in
    the bar (.nb-acts) and the message zones (.warn-zone) */
