@@ -442,6 +442,30 @@
     eq(g.players[0].pile.length, 5, '10, 10, 2, 8 — and the played 10 on top');
   });
 
+  test('v6 TOPDIG into a scaffold: his pile-top 10 folds into my 10-scaffold — the debt stands', () => {
+    // the owner's table: 10-scaffold founded from the table 9+1, Sipho's top is a 10
+    const g = mkState(2, {});
+    g.builds = [{ value: 10, cards: ['H9', 'S1'], owner: 0, augmented: false, scaffold: true }];
+    g.players[0].hand = ['D10', 'H5'];
+    g.players[1].hand = ['C2'];
+    g.players[1].pile = ['H9', 'S10'];
+    g.openedCardless = true;               // the scaffold debt is live
+    const td = R.legalActions(g).find((a) => a.type === 'topdig' && a.victim === 1);
+    assert(td, 'the equal pile-top dig into the scaffold is offered');
+    R.applyAction(g, td);
+    const b = g.builds[0];
+    assert(b.cards.includes('S10'), 'his 10 folded in');
+    eq(b.value, 10, 'value unchanged');
+    eq(b.scaffold, true, 'still a scaffold');
+    eq(g.turnUsed, false, 'no hand card spent');
+    assert(!has(R.legalActions(g), (a) => a.type === 'endturn'), 'the capture-or-top debt still stands');
+    const cap = R.legalActions(g).find((a) => a.type === 'capture' && a.card === 'D10');
+    assert(cap && cap.scaffoldCap, 'capture of the fattened scaffold offered');
+    R.applyAction(g, cap);
+    eq(g.builds.length, 0, 'taken');
+    eq(g.players[0].pile.length, 4, '9, 1, his 10 — and the played 10 on top');
+  });
+
   test('v6 DIGFOLD: the mixed fold also fattens a registered own build, never a partner pile', () => {
     const g = mkState(2, { table: ['C8'] });
     g.builds = [{ value: 10, cards: ['S10', 'H5', 'C5'], owner: 0, augmented: false }];
@@ -1061,7 +1085,6 @@
                 assert(R.sameSide(g, b.owner, g.turn), 'pile-top dig into an enemy build');
                 assert(!R.sameSide(g, a.victim, g.turn), 'pile-top dig from a partner');
                 assert(C.rank(top) === b.value, 'pile top does not match the build value');
-                assert(!b.scaffold, 'pile-top dig into a scaffold');
               }
               if (a.type === 'capture') {
                 /* the v6 capture law: a build falls ONLY to its exact value,

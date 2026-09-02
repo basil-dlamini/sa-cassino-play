@@ -453,12 +453,12 @@
     return acts;
   }
 
-  /* Pile-top digs: fold an opponent's pile top into a REGISTERED own-side
-     build whose value it matches. These are the no-hand-card moves of a turn. */
+  /* Pile-top digs: fold an opponent's pile top into an own-side build OR
+     SCAFFOLD whose value it matches — the debt stands, nothing resolves.
+     These are the no-hand-card moves of a turn. */
   function pileTopDigs(g, me, idxOf) {
     const out = [];
     for (const b of g.builds) {
-      if (b.scaffold) continue;                     // a scaffold takes no additions
       if (!sameSide(g, b.owner, me)) continue;
       const bi = idxOf(b);
       for (let seat = 0; seat < g.numPlayers; seat++) {
