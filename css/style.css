@@ -516,6 +516,8 @@ small { opacity: .75; }
 .results-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .results-table th { font-size: 11.5px; text-transform: uppercase; opacity: .7; padding: 4px; text-align: center; }
 .results-table td { padding: 6px 4px; text-align: center; border-top: 1px solid rgba(255,255,255,.1); }
+.results-table td small { display: block; font-size: 10.5px; font-weight: 700; opacity: .8; margin-top: 1px; }
+.results-table .nil { opacity: .4; }
 .results-table td.name { text-align: left; font-weight: 700; white-space: nowrap; }
 .results-table td.total { font-size: 16px; font-weight: 800; color: var(--ivory); }
 .results-note, .results-tally { font-size: 12.5px; opacity: .8; margin-top: 10px; }

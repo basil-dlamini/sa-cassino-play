@@ -1381,19 +1381,32 @@
        turning); the loser of the last game always plays first — the winner deals */
     const soloWinner = res.stats.find((t) => res.winners.includes(t.name) && t.members.length === 1);
     lastWinnerSeat = soloWinner ? soloWinner.members[0] : null;
-    $('btn-again').classList.toggle('hidden', g.numPlayers !== 2);    const verb = (res.winners.length > 1 || res.winners[0] === 'You' || res.winners[0].indexOf('&') >= 0) ? ' win!' : ' wins!';
+    $('btn-again').classList.toggle('hidden', g.numPlayers !== 2);
+    const verb = (res.winners.length > 1 || res.winners[0] === 'You' || res.winners[0].indexOf('&') >= 0) ? ' win!' : ' wins!';
     let html = res.tie
       ? '<div class="results-banner tie">It&rsquo;s a tie — ' + escapeHtml(res.winners.join(' and ')) + ' share it!</div>'
       : '<div class="results-banner win">' + escapeHtml(res.winners[0]) + verb + '</div>';
-    html += '<table class="results-table"><tr><th></th><th>Cards</th><th>♠</th><th>2♠</th><th>10♦</th><th>Aces</th><th>Most cards</th><th>Most ♠</th><th>Total</th></tr>';
+    /* the arithmetic in the open: every cell shows its count AND the points
+       it earned — 28 cards = 2 pts, 12 ♠ = 2 pts, the Big 10 = 2 pts, the
+       Spy 2 = 1 pt, each ace = 1 pt */
+    const tally = (count, pts, unit) => {
+      if (!count) return '<span class="nil">—</span>';
+      const head = unit ? count + ' ' + unit : String(count);
+      return head + '<small>= ' + pts + (pts === 1 ? ' pt' : ' pts') + '</small>';
+    };
+    html += '<table class="results-table"><tr><th></th><th>Cards</th><th>Spades</th><th>Spy 2</th><th>Big 10</th><th>Aces</th><th>Total</th></tr>';
     for (const t of res.stats) {
-      html += '<tr><td class="name">' + escapeHtml(t.name) + '</td><td>' + t.cards + '</td><td>' + t.spades +
-        '</td><td>' + t.s2 + '</td><td>' + t.d10 + '</td><td>' + t.aces + '</td><td>' +
-        (t.mostCards ? '+2' : '—') + '</td><td>' + (t.mostSpades ? '+2' : '—') +
-        '</td><td class="total">' + t.total + '</td></tr>';
+      html += '<tr><td class="name">' + escapeHtml(t.name) + '</td>' +
+        '<td>' + tally(t.cards, t.mostCards ? 2 : 0, 'cards') + '</td>' +
+        '<td>' + tally(t.spades, t.mostSpades ? 2 : 0, '&#9824;') + '</td>' +
+        '<td>' + tally(t.s2, t.s2, '') + '</td>' +
+        '<td>' + tally(t.d10, t.d10 * 2, '') + '</td>' +
+        '<td>' + tally(t.aces, t.aces, t.aces === 1 ? 'ace' : 'aces') + '</td>' +
+        '<td class="total">' + t.total + '</td></tr>';
     }
     html += '</table><div class="results-note">' + res.totalInPlay + ' points were in play' +
-      (res.teamMode ? ' (pairs scoring).' : ' (singles scoring).') + '</div>';
+      (res.teamMode ? ' (pairs scoring).' : ' (singles scoring).') +
+      ' Most cards and most spades score 2 — a tie in a "most" scores nothing.</div>';
     html += '<div class="results-tally">Session: ' + escapeHtml(sessionTallyText()) + '</div>';
     box.innerHTML = html;
     $('modal-results').classList.remove('hidden');
