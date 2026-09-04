@@ -233,9 +233,12 @@
         { className: 'build-lock', textContent: '🔒' }));
       cards.appendChild(el);
       if (tutorialMode) {
+        /* same trio as the pile strip — what the build's cards are worth
+           (they only score once the build is captured into the pile) */
+        const st = R.pileStats(b.cards);
         const cnt = document.createElement('span');
         cnt.className = 'pile-stats';
-        cnt.textContent = b.cards.length + ' cards';
+        cnt.innerHTML = st.cards + ' cards · ' + st.spades + ' ♠ · ' + st.points + ' pts';
         cards.appendChild(cnt);
       }
       z.appendChild(cards);
@@ -1655,6 +1658,7 @@
       newGame({ demo: m[1] === 'demo' });
     }
   }
+
 
   root.UI = { init, toast };
 })(typeof window !== 'undefined' ? window : globalThis);
