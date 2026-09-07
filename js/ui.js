@@ -1223,6 +1223,7 @@
     show('screen-game');
     $('screen-game').classList.toggle('p2', n === 2);   // the two-hand layout
     fitCards();
+    Snd.deal();   // the riffle that opens every game
     render();
     tick();
   }
@@ -1318,11 +1319,14 @@
     humanActions = [];   // stale actions must not flash into the next player's ribbon
     turnArmed = false;   // and the incoming turn is not live until its moves are computed
     coachMsg = (opts && opts.why) || null;
-    if (a.type === 'capture') Snd.capture();
-    else if (a.type === 'build' || a.type === 'augment' || a.type === 'preg') Snd.build();
-    else if (a.type === 'dig' || a.type === 'topdig') Snd.steal();
-    else if (a.type === 'discard') Snd.drift();
-    if (a.type === 'capture' && g.phase !== 'gameover' && g.table.length === 0 && g.builds.length === 0) Snd.sweep();
+    /* the table's own voice: your moves at full presence, the AI's the same
+       sounds a touch quieter — a real table being played on around you */
+    const q = (opts && opts.human) ? 1 : 0.45;
+    if (a.type === 'capture') Snd.capture(q);
+    else if (a.type === 'build' || a.type === 'augment' || a.type === 'preg') Snd.build(q);
+    else if (a.type === 'dig' || a.type === 'topdig') Snd.steal(q);
+    else if (a.type === 'discard') Snd.drift(q);
+    if (a.type === 'capture' && g.phase !== 'gameover' && g.table.length === 0 && g.builds.length === 0) Snd.sweep(q);
     render();
     /* pairs: the partner just completed a build whose value the human holds —
        offer Shiya immediately */
