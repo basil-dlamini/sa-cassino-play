@@ -955,7 +955,7 @@
     }
     clearSelection();
     humanBusy = true;
-    setTimeout(() => (humanBusy = false), 700);
+    setTimeout(() => (humanBusy = false), 300);   // double-tap guard only — direct play must flow
     Snd.click();
     performAction(a, { human: true });
   }
@@ -1333,7 +1333,10 @@
         setTimeout(() => openShiyaOffer(v), 450);
       }
     }
-    setTimeout(tick, 200);
+    /* the next turn arms in the SAME task the move lands — no timer, no blank
+       frame between "move painted" and "ribbon lit" (owner's ruling: zero gap
+       from the AI's last move to the player's turn) */
+    tick();
   }
 
   /* ---------------- Shiya offer (partner completed a build) ---------------- */
