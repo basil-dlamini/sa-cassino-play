@@ -82,8 +82,9 @@
      between the bars and the ad) fitting EXACTLY — the reserve is the real
      chrome, measured (the ad strip lives outside the game screen and is
      therefore NOT subtracted here). */
-  /* phone-width screens run the two-hand discard grid five columns wide
-     (the owner's 5×2 ruling); wider screens keep the classic 4×2 */
+  /* LOCKED (owner's ruling, 2026-09-07): every phone-width screen runs the
+     two-hand discard grid FIVE columns wide — 5×2 = 10 slots, verified from
+     320px-class phones up. Wider screens keep the classic 4×2. */
   function p2FiveCols() {
     return session.numPlayers === 2 && $('screen-game').clientWidth <= 560;
   }
