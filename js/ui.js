@@ -1663,9 +1663,5 @@
     }
   }
 
-
-    }, 400);
-  }
-
   root.UI = { init, toast };
 })(typeof window !== 'undefined' ? window : globalThis);
