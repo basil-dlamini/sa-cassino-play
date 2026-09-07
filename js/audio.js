@@ -24,20 +24,24 @@
   }
 
   /* ---------- the real recordings ---------- */
+  /* round 1 (owner-approved 2026-09-08): place=playcard, discard/UI=flick,
+     build=contact, steal=draw, deal=shuffle. Capture/sweep/win/lose stay
+     on the interim sounds pending audition round 2 */
   const GROUPS = {
-    place:   ['card-place-1', 'card-place-2', 'card-place-3', 'card-place-4'],
-    slide:   ['card-slide-1', 'card-slide-2', 'card-slide-3', 'card-slide-4'],
-    shove:   ['card-shove-1', 'card-shove-2'],
-    shuffle: ['card-shuffle'],
-    pluck:   ['cards-pack-take-out-1'],
-    fan:     ['card-fan-1']
+    place:   ['playcard.wav'],
+    slide:   ['mixkit-2001.mp3'],
+    contact: ['pcs-contact1.wav'],
+    shove:   ['card-shove-1.ogg', 'card-shove-2.ogg'],
+    shuffle: ['mixkit-3175.mp3'],
+    pluck:   ['draw.wav'],
+    fan:     ['card-fan-1.ogg']
   };
   function loadSamples() {
     if (loading) return;
     loading = true;
     const names = Object.values(GROUPS).reduce((a, b) => a.concat(b), []);
     names.forEach((name) => {
-      fetch('sounds/' + name + '.ogg')
+      fetch('sounds/' + name)
         .then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
         .then((ab) => ac().decodeAudioData(ab))
         .then((buf) => { buffers[name] = buf; })
@@ -141,7 +145,7 @@
       burst(0.13, 0.18 * v, 650, 350, 'bandpass', 0.08); },
 
     build(v) { v = v || 1;
-      if (sample('place', 0.75 * v, 0.92)) return;     // a firmer, lower placement
+      if (sample('contact', 0.8 * v, 1)) return;     // the approved card contact
       burst(0.08, 0.17 * v, 1100, 2000, 'bandpass'); tick(0.12 * v, 0.07); thump(230, 0.04, 0.08 * v, 0.08); },
 
     steal(v) { v = v || 1;
