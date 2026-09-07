@@ -82,13 +82,20 @@
      between the bars and the ad) fitting EXACTLY — the reserve is the real
      chrome, measured (the ad strip lives outside the game screen and is
      therefore NOT subtracted here). */
+  /* phone-width screens run the two-hand discard grid five columns wide
+     (the owner's 5×2 ruling); wider screens keep the classic 4×2 */
+  function p2FiveCols() {
+    return session.numPlayers === 2 && $('screen-game').clientWidth <= 560;
+  }
+
   function fitCards() {
     const n = R.DEAL[session.numPlayers].per;
     const col = $('screen-game');
     const availW = col.clientWidth - 24;
     if (session.numPlayers === 2) {
       const wDeep = Math.floor((col.clientWidth - 16) / (1 + 9 * 0.25));
-      const wGrid = Math.floor((col.clientWidth - 16 - 15) / 4);
+      const gaps = p2FiveCols() ? 4 * 5 : 3 * 5;
+      const wGrid = Math.floor((col.clientWidth - 16 - gaps) / (p2FiveCols() ? 5 : 4));
       const wH = Math.floor((col.clientHeight - 175) / (5 * 1.4));
       const w = Math.max(52, Math.min(104, Math.min(wDeep, wGrid, wH)));
       document.documentElement.style.setProperty('--card-w', w + 'px');
@@ -577,13 +584,15 @@
         }
       }
     } else {
-      /* 2/3 hands — rectangle grid, four columns wide (the mockup lock) */
-      const cols = g.numPlayers === 3 || g.numPlayers === 2 ? 4 : 3;
+      /* 2/3 hands — rectangle grid; two-hand phones run FIVE columns (the
+         owner's 5×2 ruling), everything else keeps the mockup's four */
+      const cols = g.numPlayers === 2 ? (p2FiveCols() ? 5 : 4) : 4;
       area.classList.toggle('cols-4', cols === 4);
+      area.classList.toggle('cols-5', cols === 5);
       const minRows = g.numPlayers === 2 ? 2 : 3;
       const rows = Math.max(minRows, Math.floor((wrap.clientHeight - 8) / ch));
-      /* cell floor: two full rows (8 cells) — the mockup's 4×2 discard area */
-      const floor = g.numPlayers === 2 ? 8 : 9;
+      /* cell floor: two full rows of whatever the column count is */
+      const floor = g.numPlayers === 2 ? cols * 2 : 9;
       const cells = Math.max(rows * cols, Math.ceil(Math.max(n, floor) / cols) * cols);
       for (let i = 0; i < cells; i++) slots.push(Math.floor(i / cols) + 1 + ' / ' + (i % cols + 1));
     }
@@ -1672,7 +1681,6 @@
       newGame({ demo: m[1] === 'demo' });
     }
   }
-
 
   root.UI = { init, toast };
 })(typeof window !== 'undefined' ? window : globalThis);

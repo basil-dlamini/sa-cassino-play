@@ -661,7 +661,8 @@ small { opacity: .75; }
 #screen-game.p2 #discard-grid-wrap { padding: 3px 0; justify-content: flex-start; flex: 0 0 auto; }
 #screen-game.p2 #table-cards { gap: 5px; }
 #table-cards.cols-4 { grid-template-columns: repeat(4, var(--card-w)); }
-#screen-game.p2 .grid-cell { border-radius: 6px; }
+#screen-game.p2 #table-cards.cols-5 { grid-template-columns: repeat(5, var(--card-w)); }   /* the owner's 5×2 on phones */
+#screen-game.p2 .grid-cell { border-radius: 0; }   /* rectangles with the cards (v49) */
 
 /* my bar: full width under my areas; my fan packs RIGHT.
    The bar rides ABOVE the hand cards (a raised card must never cover the
