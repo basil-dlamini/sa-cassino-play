@@ -138,7 +138,7 @@ small { opacity: .75; }
   position: relative; width: var(--card-w); aspect-ratio: 5 / 7;
   container-type: inline-size;
   background: linear-gradient(160deg, #faf6ea 0%, #efe6cf 100%);
-  border-radius: 9px; color: #16181d;
+  border-radius: 0; color: #16181d;   /* proper rectangles (owner's ruling) */
   box-shadow: 0 2px 7px rgba(0,0,0,.4), inset 0 0 0 1px rgba(0,0,0,.1), inset 0 0 0 3px rgba(13,29,68,.14);
   font-family: Georgia, "Times New Roman", serif;
   user-select: none; flex: 0 0 auto;
@@ -160,7 +160,7 @@ small { opacity: .75; }
 }
 .card .pip.flip { transform: translate(-50%, -50%) rotate(180deg); }
 .card .pip.ace { font-size: 42cqw; }
-.card.small { width: var(--card-w-sm); border-radius: 6px; }
+.card.small { width: var(--card-w-sm); }
 .card.back {
   border: 2px solid #f4efe2;
   background:
@@ -255,7 +255,7 @@ small { opacity: .75; }
   display: flex; align-items: center; justify-content: center;
   width: calc(var(--card-w) + 12px);
   min-height: calc(var(--card-w) * 1.4 + 12px);
-  border: 1.5px dashed rgba(244,239,226,.3); border-radius: 11px; padding: 5px;
+  border: 1.5px dashed rgba(244,239,226,.3); border-radius: 0; padding: 5px;
   background: rgba(0,0,0,.16);
 }
 .area-box.has-build { border-style: solid; border-color: rgba(244,239,226,.75); background: rgba(0,0,0,.28); }
@@ -309,7 +309,7 @@ small { opacity: .75; }
 }
 .grid-cell {
   width: var(--card-w); aspect-ratio: 5 / 7;
-  border: 1.5px solid rgba(244,239,226,.16); border-radius: 10px;
+  border: 1.5px solid rgba(244,239,226,.16); border-radius: 0;   /* cards and their slots share the rectangle */
   background: rgba(0,0,0,.09);
 }
 
@@ -424,7 +424,7 @@ small { opacity: .75; }
 .trio.active .area-box { border-color: rgba(244,239,226,.8); }
 .trio.stealable .pile-box { box-shadow: 0 0 0 2px rgba(255,150,150,.9); }
 /* the trios use small cards so two bands + the grid fit side by side */
-.mode-4 .area-box { --card-w: var(--area-card, 48px); padding: 4px; border-radius: 9px; }
+.mode-4 .area-box { --card-w: var(--area-card, 48px); padding: 4px; border-radius: 0; }
 .mode-4 .area-box .build-val { width: 19px; height: 19px; font-size: 11px; top: -7px; right: -7px; }
 .mode-4 .area-box .build-lock { font-size: 10px; }
 .mode-4 .area-box .pile-count { font-size: 10.5px; }
