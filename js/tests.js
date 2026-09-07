@@ -327,6 +327,33 @@
       'no base, no dig-founding — the standing law');
   });
 
+  test('v6 SCAFFOLD FOR CAPTURE while owning a build: his 7 onto the base 7, taken with the held 7', () => {
+    // the owner's table: my live 10-build, a 7 loose, Sipho's top a 7, two 7s in hand
+    const g = mkState(2, { table: ['C7'] });
+    g.builds = [{ value: 10, cards: ['S10', 'H5', 'C5'], owner: 0, augmented: false }];
+    g.players[0].hand = ['D7', 'H7'];
+    g.players[1].hand = ['C2'];
+    g.players[1].pile = ['H8', 'S7'];       // Sipho's top: the 7
+    const sc = R.legalActions(g).find((a) => a.type === 'scaffold' && a.value === 7 && a.victim === 1);
+    assert(sc, 'the dig-founding onto the base 7 is offered while owning the 10-build');
+    R.applyAction(g, sc);
+    const b = g.builds.find((x) => x.scaffold);
+    eq(b.value, 7);
+    eq(b.cards.length, 2, 'base 7 + his dug 7');
+    eq(g.players[1].pile.length, 1, 'his 7 dug');
+    const acts = R.legalActions(g);
+    assert(!acts.some((a) => a.type === 'augment' && a.method === 'top'),
+      'no top offered — a second build never comes by hand (two 7s held, still barred)');
+    const cap = acts.find((a) => a.type === 'capture' && a.scaffoldCap && a.card === 'D7');
+    assert(cap, 'capture of the scaffold with a held 7 offered');
+    R.applyAction(g, cap);
+    eq(g.builds.filter((x) => x.scaffold).length, 0, 'scaffold gone');
+    eq(g.players[0].pile.length, 3, 'base 7 + his 7 + my played 7');
+    const kept = g.builds.find((x) => !x.scaffold);
+    assert(kept && kept.value === 10, 'the live 10-build untouched');
+    assert(has(R.legalActions(g), (a) => a.type === 'endturn'), 'the turn may end');
+  });
+
   /* ================= the v6 table law (as taught by the owner) ================= */
   test('v6 CAPTURE: a build NEVER joins a sum — only its exact value takes it', () => {
     // the owner's original report, now law: topped 7-build + loose 3 vs a 10
@@ -426,11 +453,15 @@
     eq(g4.builds[0].augmented, false, 'virgin — preggable again');
   });
 
-  test('v6 REGISTRATION: one build per player in 2 hands — no scaffold, no second build', () => {
+  test('v6 REGISTRATION: one build per player in 2 hands — scaffolds free, no second build', () => {
     const g = mkState(2, { table: ['C3', 'H4'] });
     g.builds = [{ value: 8, cards: ['H3', 'S5'], owner: 0, augmented: false }];
     g.players[0].hand = ['D7', 'C7'];
-    assert(!has(R.legalActions(g), (a) => a.type === 'scaffold'), 'no scaffolding while owning a build');
+    /* the owner's ruling: owning a build does NOT bar scaffold founding —
+       the debt settles by capture, which founds nothing (see the SCAFFOLD
+       FOR CAPTURE test). What stays barred is the second REGISTERED build */
+    assert(has(R.legalActions(g), (a) => a.type === 'scaffold' && a.value === 7),
+      'a 7+7 scaffold from the table is offered while owning the 8-build');
     assert(!has(R.legalActions(g), (a) => a.type === 'build'), 'no second self-made build');
   });
 
@@ -1168,6 +1199,14 @@
                 } else {
                   eq(C.rank(a.card) + C.rank(top), a.value, 'hand+pile founding must sum to the value');
                 }
+              }
+              if (a.type === 'augment' && a.method === 'top' && g.builds[a.buildIdx] &&
+                  g.builds[a.buildIdx].scaffold) {
+                /* a scaffold's graduation founds a registered build — it may
+                   only ever be offered to a player owning none (the owner's
+                   law: capture-only while a build stands) */
+                assert(g.builds.filter((x) => !x.scaffold && x.owner === g.turn).length === 0,
+                  'scaffold top offered while owning a registered build');
               }
               if (a.type === 'scaffold') {
                 assert(!g.turnUsed, 'scaffold founded after the hand card');

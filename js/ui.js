@@ -723,8 +723,15 @@
         const edigs = humanActions.filter((a) => a.type === 'edig' &&
           a.victims.includes(pileTopSel) && sameCards(a.loose) &&
           (buildSel == null || a.buildIdx === buildSel));
-        const scaffs = humanActions.filter((a) => a.type === 'scaffold' &&
-          a.victim === pileTopSel && sameCards(a.cards));
+        /* a dig-founding's BASE may or may not be in the selection — it folds
+           beneath automatically either way (the owner's tap: his 7 + the 7) */
+        const scaffs = humanActions.filter((a) => {
+          if (a.type !== 'scaffold' || a.victim !== pileTopSel) return false;
+          if (sameCards(a.cards)) return true;
+          if (a.cards.length + 1 !== tableSel.size) return false;
+          const extra = [...tableSel].find((id) => !a.cards.includes(id));
+          return extra != null && C.rank(extra) === a.value && g.table.includes(extra);
+        });
         const all = digs.concat(digfolds).concat(edigs).concat(scaffs);
         if (all.length) return all;
       }
@@ -901,7 +908,10 @@
           : 'Extra cards fold in — the value stays ' + g.builds[a.buildIdx].value + '.';
       case 'dig':     return 'Their pile top folds into the build — it stays worth ' + g.builds[a.buildIdx].value + '.';
       case 'topdig':  return 'Their pile top folds into the build — it stays worth ' + g.builds[a.buildIdx].value + ' and locks.';
-      case 'scaffold': return 'Built from the table alone — capture it or top it before your turn ends.';
+      case 'scaffold':
+        return g.builds.some((b) => !b.scaffold && b.owner === g.turn)
+          ? 'Built from the table alone — with a build already yours, capture it with your ' + a.value + ' before your turn ends.'
+          : 'Built from the table alone — capture it or top it before your turn ends.';
       case 'caugment': return 'Table cards fold in — the value stays ' + g.builds[a.buildIdx].value + ' and locks.';
       case 'efold':    return 'Table cards join THEIR build — then your ' + g.builds[a.buildIdx].value + ' captures all of it.';
       case 'edig':     return 'Their card joins THEIR build — then your ' + g.builds[a.buildIdx].value + ' captures all of it.';
@@ -1662,6 +1672,7 @@
       newGame({ demo: m[1] === 'demo' });
     }
   }
+
 
   root.UI = { init, toast };
 })(typeof window !== 'undefined' ? window : globalThis);

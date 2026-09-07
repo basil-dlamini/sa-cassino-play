@@ -506,36 +506,34 @@
        value V — into an UNREGISTERED stack in the discard area, of a value
        you hold; it must be captured or graduated before the turn ends, so it
        can only be FOUNDED before the hand card is spent. One scaffold at a
-       time, no founding over a fold debt, and the founder must hold a free
-       build slot (none at all in 2/3 hands — the graduation top requires
-       owning nothing anyway) */
+       time, and never over a fold debt. Owning registered builds does NOT
+       bar founding (the owner's law): the debt can always be settled by
+       CAPTURE, which founds nothing — only the graduation top demands owning
+       nothing, and that bar lives at the top itself */
     if (!scaffoldLive && !g.builds.some((b) => b.captLock) && !g.turnUsed) {
-      const slotFree = g.numPlayers === 4 ? buildsOwned(g, me) <= 1 : buildsOwned(g, me) === 0;
-      if (slotFree) {
-        const heldVals = [...new Set(P.hand.map((id) => C.rank(id)))];
-        for (const V of heldVals) {
-          if (g.builds.some((b) => b.value === V)) continue;   // no duplicate values
-          /* pure table scaffolds: 2+ cards summing to V — a lone card is
-             NEVER a build */
-          for (const sub of allSubsets(g.table, V, 12)) {
-            if (sub.length < 2) continue;
-            out.push({ type: 'scaffold', cards: sub, value: V });
-          }
-          /* dig-foundings: an opponent's pile top (+ table cards) summing to V —
-             ONLY onto a loose BASE of V (the owner's law: no base, no prompt).
-             A lone pile top on its base is a legal two-card founding */
-          const base = g.table.find((t) => C.rank(t) === V);
-          if (base) {
-            for (let seat = 0; seat < g.numPlayers; seat++) {
-              if (sameSide(g, seat, me)) continue;
-              const top = g.players[seat].pile[g.players[seat].pile.length - 1];
-              if (!top) continue;
-              const rest = V - C.rank(top);
-              if (rest < 0) continue;
-              const subs = rest === 0 ? [[]] : allSubsets(g.table, rest, 8);
-              for (const sub of subs) {
-                out.push({ type: 'scaffold', cards: sub, value: V, victim: seat });
-              }
+      const heldVals = [...new Set(P.hand.map((id) => C.rank(id)))];
+      for (const V of heldVals) {
+        if (g.builds.some((b) => b.value === V)) continue;   // no duplicate values
+        /* pure table scaffolds: 2+ cards summing to V — a lone card is
+           NEVER a build */
+        for (const sub of allSubsets(g.table, V, 12)) {
+          if (sub.length < 2) continue;
+          out.push({ type: 'scaffold', cards: sub, value: V });
+        }
+        /* dig-foundings: an opponent's pile top (+ table cards) summing to V —
+           ONLY onto a loose BASE of V (the owner's law: no base, no prompt).
+           A lone pile top on its base is a legal two-card founding */
+        const base = g.table.find((t) => C.rank(t) === V);
+        if (base) {
+          for (let seat = 0; seat < g.numPlayers; seat++) {
+            if (sameSide(g, seat, me)) continue;
+            const top = g.players[seat].pile[g.players[seat].pile.length - 1];
+            if (!top) continue;
+            const rest = V - C.rank(top);
+            if (rest < 0) continue;
+            const subs = rest === 0 ? [[]] : allSubsets(g.table, rest, 8);
+            for (const sub of subs) {
+              out.push({ type: 'scaffold', cards: sub, value: V, victim: seat });
             }
           }
         }
