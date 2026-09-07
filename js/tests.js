@@ -67,6 +67,39 @@
     g4.players.forEach((p) => eq(p.hand.length, 10));
   });
 
+  test('v6 SCORING: a tie for most cards/spades pays a point to each tied side', () => {
+    /* a dead heat: 20 cards each, 5 spades each — every "most" is a tie */
+    const tie0 = ['S1','H2','D3','C4','S5','H6','D7','C8','S9','H10','D1','C2','S3','H4','D5','C6','S7','H8','D9','C10'];
+    const tie1 = ['H1','D2','C3','S4','H5','D6','C7','S8','H9','D10','C1','S2','D4','C5','S6','H7','D8','C9','S10','H3'];
+    const g = mkState(2, {});
+    g.players[0].pile = tie0.slice();
+    g.players[1].pile = tie1.slice();
+    const res = R.scoreGame(g);
+    eq(res.stats[0].mostCards, 1, 'cards tie pays 1');
+    eq(res.stats[1].mostCards, 1, 'cards tie pays 1 to the other side');
+    eq(res.stats[0].mostSpades, 1, 'spades tie pays 1');
+    eq(res.stats[1].mostSpades, 1, 'spades tie pays 1 to the other side');
+    eq(res.stats[0].total, res.stats[0].points + 2, 'a double tie collects both points');
+    eq(res.stats[1].total, res.stats[1].points + 2, 'both sides collect');
+    /* an outright most still takes 2 */
+    const g2 = mkState(2, {});
+    g2.players[0].pile = tie0.concat(['H3']);
+    g2.players[1].pile = tie1.filter((x) => x !== 'H3');
+    const r2 = R.scoreGame(g2);
+    eq(r2.stats[0].mostCards, 2, 'outright most takes 2');
+    eq(r2.stats[1].mostCards, 0, 'the loser takes nothing');
+    eq(r2.stats[0].mostSpades, 1, 'spades still tied');
+    eq(r2.stats[1].mostSpades, 1, 'spades still tied');
+    /* three hands: card points only — no most bonuses whatever the counts */
+    const g3 = mkState(3, {});
+    g3.players[0].pile = tie0.concat(tie1.slice(0, 15));
+    g3.players[1].pile = tie1.slice(15);
+    g3.players[2].pile = [];
+    const r3 = R.scoreGame(g3);
+    r3.stats.forEach((t) => { eq(t.mostCards, 0, 'no card bonus in three hands'); eq(t.mostSpades, 0, 'no spade bonus in three hands'); });
+    eq(r3.totalInPlay, 7, 'seven card points in play');
+  });
+
   /* ================= discarding & the build-value ban ================= */
   test('a discard is refused while its twin lies on the table — the capture is the way out', () => {
     const g = mkState(2, { table: ['C4'] });

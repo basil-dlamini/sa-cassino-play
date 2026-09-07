@@ -1447,16 +1447,16 @@
     html += '<table class="results-table"><tr><th></th><th>Cards</th><th>Spades</th><th>Spy 2</th><th>Big 10</th><th>Aces</th><th>Total</th></tr>';
     for (const t of res.stats) {
       html += '<tr><td class="name">' + escapeHtml(t.name) + '</td>' +
-        '<td>' + tally(t.cards, t.mostCards ? 2 : 0, 'cards') + '</td>' +
-        '<td>' + tally(t.spades, t.mostSpades ? 2 : 0, '&#9824;') + '</td>' +
+        '<td>' + tally(t.cards, t.mostCards, 'cards') + '</td>' +
+        '<td>' + tally(t.spades, t.mostSpades, '&#9824;') + '</td>' +
         '<td>' + tally(t.s2, t.s2, '') + '</td>' +
         '<td>' + tally(t.d10, t.d10 * 2, '') + '</td>' +
         '<td>' + tally(t.aces, t.aces, t.aces === 1 ? 'ace' : 'aces') + '</td>' +
         '<td class="total">' + t.total + '</td></tr>';
     }
     html += '</table><div class="results-note">' + res.totalInPlay + ' points were in play' +
-      (res.teamMode ? ' (pairs scoring).' : ' (singles scoring).') +
-      ' Most cards and most spades score 2 — a tie in a "most" scores nothing.</div>';
+      (res.teamMode ? ' (pairs scoring). Most cards and most spades score 2 — a tie pays 1 point to each tied side.'
+        : ' (singles scoring). Card points only — no most bonuses in three hands.') + '</div>';
     html += '<div class="results-tally">Session: ' + escapeHtml(sessionTallyText()) + '</div>';
     box.innerHTML = html;
     $('modal-results').classList.remove('hidden');

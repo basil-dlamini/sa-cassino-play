@@ -1082,7 +1082,10 @@
     const max = Math.max(...stats.map((t) => t[key]));
     if (max === 0) return;
     const best = stats.filter((t) => t[key] === max);
+    /* the owner's law: an outright most takes 2 points; a TIE pays a point
+       to every tied side — the two categories pay separately */
     if (best.length === 1) best[0][field] = 2;
+    else best.forEach((t) => { t[field] = 1; });
   }
 
   const Rules = {
