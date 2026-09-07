@@ -146,7 +146,7 @@ small { opacity: .75; }
 }
 .card.red { color: #c2232a; }
 .card .corner {
-  position: absolute; font-size: 15px; font-size: 16cqw; font-weight: 700;
+  position: absolute; font-size: 15px; font-size: 20cqw; font-weight: 700;   /* numbering a quarter larger (owner's ask) */
   line-height: 1.02; text-align: center;
   display: flex; flex-direction: column; align-items: center;
 }
