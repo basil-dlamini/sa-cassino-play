@@ -324,15 +324,26 @@
               acts.push({ type: 'build', card, loose: sub, value: V, owner });
             }
             /* compound founding: a table BASE of value V + this hand card +
-               an opponent's pile top (hand + pile = V) founds the build at
-               once — no same-turn obligation, the build is live (owner holds V) */
+               an opponent's pile top founds the build at once — no same-turn
+               obligation, the build is live (owner holds V). Hand + pile alone
+               may complete V, or hand + pile + a table set together (the
+               THREE-SOURCE founding). The captured card may join ONLY because
+               the base stands beneath it — no base, no prompt */
             const base = g.table.find((t) => C.rank(t) === V);
             if (base && owner === me) {
               for (let seat = 0; seat < g.numPlayers; seat++) {
                 if (sameSide(g, seat, me)) continue;
                 const top = g.players[seat].pile[g.players[seat].pile.length - 1];
-                if (top && C.rank(top) + rp === V) {
+                if (!top) continue;
+                const rest = V - rp - C.rank(top);
+                if (rest === 0) {
                   acts.push({ type: 'build', card, loose: [base], value: V, owner: me, victim: seat });
+                } else if (rest > 0) {
+                  /* A + the 3 + his 6 = 10 over the base 10 — the base folds
+                     beneath; the selection is the three sources only */
+                  for (const sub of allSubsets(g.table, rest, 8)) {
+                    acts.push({ type: 'build', card, loose: sub, value: V, owner: me, victim: seat, base });
+                  }
                 }
               }
             }
@@ -847,9 +858,18 @@
       let bCards, logLine;
       if (a.victim != null) {
         const dug = g.players[a.victim].pile.pop();
-        bCards = [...a.loose, ...sortDesc([a.card, dug])];
-        logLine = act(me, 'builds', 'build') + ' ' + a.value + ' (' + C.label(a.card) + ' + ' +
-          C.label(dug) + ' from ' + names(g, a.victim) + '\u2019s pile + ' + fmt(a.loose) + ' base)';
+        if (a.base != null) {
+          /* three-source founding: the base folds beneath the founding set */
+          removeFromTable(g, [a.base]);
+          bCards = [a.base, ...sortDesc([a.card, dug, ...a.loose])];
+          logLine = act(me, 'builds', 'build') + ' ' + a.value + ' (' + C.label(a.card) + ' + ' +
+            C.label(dug) + ' from ' + names(g, a.victim) + '\u2019s pile + ' + fmt(a.loose) +
+            ' on the ' + C.label(a.base) + ' base)';
+        } else {
+          bCards = [...a.loose, ...sortDesc([a.card, dug])];
+          logLine = act(me, 'builds', 'build') + ' ' + a.value + ' (' + C.label(a.card) + ' + ' +
+            C.label(dug) + ' from ' + names(g, a.victim) + '\u2019s pile + ' + fmt(a.loose) + ' base)';
+        }
       } else {
         const set = sortDesc([a.card, ...a.loose]);
         const bases = absorbBases(g, a.value);          // a loose V joins as the base

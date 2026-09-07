@@ -294,6 +294,39 @@
       'captured cards never help found a build — founding needs the loose base');
   });
 
+  test('v6 THREE-SOURCE FOUNDING: A(hand) + 3(table) + his 6 = 10 over the base 10', () => {
+    // the owner's table: 10 and 3 loose, Sipho's top a 6, hand 10 + Ace
+    const g = mkState(2, { table: ['H10', 'S3'] });
+    g.players[0].hand = ['C10', 'S1'];
+    g.players[1].hand = ['H7'];
+    g.players[1].pile = ['H9', 'C6'];        // Sipho's top: the 6
+    const b = R.legalActions(g).find((x) => x.type === 'build' && x.value === 10 && x.victim === 1);
+    assert(b, 'the three-source founding is offered');
+    eq(b.card, 'S1', 'the Ace is the spent card');
+    eq(b.loose.join(), 'S3', 'the selection is the three sources — the base is not part of it');
+    eq(b.base, 'H10', 'the base folds beneath automatically');
+    R.applyAction(g, b);
+    const bd = g.builds[0];
+    eq(bd.value, 10);
+    eq(bd.owner, 0, 'mine to capture later');
+    eq(bd.augmented, true, 'locked — a captured card is folded in');
+    eq(bd.cards.length, 4, 'base + the three founding cards');
+    eq(bd.cards[0], 'H10', 'the base at the very bottom');
+    assert(bd.cards.includes('S1') && bd.cards.includes('S3') && bd.cards.includes('C6'),
+      'the Ace, the 3 and his 6 all in');
+    eq(g.table.length, 0, 'the 3 and the base both leave the table');
+    eq(g.players[1].pile.length, 1, 'his 6 dug off the top');
+    eq(g.players[0].hand.join(), 'C10', 'the Ace spent, the 10 kept as the capture card');
+    assert(g.players[0].virtual[10], 'registered as my live 10');
+    // no base of the value on the table → the captured card stays silent
+    const g2 = mkState(2, { table: ['S3', 'H4'] });
+    g2.players[0].hand = ['C10', 'S1'];
+    g2.players[1].hand = ['H7'];
+    g2.players[1].pile = ['H9', 'C6'];
+    assert(!has(R.legalActions(g2), (x) => x.type === 'build' && x.victim != null),
+      'no base, no dig-founding — the standing law');
+  });
+
   /* ================= the v6 table law (as taught by the owner) ================= */
   test('v6 CAPTURE: a build NEVER joins a sum — only its exact value takes it', () => {
     // the owner's original report, now law: topped 7-build + loose 3 vs a 10
@@ -1120,6 +1153,21 @@
                 assert(!g.builds.some((b) => b.scaffold), 'endturn with a scaffold live');
                 assert(!g.builds.some((b) => b.captLock), 'endturn with a capture lock owed');
                 assert(!g.openedCardless || g.resolved, 'endturn with a cardless debt owed');
+              }
+              if (a.type === 'build' && a.victim != null) {
+                /* dig-foundings: enemy pile only, over a loose base, summing
+                   exactly to the value (hand+pile, or hand+pile+table set) */
+                const top = g.players[a.victim].pile[g.players[a.victim].pile.length - 1];
+                assert(!R.sameSide(g, a.victim, g.turn), 'founding dig from a partner');
+                assert(g.table.some((t) => C.rank(t) === a.value), 'dig-founding without a loose base');
+                if (a.base != null) {
+                  eq(C.rank(a.card) + C.rank(top) + a.loose.reduce((n, id) => n + C.rank(id), 0),
+                    a.value, 'three-source founding must sum to the value');
+                  assert(C.rank(a.base) === a.value, 'the founding base must carry the value');
+                  assert(!a.loose.includes(a.base), 'the base may not double-count');
+                } else {
+                  eq(C.rank(a.card) + C.rank(top), a.value, 'hand+pile founding must sum to the value');
+                }
               }
               if (a.type === 'scaffold') {
                 assert(!g.turnUsed, 'scaffold founded after the hand card');

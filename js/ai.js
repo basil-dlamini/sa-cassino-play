@@ -49,6 +49,7 @@
       table.push(action.card);
     } else if (action.type === 'build') {
       const set = new Set(action.loose);
+      if (action.base != null) set.add(action.base);   // three-source founding folds the base beneath
       table = table.filter((id) => !set.has(id));
       builds.push({ value: action.value, owner: action.owner });
     } else if (action.type === 'augment' || action.type === 'dig') {
@@ -139,6 +140,8 @@
 
       if (a.type === 'build') {
         const folding = a.loose.slice();
+        if (a.base != null) folding.push(a.base);
+        if (a.victim != null) folding.push(g.players[a.victim].pile[g.players[a.victim].pile.length - 1]);
         const pts = pilePointsOf(folding);
         s += w.build * (0.5 + 0.3 * pts + 0.45 * folding.length);
         const holder = a.owner;
