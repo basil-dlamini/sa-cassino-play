@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sound Audition — South African Cassino</title>
+<style>
+  body { font-family: 'Segoe UI', sans-serif; background: #0d1932; color: #f4efe2; padding: 16px; max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 20px; } p.lead { font-size: 13px; opacity: .8; line-height: 1.5; }
+  .action { background: rgba(255,255,255,.05); border: 1px solid rgba(244,239,226,.25); border-radius: 12px; padding: 10px 12px; margin: 12px 0; }
+  .action h2 { font-size: 15px; margin: 0 0 2px; }
+  .action .desc { font-size: 11.5px; opacity: .7; margin: 0 0 8px; }
+  .cand { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid rgba(244,239,226,.12); }
+  .cand:first-of-type { border-top: 0; }
+  .cand button.play { background: #f4efe2; color: #0d1932; border: 0; border-radius: 8px; padding: 6px 12px; font-weight: 700; font-size: 13px; min-width: 56px; }
+  .cand .nm { font-size: 13px; flex: 1; }
+  .cand .src { font-size: 10px; opacity: .55; display: block; }
+  .cand label { font-size: 12px; white-space: nowrap; cursor: pointer; }
+  #copy { background: #d9b23c; color: #14264f; border: 0; border-radius: 10px; padding: 12px 18px; font-weight: 800; font-size: 15px; width: 100%; margin-top: 12px; }
+  #out { font-family: Consolas, monospace; font-size: 11px; background: rgba(0,0,0,.4); border-radius: 8px; padding: 10px; white-space: pre-wrap; word-break: break-all; }
+  .picked { background: rgba(60,180,100,.15); }
+</style>
+</head>
+<body>
+<h1>🔊 Sound Audition</h1>
+<p class="lead">Tap <b>Play</b> to hear each candidate at the volume it would use in the game.
+When a sound feels right for an action, tick <b>Choose</b>. You can also tick
+<b>None</b> if nothing works — I'll keep hunting. When you're done, press
+<b>Copy my choices</b> and paste the result back to me in the chat.</p>
+<div id="list"></div>
+<button id="copy">Copy my choices</button>
+<div id="out" hidden></div>
+<script>
+/* candidates per action: id = file in sounds-candidates/, real volume used in game */
+const ACTIONS = [
+  { key: 'place',   title: 'Playing a card from your hand',  vol: 0.85, cands: [
+    ['mixkit-1994.mp3', 'Poker card placement', 'Mixkit'],
+    ['mixkit-1930.mp3', 'Poker card placement (take 2)', 'Mixkit'],
+    ['playcard.wav', 'Play card', 'Cockatrice'],
+    ['pcs-contact1.wav', 'Card contact (short)', 'BMacZero']] },
+  { key: 'discard', title: 'Discard sliding into its slot', vol: 0.7, cands: [
+    ['untap.wav', 'Card slide', 'Cockatrice'],
+    ['pcs-contact2.wav', 'Card contact (long)', 'BMacZero'],
+    ['mixkit-2001.mp3', 'Poker card flick', 'Mixkit']] },
+  { key: 'capture', title: 'Capture — slap and gather',     vol: 0.9, cands: [
+    ['pcs-contact2.wav', 'Card contact (long)', 'BMacZero'],
+    ['tap.wav', 'Card tap/scrape', 'Cockatrice'],
+    ['mixkit-1930.mp3', 'Poker card placement (firm)', 'Mixkit']] },
+  { key: 'build',   title: 'Building / folding into a build', vol: 0.75, cands: [
+    ['tap.wav', 'Card tap', 'Cockatrice'],
+    ['pcs-contact1.wav', 'Card contact (short)', 'BMacZero'],
+    ['playcard.wav', 'Play card (softer)', 'Cockatrice']] },
+  { key: 'steal',   title: 'Digging a pile top — the pluck', vol: 0.85, cands: [
+    ['draw.wav', 'Card drawn from deck', 'Cockatrice'],
+    ['pcs-cut.wav', 'Deck cut', 'BMacZero'],
+    ['mixkit-1929.mp3', 'Poker card flick (take 2)', 'Mixkit']] },
+  { key: 'deal',    title: 'The shuffle that opens a game',  vol: 0.9, cands: [
+    ['pcs-shuffle.wav', 'Deck shuffle', 'BMacZero'],
+    ['pcs-shuffleandbridge.wav', 'Shuffle and bridge', 'BMacZero'],
+    ['shuffle.wav', 'Shuffle', 'Cockatrice'],
+    ['mixkit-3175.mp3', 'Card deck shuffle', 'Mixkit']] },
+  { key: 'sweep',   title: 'Sweeping the table clean',       vol: 0.9, cands: [
+    ['pcs-contact2.wav', 'Long gather', 'BMacZero'],
+    ['pcs-shuffleandbridge.wav', 'Big gather (bridge)', 'BMacZero']] },
+  { key: 'win',     title: 'Winning — the flourish',         vol: 0.9, cands: [
+    ['mixkit-2002.mp3', 'Deck flourish', 'Mixkit'],
+    ['pcs-shuffle.wav', 'Short riffle', 'BMacZero'],
+    ['Passturn.wav', 'Card flip past', 'Cockatrice']] },
+  { key: 'lose',    title: 'Losing — a soft flat drop',      vol: 0.6, cands: [
+    ['pcs-contact1.wav', 'Soft contact', 'BMacZero'],
+    ['untap.wav', 'Slide away', 'Cockatrice']] },
+  { key: 'click',   title: 'Buttons / UI tick (very quiet)', vol: 0.28, cands: [
+    ['pcs-contact1.wav', 'Tiny contact', 'BMacZero'],
+    ['mixkit-2001.mp3', 'Flick (quiet)', 'Mixkit'],
+    ['untap.wav', 'Slide (quiet)', 'Cockatrice']] }
+];
+const pick = {};
+let current = null;
+const list = document.getElementById('list');
+ACTIONS.forEach((a) => {
+  const box = document.createElement('div');
+  box.className = 'action';
+  box.innerHTML = '<h2>' + a.title + '</h2><div class="desc">played at ' +
+    Math.round(a.vol * 100) + '% volume</div>';
+  a.cands.forEach((c) => {
+    const row = document.createElement('div');
+    row.className = 'cand';
+    const b = document.createElement('button');
+    b.className = 'play'; b.textContent = '▶';
+    b.onclick = () => {
+      if (current) current.pause();
+      const au = new Audio('sounds-candidates/' + c[0]);
+      au.volume = a.vol; current = au; au.play().catch(() => {});
+    };
+    const nm = document.createElement('div');
+    nm.className = 'nm'; nm.innerHTML = c[1] + '<span class="src">' + c[0] + ' · ' + c[2] + '</span>';
+    const lab = document.createElement('label');
+    const rb = document.createElement('input');
+    rb.type = 'radio'; rb.name = a.key; rb.value = c[0];
+    rb.onchange = () => { pick[a.key] = c[0]; row.parentElement.querySelectorAll('.cand').forEach((r) => r.classList.remove('picked')); row.classList.add('picked'); };
+    lab.appendChild(rb); lab.appendChild(document.createTextNode(' Choose'));
+    row.appendChild(b); row.appendChild(nm); row.appendChild(lab);
+    box.appendChild(row);
+  });
+  const none = document.createElement('label');
+  const nrb = document.createElement('input');
+  nrb.type = 'radio'; nrb.name = a.key; nrb.value = 'NONE';
+  nrb.onchange = () => { pick[a.key] = 'NONE'; box.querySelectorAll('.cand').forEach((r) => r.classList.remove('picked')); };
+  none.style.cssText = 'display:block;font-size:12px;margin-top:6px;opacity:.8;cursor:pointer';
+  none.appendChild(nrb);
+  none.appendChild(document.createTextNode(' None of these — keep looking'));
+  box.appendChild(none);
+  list.appendChild(box);
+});
+document.getElementById('copy').onclick = () => {
+  const lines = ACTIONS.map((a) => a.key + ': ' + (pick[a.key] || '(not chosen)'));
+  const out = 'SOUND CHOICES\n' + lines.join('\n');
+  const el = document.getElementById('out');
+  el.hidden = false; el.textContent = out;
+  if (navigator.clipboard) navigator.clipboard.writeText(out).catch(() => {});
+  document.getElementById('copy').textContent = 'Copied — paste it in the chat (also shown below)';
+};
+</script>
+</body>
+</html>
