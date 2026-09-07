@@ -789,6 +789,12 @@
   function afterSelectionChange() {
     const m = matchesForSelection();
     const armed = selectedCard ? hasSideSelection() : (pileTopSel != null || tableSel.size > 0);
+    /* DIRECT mode: a complete selection that means exactly one move plays
+       at once — the confirmation returns only for real choices */
+    if (directMode() && m.length === 1 && armed && !humanBusy) {
+      executeHuman(m[0]);
+      return;
+    }
     pendingConfirm = (m.length && armed) ? { matches: m } : null;
     renderActionPanel();
     applySelClasses();
@@ -849,6 +855,7 @@
     if (!isHumanTurn() || !turnArmed || !selectedCard || hasSideSelection()) return;
     const card = selectedCard;
     if (discardLegalFor(card)) {
+      if (directMode()) { executeHuman({ type: 'discard', card }, areaStr); return; }
       pendingConfirm = { matches: [{ type: 'discard', card }], discardArea: areaStr };
       renderActionPanel();
       Snd.click();
@@ -933,11 +940,16 @@
   }
 
   /* --- confirming: the live strip — the board stays visible and tappable --- */
-  function confirmAction(i) {
-    if (!pendingConfirm || humanBusy) return;
-    const a = pendingConfirm.matches[i];
-    const area = pendingConfirm.discardArea;
-    pendingConfirm = null;
+  /* Move confirmation (owner's ruling 2026-09-07): DIRECT by default — a
+     complete selection that means exactly ONE legal action plays at once.
+     The prompt survives only where one selection could mean two moves
+     (capture vs build, capture vs top, scaffold vs fold). Settings toggle:
+     'direct' | 'prompt' */
+  function directMode() {
+    return (localStorage.getItem('sacassino.confirmMode') || 'direct') === 'direct';
+  }
+
+  function executeHuman(a, area) {
     if (a.type === 'discard' && area) {
       tableSlots[a.card] = area;   // snap to the chosen slot
     }
@@ -946,6 +958,14 @@
     setTimeout(() => (humanBusy = false), 700);
     Snd.click();
     performAction(a, { human: true });
+  }
+
+  function confirmAction(i) {
+    if (!pendingConfirm || humanBusy) return;
+    const a = pendingConfirm.matches[i];
+    const area = pendingConfirm.discardArea;
+    pendingConfirm = null;
+    executeHuman(a, area);
   }
   function cancelConfirm() {
     pendingConfirm = null;
@@ -1499,6 +1519,9 @@
   }
   function renderSettings() {
     $('snd-toggle').textContent = Snd.muted ? 'Sound: OFF' : 'Sound: ON';
+    $('confirm-toggle').textContent = directMode()
+      ? 'Moves: Direct (tap to play)'
+      : 'Moves: Prompt every move';
     $('speed-select').value = localStorage.getItem('sacassino.aiSpeed') || '900';
     $('btn-remove-ads').textContent = Ads.removed ? '✓ Ads removed — thank you!' : 'Remove ads — $2.99 (one-time)';
     $('btn-remove-ads').disabled = Ads.removed;
@@ -1647,6 +1670,13 @@
 
     $('btn-settings-close').addEventListener('click', () => { Snd.click(); $('modal-settings').classList.add('hidden'); });
     $('snd-toggle').addEventListener('click', () => { Snd.muted = !Snd.muted; renderSettings(); if (!Snd.muted) Snd.click(); });
+    $('confirm-toggle').addEventListener('click', () => {
+      localStorage.setItem('sacassino.confirmMode', directMode() ? 'prompt' : 'direct');
+      renderSettings(); Snd.click();
+      toast(directMode()
+        ? 'Direct moves: a complete selection plays at once.'
+        : 'Prompt every move: Confirm is back.');
+    });
     $('speed-select').addEventListener('change', () => localStorage.setItem('sacassino.aiSpeed', $('speed-select').value));
     $('btn-remove-ads').addEventListener('click', () => {
       if (Ads.removed) { toast('Ads are already removed on this device.'); return; }
