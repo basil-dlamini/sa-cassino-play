@@ -541,7 +541,9 @@
   function assignSlots(slots) {
     const live = new Set(g.table);
     for (const sc of g.builds) {
-      if (sc.scaffold) live.add(sc.cards[sc.cards.length - 1]);   // scaffold anchors hold their slots
+      /* a scaffold stands on its BOTTOM card's slot — the base it was
+         founded over, or the highest founding card when there is no base */
+      if (sc.scaffold) live.add(sc.cards[0]);
     }
     for (const k of Object.keys(tableSlots)) if (!live.has(k)) delete tableSlots[k];
     const occupied = new Set(Object.values(tableSlots));
@@ -602,18 +604,20 @@
       }
       area.appendChild(el);
     }
-    /* the scaffold: an UNREGISTERED stack standing in the discard area —
-       the founding cards slid together, the base beneath them all. Tapping
-       the stack selects it (for its capture, or its graduation by topping) */
+    /* the scaffold: an UNREGISTERED stack standing in the discard area, ON
+       ITS BOTTOM CARD'S SLOT — the base never moves from its place and the
+       founding cards fold on top of it; a baseless founding stands on its
+       highest card's slot the same way. The TOP card shows as the face.
+       Tapping the stack selects it (capture, or graduation by topping) */
     const scBuild = g.builds.find((b) => b.scaffold);
     if (scBuild) {
-      const anchor = scBuild.cards[scBuild.cards.length - 1];
+      const anchor = scBuild.cards[0];             // the bottom card holds the slot
       if (!tableSlots[anchor]) tableSlots[anchor] = slots[0];
       const z = document.createElement('div');
       z.className = 'area-box build-box has-build scaffold';
       z.dataset.idx = g.builds.indexOf(scBuild);
       z.style.gridArea = tableSlots[anchor];
-      const el = cardEl(anchor);
+      const el = cardEl(scBuild.cards[scBuild.cards.length - 1]);   // the face is the top card
       el.style.boxShadow = stackShadow(scBuild.cards.length);
       z.appendChild(el);
       const badge = document.createElement('span');
@@ -1659,6 +1663,9 @@
     }
   }
 
+
+    }, 400);
+  }
 
   root.UI = { init, toast };
 })(typeof window !== 'undefined' ? window : globalThis);
