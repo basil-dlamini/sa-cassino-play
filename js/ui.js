@@ -711,6 +711,12 @@
       const top = g.players[a.victim].pile[g.players[a.victim].pile.length - 1];
       if (top) ids.push(top);
     }
+    if (a.victims) {                              // an enemy dig may span several piles
+      for (const seat of a.victims) {
+        const top = g.players[seat].pile[g.players[seat].pile.length - 1];
+        if (top) ids.push(top);
+      }
+    }
     if (a.loose) ids.push(...a.loose);
     for (const idx of (a.buildIds || [])) ids.push(...g.builds[idx].cards);
     if (a.buildIdx != null) ids.push(...g.builds[a.buildIdx].cards);
@@ -786,12 +792,25 @@
     });
   }
 
+  /* can this move still GROW? if any legal action strictly contains the
+     matched one's cards, the player is mid-assembly — direct mode waits for
+     the maximal selection instead of ambushing a legal partial (5+A must
+     not fire as a 6-scaffold while 2+5+A=8 is still reachable) */
+  function selectionCanGrow(match) {
+    const base = cardsOfAction(match);
+    return humanActions.some((a) => {
+      if (a === match) return false;
+      const ids = cardsOfAction(a);
+      return ids.length > base.length && base.every((id) => ids.includes(id));
+    });
+  }
+
   function afterSelectionChange() {
     const m = matchesForSelection();
     const armed = selectedCard ? hasSideSelection() : (pileTopSel != null || tableSel.size > 0);
-    /* DIRECT mode: a complete selection that means exactly one move plays
-       at once — the confirmation returns only for real choices */
-    if (directMode() && m.length === 1 && armed && !humanBusy) {
+    /* DIRECT mode: a complete, MAXIMAL selection that means exactly one move
+       plays at once — the confirmation returns only for real choices */
+    if (directMode() && m.length === 1 && armed && !humanBusy && !selectionCanGrow(m[0])) {
       executeHuman(m[0]);
       return;
     }
@@ -1626,8 +1645,8 @@
         render();
         return;
       }
-      selectedCard = el.dataset.id;   // the move starts with a hand card
-      tableSel = new Set(); buildSel = null; pileTopSel = null;
+      selectedCard = el.dataset.id;   // the move's hand card — an existing table/
+                                        // pile selection is KEPT (order never matters)
       Snd.select();
       refreshAfterSelect();
     });
@@ -1733,6 +1752,7 @@
       newGame({ demo: m[1] === 'demo' });
     }
   }
+
 
   root.UI = { init, toast };
 })(typeof window !== 'undefined' ? window : globalThis);
