@@ -198,7 +198,21 @@
     win()  { if (sample('win', 0.9, 1)) return;
       const end = riffle(20, 0.14, 0.34, 0, true); thump(180, 0.06, 0.1, end + 0.05); burst(0.1, 0.15, 1400, 700, 'lowpass', end + 0.06); },
     lose() { if (sample('lose', 0.6, 0.75)) return;
-      burst(0.06, 0.16, 900, 450, 'lowpass'); thump(120, 0.09, 0.1, 0.03); }
+      burst(0.06, 0.16, 900, 450, 'lowpass'); thump(120, 0.09, 0.1, 0.03); },
+
+    /* card selection: its own subtle voice, quieter than any play */
+    select() { if (sample('place', 0.22, 1.5)) return; tick(0.06); },
+
+    /* SWEEP MOMENTS — placeholders until the owner's car/crowd recordings
+       arrive (record.html). The shapes hint at the coming voices */
+    sweepWin()   { const e = riffle(10, 0.13, 0.24, 0, true);   /* crowd nods: a rising riffle */
+      burst(0.1, 0.16, 1300, 600, 'lowpass', e + 0.05); thump(170, 0.06, 0.1, e + 0.06); },
+    sweepKing()  { const e = riffle(20, 0.15, 0.38, 0, true);   /* the king: a long flourish */
+      burst(0.14, 0.2, 1500, 500, 'lowpass', e + 0.05); thump(150, 0.08, 0.13, e + 0.07); thump(120, 0.1, 0.11, e + 0.16); },
+    sweptPoint() { thump(90, 0.12, 0.12, 0); thump(85, 0.12, 0.12, 0.22);   /* the car: struggle, struggle… */
+      burst(0.35, 0.3, 900, 2200, 'bandpass', 0.45); thump(70, 0.3, 0.2, 0.45); },  /* …then the roar */
+    sweptClean() { riffle(16, 0.13, 0.5, 0, true);                              /* revving, spinning… */
+      [300, 240, 190].forEach((f, i) => thump(f, 0.12, 0.08, 0.55 + i * 0.13)); }  /* …the mocking fall */
   };
   root.Sound = Sound;
 })(typeof window !== 'undefined' ? window : globalThis);

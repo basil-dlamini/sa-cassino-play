@@ -387,6 +387,42 @@
     assert(has(R.legalActions(g), (a) => a.type === 'endturn'), 'the turn may end');
   });
 
+  test('v6 SWEEP BONUSES: all point cards = sweep, all forty = clean; never stacked', () => {
+    const deck = C.makeDeck();
+    const points = ['S1', 'H1', 'D1', 'C1', 'S2', 'D10'];
+    /* pairs: my pile holds every point card (plus spares), his pile the rest */
+    const g = mkState(2, {});
+    g.players[0].pile = points.concat(['H4', 'C6']);
+    g.players[1].pile = deck.filter((c) => !points.includes(c) && c !== 'H4' && c !== 'C6');
+    const r = R.scoreGame(g);
+    eq(r.stats[0].sweep, 22, 'all point cards = the 22 sweep bonus');
+    eq(r.stats[1].sweep, 0, 'no sweep for the other side');
+    eq(r.totalInPlay, 11, 'bonuses are bonuses — points in play unchanged');
+    /* clean sweep: all forty in one pile — the 44 REPLACES the 22 */
+    const g2 = mkState(2, {});
+    g2.players[0].pile = deck.slice();
+    g2.players[1].pile = [];
+    const r2 = R.scoreGame(g2);
+    eq(r2.stats[0].sweep, 44, 'every card = the 44 clean sweep');
+    eq(r2.stats[0].total, r2.stats[0].points + 4 + 44, 'clean sweep pays once — never 22+44');
+    /* three hands: 11 and 22 */
+    const g3 = mkState(3, {});
+    g3.players[0].pile = points.concat(deck.slice(0, 9));
+    g3.players[1].pile = deck.slice(9, 25);
+    g3.players[2].pile = deck.slice(25);
+    const r3 = R.scoreGame(g3);
+    eq(r3.stats[0].sweep, 11, 'singles sweep pays 11');
+    const g4 = mkState(3, {});
+    g4.players[0].pile = deck.slice();
+    g4.players[1].pile = []; g4.players[2].pile = [];
+    eq(R.scoreGame(g4).stats[0].sweep, 22, 'singles clean sweep pays 22');
+    /* missing even one point card: no sweep */
+    const g5 = mkState(2, {});
+    g5.players[0].pile = points.filter((c) => c !== 'D10').concat(['H4']);
+    g5.players[1].pile = deck.filter((c) => !g5.players[0].pile.includes(c));
+    eq(R.scoreGame(g5).stats[0].sweep, 0, 'all-but-one point card is no sweep');
+  });
+
   /* ================= the v6 table law (as taught by the owner) ================= */
   test('v6 CAPTURE: a build NEVER joins a sum — only its exact value takes it', () => {
     // the owner's original report, now law: topped 7-build + loose 3 vs a 10
@@ -1392,7 +1428,13 @@
         eq(pileTotal, 40, 'not all cards ended in piles');
         const res = R.scoreGame(g);
         assert(res.winners.length >= 1, 'no winner');
-        for (const t of res.stats) assert(t.total <= res.totalInPlay, 'score exceeds universe');
+        const allowedSweep = res.teamMode ? [0, 22, 44] : [0, 11, 22];
+        for (const t of res.stats) {
+          /* bonuses sit on top of the points in play: verify the exact
+             composition and that only a lawful sweep award exists */
+          assert(allowedSweep.includes(t.sweep || 0), 'unlawful sweep bonus ' + (t.sweep || 0));
+          eq(t.total, t.points + t.mostCards + t.mostSpades + (t.sweep || 0), 'total composition');
+        }
         totalGames++;
       }
     }

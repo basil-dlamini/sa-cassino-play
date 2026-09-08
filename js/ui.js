@@ -834,19 +834,19 @@
   function toggleTableSel(id) {
     if (!isHumanTurn() || humanBusy || !turnArmed) return;   // loose cards pair with a hand card or found a cardless build
     if (tableSel.has(id)) tableSel.delete(id); else tableSel.add(id);
-    Snd.click();
+    Snd.select();
     afterSelectionChange();
   }
   function toggleBuildSel(idx) {
     if (!isHumanTurn() || !turnArmed) return;
     buildSel = buildSel === idx ? null : idx;
-    Snd.click();
+    Snd.select();
     afterSelectionChange();
   }
   function togglePileSel(seat) {
     if (!isHumanTurn() || !turnArmed) return;
     pileTopSel = pileTopSel === seat ? null : seat;
-    Snd.click();
+    Snd.select();
     afterSelectionChange();
   }
 
@@ -1448,24 +1448,38 @@
       const head = unit ? count + ' ' + unit : String(count);
       return head + '<small>= ' + pts + (pts === 1 ? ' pt' : ' pts') + '</small>';
     };
-    html += '<table class="results-table"><tr><th></th><th>Cards</th><th>Spades</th><th>Spy 2</th><th>Big 10</th><th>Aces</th><th>Total</th></tr>';
+    html += '<table class="results-table"><tr><th></th><th>Cards</th><th>Spades</th><th>Spy 2</th><th>Big 10</th><th>Aces</th><th>Sweep</th><th>Total</th></tr>';
     for (const t of res.stats) {
+      const clean = res.teamMode ? 44 : 22;
       html += '<tr><td class="name">' + escapeHtml(t.name) + '</td>' +
         '<td>' + tally(t.cards, t.mostCards, 'cards') + '</td>' +
         '<td>' + tally(t.spades, t.mostSpades, '&#9824;') + '</td>' +
         '<td>' + tally(t.s2, t.s2, '') + '</td>' +
         '<td>' + tally(t.d10, t.d10 * 2, '') + '</td>' +
         '<td>' + tally(t.aces, t.aces, t.aces === 1 ? 'ace' : 'aces') + '</td>' +
+        '<td>' + (t.sweep
+          ? '+' + t.sweep + '<small>' + (t.sweep >= clean ? 'clean sweep' : 'sweep') + '</small>'
+          : '<span class="nil">—</span>') + '</td>' +
         '<td class="total">' + t.total + '</td></tr>';
     }
     html += '</table><div class="results-note">' + res.totalInPlay + ' points were in play' +
-      (res.teamMode ? ' (pairs scoring). Most cards and most spades score 2 — a tie pays 1 point to each tied side.'
-        : ' (singles scoring). Card points only — no most bonuses in three hands.') + '</div>';
+      (res.teamMode ? ' (pairs scoring). Most cards and most spades score 2 — a tie pays 1 point to each tied side. A sweep (all the point cards) adds 22, a clean sweep (all forty cards) 44 — bonuses on top.'
+        : ' (singles scoring). Card points only — no most bonuses in three hands. A sweep adds 11, a clean sweep 22 — bonuses on top.') + '</div>';
     html += '<div class="results-tally">Session: ' + escapeHtml(sessionTallyText()) + '</div>';
     box.innerHTML = html;
     $('modal-results').classList.remove('hidden');
     const youWon = res.stats.some((t) => t.members.includes(HUMAN) && res.winners.includes(t.name));
-    if (youWon) Snd.win(); else Snd.lose();
+    /* the sweep is the headline when it happens — its moment sounds over the
+       plain win/lose; placeholders until the owner's recordings arrive */
+    const mine = res.stats.find((t) => t.members.includes(HUMAN));
+    const other = res.stats.find((t) => !t.members.includes(HUMAN));
+    const cleanPts = res.teamMode ? 44 : 22;
+    if (mine && mine.sweep >= cleanPts) Snd.sweepKing();
+    else if (mine && mine.sweep) Snd.sweepWin();
+    else if (other && other.sweep >= cleanPts) Snd.sweptClean();
+    else if (other && other.sweep) Snd.sweptPoint();
+    else if (youWon) Snd.win();
+    else Snd.lose();
   }
 
   function sessionTallyText() {
@@ -1614,7 +1628,7 @@
       }
       selectedCard = el.dataset.id;   // the move starts with a hand card
       tableSel = new Set(); buildSel = null; pileTopSel = null;
-      Snd.click();
+      Snd.select();
       refreshAfterSelect();
     });
 
