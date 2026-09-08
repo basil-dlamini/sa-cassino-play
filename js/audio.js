@@ -38,7 +38,8 @@
     win:     ['card-fan-1.ogg'],
     lose:    ['playcard.wav'],
     click:   ['mixkit-2001.mp3'],
-    select:  ['playcard.wav']
+    select:  ['playcard.wav'],
+    deselect: ['playcard.wav']
   };
   /* the owner's own recordings (record.html, same site) outrank the shipped
      samples on the device that made them — the personal table voice */
@@ -201,8 +202,10 @@
     lose() { if (sample('lose', 0.6, 0.75)) return;
       burst(0.06, 0.16, 900, 450, 'lowpass'); thump(120, 0.09, 0.1, 0.03); },
 
-    /* card selection: its own subtle voice, quieter than any play */
-    select() { if (sample('place', 0.22, 1.5)) return; tick(0.06); },
+    /* card selection and deselection: their own subtle voices, the quietest
+       in the game — distinct from each other (the owner records both) */
+    select()   { if (sample('select', 0.22, 1.5)) return; tick(0.06); },
+    deselect() { if (sample('deselect', 0.2, 1.15)) return; tick(0.045); },
 
     /* SWEEP MOMENTS — placeholders until the owner's car/crowd recordings
        arrive (record.html). The shapes hint at the coming voices */

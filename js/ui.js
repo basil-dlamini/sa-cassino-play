@@ -855,18 +855,21 @@
   /* --- selection toggles: nothing is selectable until the turn is LIVE --- */
   function toggleTableSel(id) {
     if (!isHumanTurn() || humanBusy || !turnArmed) return;   // loose cards pair with a hand card or found a cardless build
-    if (tableSel.has(id)) tableSel.delete(id); else tableSel.add(id);
-    if (!afterSelectionChange()) Snd.select();   // a tap that played a move speaks with the move's own voice
+    const removing = tableSel.has(id);
+    if (removing) tableSel.delete(id); else tableSel.add(id);
+    if (!afterSelectionChange()) (removing ? Snd.deselect() : Snd.select());
   }
   function toggleBuildSel(idx) {
     if (!isHumanTurn() || !turnArmed) return;
-    buildSel = buildSel === idx ? null : idx;
-    if (!afterSelectionChange()) Snd.select();
+    const removing = buildSel === idx;
+    buildSel = removing ? null : idx;
+    if (!afterSelectionChange()) (removing ? Snd.deselect() : Snd.select());
   }
   function togglePileSel(seat) {
     if (!isHumanTurn() || !turnArmed) return;
-    pileTopSel = pileTopSel === seat ? null : seat;
-    if (!afterSelectionChange()) Snd.select();
+    const removing = pileTopSel === seat;
+    pileTopSel = removing ? null : seat;
+    if (!afterSelectionChange()) (removing ? Snd.deselect() : Snd.select());
   }
 
   /* --- discard: tap an empty slot with a hand card selected --- */
@@ -1640,7 +1643,7 @@
       if (el.dataset.id === selectedCard) {   // tap the selected card again → deselect
         clearSelection();
         pendingConfirm = null;
-        Snd.click();
+        Snd.deselect();
         render();
         return;
       }
