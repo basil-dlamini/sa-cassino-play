@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Record My Table — South African Cassino</title>
+<style>
+  body { font-family: 'Segoe UI', sans-serif; background: #0d1932; color: #f4efe2; padding: 16px; max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 20px; } p.lead { font-size: 13px; opacity: .85; line-height: 1.55; }
+  .action { background: rgba(255,255,255,.05); border: 1px solid rgba(244,239,226,.25); border-radius: 12px; padding: 10px 12px; margin: 12px 0; }
+  .action h2 { font-size: 15px; margin: 0 0 2px; }
+  .action .desc { font-size: 11.5px; opacity: .7; margin: 0 0 8px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  button { border: 0; border-radius: 8px; padding: 8px 12px; font-weight: 700; font-size: 13px; }
+  .rec { background: #d23c3c; color: #fff; min-width: 92px; }
+  .rec.on { background: #fff; color: #d23c3c; }
+  .ply { background: #f4efe2; color: #0d1932; }
+  .use { background: #3cb464; color: #06210f; }
+  .dl   { background: rgba(244,239,226,.25); color: #f4efe2; text-decoration: none; display: inline-block; }
+  .del  { background: rgba(244,239,226,.15); color: #f4efe2; }
+  .state { font-size: 11px; opacity: .75; margin-top: 6px; }
+  .mine { border-color: #3cb464; }
+  #status { font-size: 12px; opacity: .8; margin-top: 4px; min-height: 16px; }
+</style>
+</head>
+<body>
+<h1>🎤 Record My Table</h1>
+<p class="lead"><b>How to get great card sounds:</b> find a quiet room. Lay the phone flat
+on the table, about a hand's width from where the cards will land, microphone
+side toward them. Then for each sound below: tap <b>Record</b>, do the thing
+once, clearly, and tap <b>Stop</b> (or let it stop itself). <b>Play</b> it
+back — if you like it, it's already saved as yours. Record as many takes as
+you want; the newest take wins. Your recordings are used by the game on this
+phone immediately — refresh the game after recording. The <b>Download</b>
+link lets you send a take to me later so it ships to every player.</p>
+<div id="list"></div>
+<div id="status"></div>
+<script>
+const ACTIONS = [
+  { key: 'capture', title: 'Capture — slap and gather', tip: 'slap a small pile of cards once, then pull them together toward you' },
+  { key: 'sweep',   title: 'Sweep — clearing the table', tip: 'gather all the cards from the table into one pile in one motion' },
+  { key: 'win',     title: 'Win — the flourish',         tip: 'spread a riffle or fan of cards across the table' },
+  { key: 'lose',    title: 'Lose — a flat drop',         tip: 'let a single card fall flat onto the table from a low height' },
+  { key: 'place',   title: 'Playing a card (optional — approved sound in place)', tip: 'lay one card down firmly from your hand' },
+  { key: 'discard', title: 'Discard slide (optional)',   tip: 'slide one card across the table into place' },
+  { key: 'build',   title: 'Build / fold (optional)',    tip: 'place a card onto a small stack and square it' },
+  { key: 'steal',   title: 'Dig / take (optional)',      tip: 'draw one card quickly from the top of a deck' },
+  { key: 'deal',    title: 'Opening shuffle (optional)', tip: 'riffle the deck once' },
+  { key: 'click',   title: 'Button tick (optional)',     tip: 'a tiny soft card touch' }
+];
+function openDb() {
+  return new Promise((res, rej) => {
+    const rq = indexedDB.open('sacassino', 1);
+    rq.onupgradeneeded = () => rq.result.createObjectStore('ownerSounds');
+    rq.onsuccess = () => res(rq.result);
+    rq.onerror = () => rej(rq.error);
+  });
+}
+function dbPut(key, blob) { return openDb().then((db) => new Promise((res, rej) => {
+  const tx = db.transaction('ownerSounds', 'readwrite');
+  tx.objectStore('ownerSounds').put(blob, key);
+  tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+})); }
+function dbGet(key) { return openDb().then((db) => new Promise((res) => {
+  const rq = db.transaction('ownerSounds', 'readonly').objectStore('ownerSounds').get(key);
+  rq.onsuccess = () => res(rq.result || null); rq.onerror = () => res(null);
+})); }
+function dbDel(key) { return openDb().then((db) => new Promise((res) => {
+  const tx = db.transaction('ownerSounds', 'readwrite');
+  tx.objectStore('ownerSounds').delete(key);
+  tx.oncomplete = res; tx.onerror = res;
+})); }
+
+let stream = null, rec = null, chunks = [], active = null;
+const status = (s) => { document.getElementById('status').textContent = s || ''; };
+
+ACTIONS.forEach((a) => {
+  const box = document.createElement('div');
+  box.className = 'action'; box.id = 'act-' + a.key;
+  box.innerHTML = '<h2>' + a.title + '</h2><div class="desc">' + a.tip + '</div>';
+  const row = document.createElement('div'); row.className = 'row';
+  const rb = document.createElement('button'); rb.className = 'rec'; rb.textContent = '⏺ Record';
+  const pb = document.createElement('button'); pb.className = 'ply'; pb.textContent = '▶ Play';
+  const dl = document.createElement('a'); dl.className = 'dl'; dl.textContent = '⬇ Download'; dl.hidden = true;
+  const del = document.createElement('button'); del.className = 'del'; del.textContent = 'Remove mine'; del.hidden = true;
+  const state = document.createElement('div'); state.className = 'state';
+  const refresh = () => dbGet(a.key).then((b) => {
+    const mine = !!b;
+    box.classList.toggle('mine', mine);
+    state.textContent = mine ? '✔ your recording is saved — the game uses it on this phone' : 'using the shipped sound';
+    dl.hidden = !mine;
+    if (mine) { dl.href = URL.createObjectURL(b); dl.download = 'my-' + a.key + '.webm'; }
+    del.hidden = !mine;
+  });
+  refresh();
+  rb.onclick = async () => {
+    if (rec && rec.state === 'recording') { rec.stop(); return; }
+    try {
+      if (!stream) stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    } catch (e) { status('Microphone blocked — allow mic access and try again.'); return; }
+    chunks = [];
+    const mime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'].find((m) => MediaRecorder.isTypeSupported(m)) || '';
+    rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+    rec.ondataavailable = (e) => chunks.push(e.data);
+    rec.onstop = () => {
+      rb.textContent = '⏺ Record'; rb.classList.remove('on');
+      document.querySelectorAll('.rec').forEach((b) => { b.disabled = false; });
+      const blob = new Blob(chunks, { type: rec.mimeType || 'audio/webm' });
+      dbPut(a.key, blob).then(() => { status('Saved your "' + a.key + '" take.'); refresh(); })
+        .catch(() => status('Could not save — storage full?'));
+      active = { key: a.key, blob };
+    };
+    rec.start();
+    active = a.key;
+    rb.textContent = '⏹ Stop'; rb.classList.add('on');
+    status('Recording "' + a.key + '"… do the thing once, then tap Stop.');
+    setTimeout(() => { if (rec && rec.state === 'recording') rec.stop(); }, 4000);
+  };
+  pb.onclick = () => {
+    dbGet(a.key).then((b) => {
+      if (!b) { status('No take saved yet for "' + a.key + '".'); return; }
+      new Audio(URL.createObjectURL(b)).play().catch(() => {});
+    });
+  };
+  del.onclick = () => dbDel(a.key).then(refresh);
+  row.appendChild(rb); row.appendChild(pb); row.appendChild(dl); row.appendChild(del);
+  box.appendChild(row); box.appendChild(state);
+  document.getElementById('list').appendChild(box);
+});
+</script>
+</body>
+</html>
