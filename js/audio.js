@@ -37,7 +37,8 @@
     sweep:   ['card-shove-1.ogg', 'card-shove-2.ogg'],
     win:     ['card-fan-1.ogg'],
     lose:    ['playcard.wav'],
-    click:   ['mixkit-2001.mp3']
+    click:   ['mixkit-2001.mp3'],
+    select:  ['playcard.wav']
   };
   /* the owner's own recordings (record.html, same site) outrank the shipped
      samples on the device that made them — the personal table voice */

@@ -809,10 +809,12 @@
     const m = matchesForSelection();
     const armed = selectedCard ? hasSideSelection() : (pileTopSel != null || tableSel.size > 0);
     /* DIRECT mode: a complete, MAXIMAL selection that means exactly one move
-       plays at once — the confirmation returns only for real choices */
+       plays at once — the confirmation returns only for real choices.
+       Returns true when the tap EXECUTED a move, so the caller plays the
+       selection sound only when the tap merely selected */
     if (directMode() && m.length === 1 && armed && !humanBusy && !selectionCanGrow(m[0])) {
       executeHuman(m[0]);
-      return;
+      return true;
     }
     pendingConfirm = (m.length && armed) ? { matches: m } : null;
     renderActionPanel();
@@ -820,11 +822,12 @@
     /* a cardless combine that matched nothing: if the shape would otherwise
        be legal, the failing reason is the reservation law — say so */
     if (!m.length && !selectedCard && tableSel.size + (pileTopSel != null ? 1 : 0) >= 2) maybeReservedAlert();
+    return false;
   }
 
   function refreshAfterSelect() {
     renderHand();
-    afterSelectionChange();
+    return afterSelectionChange();
   }
 
   /* The reserved-card notice: "capture" with one copy held, "top or capture"
@@ -853,20 +856,17 @@
   function toggleTableSel(id) {
     if (!isHumanTurn() || humanBusy || !turnArmed) return;   // loose cards pair with a hand card or found a cardless build
     if (tableSel.has(id)) tableSel.delete(id); else tableSel.add(id);
-    Snd.select();
-    afterSelectionChange();
+    if (!afterSelectionChange()) Snd.select();   // a tap that played a move speaks with the move's own voice
   }
   function toggleBuildSel(idx) {
     if (!isHumanTurn() || !turnArmed) return;
     buildSel = buildSel === idx ? null : idx;
-    Snd.select();
-    afterSelectionChange();
+    if (!afterSelectionChange()) Snd.select();
   }
   function togglePileSel(seat) {
     if (!isHumanTurn() || !turnArmed) return;
     pileTopSel = pileTopSel === seat ? null : seat;
-    Snd.select();
-    afterSelectionChange();
+    if (!afterSelectionChange()) Snd.select();
   }
 
   /* --- discard: tap an empty slot with a hand card selected --- */
@@ -975,8 +975,7 @@
     clearSelection();
     humanBusy = true;
     setTimeout(() => (humanBusy = false), 300);   // double-tap guard only — direct play must flow
-    Snd.click();
-    performAction(a, { human: true });
+    performAction(a, { human: true });            // the action's own sound is the voice
   }
 
   function confirmAction(i) {
@@ -1647,8 +1646,7 @@
       }
       selectedCard = el.dataset.id;   // the move's hand card — an existing table/
                                         // pile selection is KEPT (order never matters)
-      Snd.select();
-      refreshAfterSelect();
+      if (!refreshAfterSelect()) Snd.select();
     });
 
     /* the board itself is tappable: table cards, builds, pile tops, empty slots */
@@ -1752,7 +1750,6 @@
       newGame({ demo: m[1] === 'demo' });
     }
   }
-
 
   root.UI = { init, toast };
 })(typeof window !== 'undefined' ? window : globalThis);
