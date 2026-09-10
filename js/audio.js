@@ -97,7 +97,7 @@
                quirk) — treat it as failure and convert */
             blob.arrayBuffer().then((ab) => ac().decodeAudioData(ab))
               .then((buf) => {
-                if (buf && buf.length > 0) { mineBufs[key] = buf; mineRoute[key] = 'instant'; }
+                if (buf && buf.length > 0) finalizeTake(key, buf, 'instant');
                 else queueConvert(key, url);
               })
               .catch(() => { queueConvert(key, url); });
@@ -108,12 +108,48 @@
     });
   }
 
-  /* ---------- one-time silent conversion: live-webm -> WAV ---------- */
+  /* Trim the dead air: studio takes start recording the instant Record is
+     tapped, so the real sound sits seconds into each take — the game plays
+     it "on time" but the audible part arrives late. Scan for the first and
+     last real sound, cut the rest, keep the trimmed take forever (WAV). */
+  function trimSilence(buf) {
+    const ch = buf.getChannelData(0);
+    const win = Math.max(1, Math.floor(buf.sampleRate * 0.01));   // 10ms windows
+    const thresh = 0.015;                                          // noise floor
+    let first = -1, last = -1;
+    for (let i = 0; i + win <= ch.length; i += win) {
+      let sum = 0;
+      for (let j = i; j < i + win; j++) sum += ch[j] * ch[j];
+      if (Math.sqrt(sum / win) > thresh) { if (first < 0) first = i; last = i + win; }
+    }
+    if (first < 0) return null;                                    // silent take — leave it
+    const pre = Math.max(0, first - Math.floor(buf.sampleRate * 0.03));
+    const post = Math.min(ch.length, last + Math.floor(buf.sampleRate * 0.15));
+    if (pre === 0 && post === ch.length) return null;              // nothing to trim
+    const len = post - pre;
+    const out = ac().createBuffer(1, len, buf.sampleRate);
+    out.getChannelData(0).set(ch.subarray(pre, post));
+    return out;
+  }
+  /* a take landed on the instant route — trim it if it carries dead air,
+     and persist the trimmed WAV so this never runs again */
+  function finalizeTake(key, buf, route) {
+    let out = buf;
+    if (buf.duration > 0.6) {
+      const t = trimSilence(buf);
+      if (t && t.duration < buf.duration - 0.15) out = t;
+    }
+    mineBufs[key] = out;
+    mineRoute[key] = route;
+    if (out !== buf || route === 'converted')
+      saveConverted(key, new Blob([encodeWav(out.getChannelData(0), out.sampleRate)], { type: 'audio/wav' }));
+  }
   /* The player handles the recordings fine (the picker proved it); only
      decodeAudioData refuses live-recorded webm. So play each take once
      through a capture tap at zero volume, keep the raw audio, re-store it
      as WAV — the format that decodes instantly, forever after. */
   const mineRoute = {};  /* key -> 'instant' | 'converted' | 'element' | 'failed' — the truth per take */
+  const convertQueue = [];
   let converting = false;
   function queueConvert(key, url) {
     convertQueue.push([key, url]);
@@ -147,11 +183,8 @@
       const wav = encodeWav(pcm, c.sampleRate);
       c.decodeAudioData(wav)
         .then((buf) => {
-          if (buf && buf.length > 0) {
-            mineBufs[key] = buf;                   // the instant route, from now on
-            mineRoute[key] = 'converted';
-            saveConverted(key, new Blob([wav], { type: 'audio/wav' }));
-          } else mineRoute[key] = 'failed';
+          if (buf && buf.length > 0) finalizeTake(key, buf, 'converted');
+          else mineRoute[key] = 'failed';
         })
         .catch(() => { mineRoute[key] = 'failed'; });
       runConversions();   // next take, if any
@@ -344,6 +377,9 @@
         ms: mineBufs[k] ? Math.round(mineBufs[k].duration * 1000) : null
       }));
     },
+    /* the dead-air trimmer, exposed for diagnostics (diag.html) — pure:
+       buffer in, trimmed buffer or null out */
+    trimSilence: trimSilence,
 
     /* card selection and deselection: their own subtle voices, the quietest
        in the game — distinct from each other (the owner records both) */

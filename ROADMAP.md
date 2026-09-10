@@ -72,3 +72,11 @@ Nothing here is built until explicitly ordered.
   their turn (built locally: Play Again hidden). To be revisited when AI players get
   multiple personalities/play styles, and for 2-humans-vs-AI pairings (two humans
   vs two AIs, or each human partnering an AI).
+
+## Discard positions matter (settled 2026-09-07, parked for the online phase)
+The owner's law: WHICH slot a player discards their card into carries meaning —
+especially in the four-hand version. The engine currently treats table slots as
+pure presentation (positions are per-device); the online phase must carry
+canonical slot positions with the shared state, and the discard-placement law
+itself is to be taught and built when we get there. Discard slot COUNTS may
+still differ per device (local framing only).
