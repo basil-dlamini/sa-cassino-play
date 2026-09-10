@@ -91,14 +91,91 @@
             const url = URL.createObjectURL(blob);
             mineURLs[key] = url;
             primeElement(key, url);
-            /* the instant route: decode in the background, best effort */
+            /* the instant route: decode directly when the decoder cooperates;
+               when it refuses the live-webm, convert silently (below) */
             blob.arrayBuffer().then((ab) => ac().decodeAudioData(ab))
               .then((buf) => { mineBufs[key] = buf; })
-              .catch(() => {});
+              .catch(() => { queueConvert(key, url); });
           }
           cur.continue();
         };
       } catch (e) { /* no personal voice — samples stand in */ }
+    });
+  }
+
+  /* ---------- one-time silent conversion: live-webm -> WAV ---------- */
+  /* The player handles the recordings fine (the picker proved it); only
+     decodeAudioData refuses live-recorded webm. So play each take once
+     through a capture tap at zero volume, keep the raw audio, re-store it
+     as WAV — the format that decodes instantly, forever after. */
+  let convertQueue = [];
+  let converting = false;
+  function queueConvert(key, url) {
+    convertQueue.push([key, url]);
+    setTimeout(runConversions, 1500);   // let the game's opening sounds go first
+  }
+  function runConversions() {
+    if (converting || !convertQueue.length) return;
+    converting = true;
+    const [key, url] = convertQueue.shift();
+    const c = ac();
+    if (!c) { converting = false; return; }
+    const el = new Audio(url);
+    el.preload = 'auto';
+    let src = null;
+    try { src = c.createMediaElementSource(el); }
+    catch (e) { converting = false; return; }
+    const sp = c.createScriptProcessor(4096, 1, 1);
+    const chunks = [];
+    sp.onaudioprocess = (e) => { chunks.push(new Float32Array(e.inputBuffer.getChannelData(0))); };
+    src.connect(sp);
+    const mute = c.createGain(); mute.gain.value = 0;   // silent to the speakers
+    sp.connect(mute); mute.connect(c.destination);
+    const finish = () => {
+      try { sp.disconnect(); src.disconnect(); } catch (e) {}
+      converting = false;
+      const len = chunks.reduce((n, ch) => n + ch.length, 0);
+      if (!len) { runConversions(); return; }
+      const pcm = new Float32Array(len);
+      let off = 0;
+      for (const ch of chunks) { pcm.set(ch, off); off += ch.length; }
+      const wav = encodeWav(pcm, c.sampleRate);
+      c.decodeAudioData(wav)
+        .then((buf) => {
+          mineBufs[key] = buf;                     // the instant route, from now on
+          saveConverted(key, new Blob([wav], { type: 'audio/wav' }));
+        })
+        .catch(() => {});
+      runConversions();   // next take, if any
+    };
+    el.onended = finish;
+    el.onerror = finish;
+    setTimeout(finish, 8000);   // safety: never hang the queue
+    el.play().catch(finish);
+  }
+  function encodeWav(pcm, rate) {
+    const n = pcm.length;
+    const buf = new ArrayBuffer(44 + n * 2);
+    const v = new DataView(buf);
+    const ws = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    ws(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); ws(8, 'WAVEfmt ');
+    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true);
+    v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+    ws(36, 'data'); v.setUint32(40, n * 2, true);
+    for (let i = 0; i < n; i++) {
+      const s = Math.max(-1, Math.min(1, pcm[i]));
+      v.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
+    return buf;
+  }
+  function saveConverted(key, blob) {
+    openDb().then((db) => {
+      if (!db) return;
+      try {
+        const tx = db.transaction('ownerSounds', 'readwrite');
+        tx.objectStore('ownerSounds').put(blob, key);
+      } catch (e) { /* stays webm in storage — converts again next load */ }
     });
   }
   function loadSamples() {
