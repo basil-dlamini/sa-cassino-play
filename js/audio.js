@@ -91,10 +91,15 @@
             const url = URL.createObjectURL(blob);
             mineURLs[key] = url;
             primeElement(key, url);
-            /* the instant route: decode directly when the decoder cooperates;
-               when it refuses the live-webm, convert silently (below) */
+            mineRoute[key] = mineRoute[key] || 'element';
+            /* the instant route: decode directly when the decoder cooperates.
+               A decode that yields an EMPTY buffer is a lie (the live-webm
+               quirk) — treat it as failure and convert */
             blob.arrayBuffer().then((ab) => ac().decodeAudioData(ab))
-              .then((buf) => { mineBufs[key] = buf; })
+              .then((buf) => {
+                if (buf && buf.length > 0) { mineBufs[key] = buf; mineRoute[key] = 'instant'; }
+                else queueConvert(key, url);
+              })
               .catch(() => { queueConvert(key, url); });
           }
           cur.continue();
@@ -108,7 +113,7 @@
      decodeAudioData refuses live-recorded webm. So play each take once
      through a capture tap at zero volume, keep the raw audio, re-store it
      as WAV — the format that decodes instantly, forever after. */
-  let convertQueue = [];
+  const mineRoute = {};  /* key -> 'instant' | 'converted' | 'element' | 'failed' — the truth per take */
   let converting = false;
   function queueConvert(key, url) {
     convertQueue.push([key, url]);
@@ -135,17 +140,20 @@
       try { sp.disconnect(); src.disconnect(); } catch (e) {}
       converting = false;
       const len = chunks.reduce((n, ch) => n + ch.length, 0);
-      if (!len) { runConversions(); return; }
+      if (!len) { mineRoute[key] = 'failed'; runConversions(); return; }
       const pcm = new Float32Array(len);
       let off = 0;
       for (const ch of chunks) { pcm.set(ch, off); off += ch.length; }
       const wav = encodeWav(pcm, c.sampleRate);
       c.decodeAudioData(wav)
         .then((buf) => {
-          mineBufs[key] = buf;                     // the instant route, from now on
-          saveConverted(key, new Blob([wav], { type: 'audio/wav' }));
+          if (buf && buf.length > 0) {
+            mineBufs[key] = buf;                   // the instant route, from now on
+            mineRoute[key] = 'converted';
+            saveConverted(key, new Blob([wav], { type: 'audio/wav' }));
+          } else mineRoute[key] = 'failed';
         })
-        .catch(() => {});
+        .catch(() => { mineRoute[key] = 'failed'; });
       runConversions();   // next take, if any
     };
     el.onended = finish;
@@ -327,10 +335,14 @@
       burst(0.06, 0.16, 900, 450, 'lowpass'); thump(120, 0.09, 0.1, 0.03); },
 
     /* the truth about the personal table voice: which recorded sounds the
-       GAME has actually loaded — shown in Settings so a silent failure is
-       never invisible again */
+       GAME has actually loaded and BY WHICH ROUTE — shown in Settings so a
+       silent failure is never invisible again */
     ownerStatus() {
-      return Object.keys(GROUPS).map((k) => ({ key: k, mine: !!(mineEls[k] || mineBufs[k]) }));
+      return Object.keys(GROUPS).map((k) => ({
+        key: k, mine: !!(mineEls[k] || mineBufs[k]),
+        route: mineRoute[k] || null,
+        ms: mineBufs[k] ? Math.round(mineBufs[k].duration * 1000) : null
+      }));
     },
 
     /* card selection and deselection: their own subtle voices, the quietest
