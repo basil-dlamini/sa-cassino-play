@@ -23,13 +23,20 @@
 you want for each move (the game's current one is preselected and marked), tap
 <b>Play</b> to hear it at the volume that move actually uses, and when you're done
 press <b>Copy my choices</b> and paste the result to the assistant — your exact map
-gets wired into the game for everyone. Your own studio recordings still override
-these on your phone wherever you've kept them.</p>
+gets wired into the game for everyone. Your own studio recordings appear at the
+top of every list as <b>★ My … recording</b> — and where you have one for that
+very move, it is preselected. If you pick a ★ recording for any move, also grab
+its ⬇ Download from the studio page so it can ship to every player.</p>
+<div id="mystatus" hidden style="font-size:12px;background:rgba(210,60,60,.15);border:1px solid #d23c3c;border-radius:8px;padding:8px 10px;margin-bottom:8px">
+  No personal recordings found on this device — record them at
+  basil-dlamini.github.io/sa-cassino-play/record.html and reopen this page.
+</div>
 <div id="list"></div>
 <button id="copy">Copy my choices</button>
 <div id="out" hidden></div>
 <script>
-/* the whole library: [file-url, human name, source] */
+/* the whole library: [file-url, human name, source] — personal studio
+   recordings are prepended at load from the device's studio storage */
 const LIB = [
   ['sounds/playcard.wav', 'Play card', 'Cockatrice'],
   ['sounds-candidates/tap.wav', 'Card tap', 'Cockatrice'],
@@ -53,6 +60,36 @@ const LIB = [
   ['sounds/card-shove-2.ogg', 'Gather/shove 2', 'Kenney'],
   ['sounds/card-fan-1.ogg', 'Card fan', 'Kenney']
 ];
+const mineURLs = {};   /* 'mine:capture' -> blob URL */
+function openDb() {
+  return new Promise((res) => {
+    const rq = indexedDB.open('sacassino', 1);
+    rq.onupgradeneeded = () => rq.result.createObjectStore('ownerSounds');
+    rq.onsuccess = () => res(rq.result);
+    rq.onerror = () => res(null);
+  });
+}
+function loadMine() {
+  return openDb().then((db) => new Promise((res) => {
+    if (!db) return res([]);
+    try {
+      const out = [];
+      const rq = db.transaction('ownerSounds', 'readonly').objectStore('ownerSounds').openCursor();
+      rq.onsuccess = () => {
+        const cur = rq.result;
+        if (!cur) return res(out);
+        const key = cur.key, blob = cur.value;
+        if (blob && blob.size) {
+          const id = 'mine:' + key;
+          mineURLs[id] = URL.createObjectURL(blob);
+          out.push([id, '★ My ' + key + ' recording (' + Math.round(blob.size / 1024) + 'KB)', 'MY STUDIO']);
+        }
+        cur.continue();
+      };
+      rq.onerror = () => res(out);
+    } catch (e) { res([]); }
+  }));
+}
 const ACTIONS = [
   { key: 'place',    title: 'Playing a card from your hand', vol: 0.85, cur: 'sounds/playcard.wav' },
   { key: 'discard',  title: 'Discard sliding into its slot',  vol: 0.7,  cur: 'sounds/mixkit-2001.mp3' },
@@ -70,31 +107,38 @@ const ACTIONS = [
 const picks = {};
 let current = null;
 const list = document.getElementById('list');
-ACTIONS.forEach((a) => {
-  const box = document.createElement('div');
-  box.className = 'action';
-  const curName = (LIB.find((l) => l[0] === a.cur) || ['', '—'])[1];
-  box.innerHTML = '<h2>' + a.title + '</h2><div class="cur">current: ' + curName + ' · played at ' + Math.round(a.vol * 100) + '%</div>';
-  const row = document.createElement('div'); row.className = 'row';
-  const sel = document.createElement('select');
-  LIB.forEach((l) => {
-    const o = document.createElement('option');
-    o.value = l[0]; o.textContent = l[1] + ' · ' + l[2] + (l[0] === a.cur ? '  ← current' : '');
-    sel.appendChild(o);
+loadMine().then((mine) => {
+  if (mine.length) LIB.unshift(...mine);
+  else document.getElementById('mystatus').hidden = false;
+  ACTIONS.forEach((a) => {
+    const box = document.createElement('div');
+    box.className = 'action';
+    const curName = (LIB.find((l) => l[0] === a.cur) || ['', '—'])[1];
+    box.innerHTML = '<h2>' + a.title + '</h2><div class="cur">current: ' + curName + ' · played at ' + Math.round(a.vol * 100) + '%</div>';
+    const row = document.createElement('div'); row.className = 'row';
+    const sel = document.createElement('select');
+    LIB.forEach((l) => {
+      const o = document.createElement('option');
+      o.value = l[0]; o.textContent = l[1] + ' · ' + l[2] + (l[0] === a.cur ? '  ← current' : '');
+      sel.appendChild(o);
+    });
+    /* your own take for this move sits at the top, preselected when present */
+    const own = mine.find((m) => m[0] === 'mine:' + a.key);
+    if (own) sel.value = own[0];
+    else sel.value = a.cur;
+    picks[a.key] = sel.value;
+    sel.onchange = () => { picks[a.key] = sel.value; };
+    const pb = document.createElement('button');
+    pb.textContent = '▶ Play';
+    pb.onclick = () => {
+      if (current) current.pause();
+      const au = new Audio(mineURLs[sel.value] || sel.value);
+      au.volume = a.vol; current = au; au.play().catch(() => {});
+    };
+    row.appendChild(sel); row.appendChild(pb);
+    box.appendChild(row);
+    list.appendChild(box);
   });
-  sel.value = a.cur;
-  picks[a.key] = a.cur;
-  sel.onchange = () => { picks[a.key] = sel.value; };
-  const pb = document.createElement('button');
-  pb.textContent = '▶ Play';
-  pb.onclick = () => {
-    if (current) current.pause();
-    const au = new Audio(sel.value);
-    au.volume = a.vol; current = au; au.play().catch(() => {});
-  };
-  row.appendChild(sel); row.appendChild(pb);
-  box.appendChild(row);
-  list.appendChild(box);
 });
 document.getElementById('copy').onclick = () => {
   const lines = ACTIONS.map((a) => a.key + ': ' + picks[a.key]);
