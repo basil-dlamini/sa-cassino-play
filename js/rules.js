@@ -935,8 +935,11 @@
           names(g, live.owner) + '\u2019s ' + a.value + '-build — absorbed and locked.');
       } else {
         /* A/D: the build rises to V — the pregger's, or restarted as the
-           partner's when he virtually owns the value */
-        b.cards.push(...sortDesc([a.card]));
+           partner's when he virtually owns the value. A preg RE-FOUNDS the
+           build at its new value: the whole stack re-stacks as one sorted
+           set, the lowest card showing on top (a fold lands on top of an
+           unchanged build — a rise re-sorts, owner's law 2026-09-09) */
+        b.cards = sortDesc(b.cards.concat([a.card]));
         b.value = a.value;
         b.owner = a.owner;
         const pregBases = absorbBases(g, a.value);       // a loose V joins as the base

@@ -1343,11 +1343,15 @@
     /* the table's own voice: your moves at full presence, the AI's the same
        sounds a touch quieter — a real table being played on around you */
     const q = (opts && opts.human) ? 1 : 0.45;
-    if (a.type === 'capture') Snd.capture(q);
+    /* one voice per move: a capture that clears the table speaks ONLY with
+       the sweep — never capture and sweep stacked (the owner's one-voice law) */
+    const sweeping = a.type === 'capture' && g.phase !== 'gameover' &&
+      g.table.length === 0 && g.builds.length === 0;
+    if (sweeping) Snd.sweep(q);
+    else if (a.type === 'capture') Snd.capture(q);
     else if (a.type === 'build' || a.type === 'augment' || a.type === 'preg') Snd.build(q);
     else if (a.type === 'dig' || a.type === 'topdig') Snd.steal(q);
     else if (a.type === 'discard') Snd.drift(q);
-    if (a.type === 'capture' && g.phase !== 'gameover' && g.table.length === 0 && g.builds.length === 0) Snd.sweep(q);
     render();
     /* pairs: the partner just completed a build whose value the human holds —
        offer Shiya immediately */

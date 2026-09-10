@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sound Doctor — South African Cassino</title>
+<style>
+  body { font-family: 'Segoe UI', sans-serif; background: #0d1932; color: #f4efe2; padding: 16px; max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 20px; } p.lead { font-size: 13px; opacity: .85; line-height: 1.55; }
+  .row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid rgba(244,239,226,.15); }
+  .nm { font-size: 14px; font-weight: 700; flex: 1; }
+  .verdict { font-size: 12px; display: block; opacity: .8; margin-top: 2px; }
+  .ok { color: #7fe8a0; } .bad { color: #ff9d9d; } .none { opacity: .5; }
+  button { background: #f4efe2; color: #0d1932; border: 0; border-radius: 8px; padding: 8px 14px; font-weight: 700; }
+</style>
+</head>
+<body>
+<h1>🩺 Sound Doctor</h1>
+<p class="lead">This checks every sound you recorded, through <b>the exact pipeline
+the game uses</b> (storage → decode → play). Whatever the verdict says here is
+what the game experiences. Tell the assistant what the capture line says.</p>
+<div id="list"><div class="row">Opening storage…</div></div>
+<script>
+function openDb() {
+  return new Promise((res) => {
+    const rq = indexedDB.open('sacassino', 1);
+    rq.onupgradeneeded = () => rq.result.createObjectStore('ownerSounds');
+    rq.onsuccess = () => res(rq.result);
+    rq.onerror = () => res(null);
+  });
+}
+const AC = window.AudioContext || window.webkitAudioContext;
+const ctx = new AC();
+document.addEventListener('click', () => { if (ctx.state === 'suspended') ctx.resume(); });
+const bufs = {};
+openDb().then((db) => {
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  if (!db) { list.innerHTML = '<div class="row"><span class="bad">Storage would not open — the game cannot see your recordings at all.</span></div>'; return; }
+  const store = db.transaction('ownerSounds', 'readonly').objectStore('ownerSounds');
+  const getAll = store.getAllKeys();
+  getAll.onsuccess = () => {
+    const keys = getAll.result || [];
+    if (!keys.length) { list.innerHTML = '<div class="row"><span class="none">No recordings saved on this phone — the studio saves nothing until a take is kept.</span></div>'; return; }
+    keys.forEach((key) => {
+      const rq = store.get(key);
+      rq.onsuccess = () => {
+        const blob = rq.result;
+        const row = document.createElement('div');
+        row.className = 'row';
+        const nm = document.createElement('div');
+        nm.className = 'nm';
+        nm.innerHTML = key + '<span class="verdict">checking…</span>';
+        const pb = document.createElement('button');
+        pb.textContent = '▶ Play';
+        pb.disabled = true;
+        pb.onclick = () => {   /* the GAME's exact playback path */
+          if (ctx.state === 'suspended') ctx.resume();
+          const src = ctx.createBufferSource();
+          src.buffer = bufs[key];
+          const g = ctx.createGain(); g.gain.value = 0.9;
+          src.connect(g); g.connect(ctx.destination); src.start();
+        };
+        row.appendChild(nm); row.appendChild(pb);
+        list.appendChild(row);
+        const verdict = (cls, txt) => { nm.innerHTML = key + '<span class="verdict ' + cls + '">' + txt + '</span>'; };
+        if (!blob || !blob.size) { verdict('bad', 'saved but EMPTY (0 bytes) — re-record it in the studio'); return; }
+        blob.arrayBuffer().then((ab) => ctx.decodeAudioData(ab)).then((buf) => {
+          bufs[key] = buf;
+          pb.disabled = false;
+          verdict('ok', '✓ ' + blob.size + ' bytes, ' + Math.round(buf.duration * 1000) + 'ms — THE GAME PLAYS THIS');
+        }).catch((e) => {
+          verdict('bad', 'saved (' + blob.size + 'b, ' + (blob.type || 'no type') + ') but the game CANNOT decode it — tell the assistant');
+        });
+      };
+    });
+  };
+});
+</script>
+</body>
+</html>

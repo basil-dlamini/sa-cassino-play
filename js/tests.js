@@ -423,6 +423,32 @@
     eq(R.scoreGame(g5).stats[0].sweep, 0, 'all-but-one point card is no sweep');
   });
 
+  test('v6 PREG ORDER: the rise re-stacks the whole set — 4+2 pregged by 3 shows the 2', () => {
+    /* the owner's table: my 6-build of 4+2, Sipho pregs with a 3 into a 9 */
+    const g = mkState(2, { table: ['H7'] });
+    g.builds = [{ value: 6, cards: ['H4', 'D2'], owner: 0, augmented: false }];
+    g.players[0].hand = ['C8'];
+    g.players[1].hand = ['S3', 'H9'];      // he holds the 9 the rise demands
+    g.turn = 1;                            // SIPHO pregs, not me
+    const p = R.legalActions(g).find((a) => a.type === 'preg' && a.value === 9);
+    assert(p, 'the preg to 9 is offered');
+    R.applyAction(g, p);
+    const b = g.builds[0];
+    eq(b.value, 9, 'risen to 9');
+    eq(b.owner, 1, 'the pregger\'s build');
+    eq(b.cards.join(), ['H4', 'S3', 'D2'].join(), 'the whole set re-stacked, sorted');
+    eq(b.cards[b.cards.length - 1], 'D2', 'the 2 shows on top — never the preg card');
+    /* a loose 9 on the table still folds beneath as the base */
+    const g2 = mkState(2, { table: ['C9'] });
+    g2.builds = [{ value: 6, cards: ['H4', 'D2'], owner: 0, augmented: false }];
+    g2.players[0].hand = ['C8'];
+    g2.players[1].hand = ['S3', 'H9'];
+    g2.turn = 1;
+    R.applyAction(g2, R.legalActions(g2).find((a) => a.type === 'preg' && a.value === 9));
+    eq(g2.builds[0].cards[0], 'C9', 'the base beneath it all');
+    eq(g2.builds[0].cards[g2.builds[0].cards.length - 1], 'D2', 'still the 2 on top');
+  });
+
   /* ================= the v6 table law (as taught by the owner) ================= */
   test('v6 CAPTURE: a build NEVER joins a sum — only its exact value takes it', () => {
     // the owner's original report, now law: topped 7-build + loose 3 vs a 10
