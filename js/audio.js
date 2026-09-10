@@ -43,10 +43,29 @@
   };
   /* the owner's own recordings (record.html, same site) outrank the shipped
      samples on the device that made them — the personal table voice.
-     Played through plain Audio elements from blob URLs: the one pathway
-     that provably works everywhere recordings exist (the picker's path) —
-     no decode step left to fail silently */
+     Two routes, fastest wins: DECODED buffers (instant, sample-accurate)
+     when the decoder cooperates, and PRIMED Audio elements kept loaded and
+     ready to restart — never built on the fly at play time */
   const mineURLs = {};
+  const mineEls = {};    /* primed, paused at zero — restart is cheap */
+  const mineBufs = {};   /* decoded — the instant route */
+  function primeElement(key, url) {
+    const el = new Audio();
+    el.src = url; el.preload = 'auto';
+    /* live-recorded webm often reports an unknown duration; force it to
+       resolve so restarting and seeking behave */
+    el.addEventListener('loadedmetadata', () => {
+      if (el.duration === Infinity) {
+        el.currentTime = 1e101;
+        el.addEventListener('timeupdate', function fix() {
+          el.removeEventListener('timeupdate', fix);
+          el.currentTime = 0;
+        });
+      }
+    });
+    el.load();
+    mineEls[key] = el;
+  }
   function openDb() {
     return new Promise((res) => {
       let done = false;
@@ -67,7 +86,16 @@
         rq.onsuccess = () => {
           const cur = rq.result;
           if (!cur) return;
-          if (cur.value && cur.value.size) mineURLs[cur.key] = URL.createObjectURL(cur.value);
+          if (cur.value && cur.value.size) {
+            const key = cur.key, blob = cur.value;
+            const url = URL.createObjectURL(blob);
+            mineURLs[key] = url;
+            primeElement(key, url);
+            /* the instant route: decode in the background, best effort */
+            blob.arrayBuffer().then((ab) => ac().decodeAudioData(ab))
+              .then((buf) => { mineBufs[key] = buf; })
+              .catch(() => {});
+          }
           cur.continue();
         };
       } catch (e) { /* no personal voice — samples stand in */ }
@@ -87,14 +115,28 @@
     });
   }
   /* play the owner's own recording if present, else a random variant of the
-     group; returns false when nothing real is available. The personal take
-     plays through a plain Audio element — the picker's proven pathway */
+     group; returns false when nothing real is available. Personal takes:
+     decoded buffer first (instant), primed element second — never a fresh
+     player built at play time */
   function sample(group, vol, rate) {
     if (root.Sound.muted) return true;
-    if (mineURLs[group]) {
-      const au = new Audio(mineURLs[group]);
-      au.volume = Math.max(0, Math.min(1, vol));
-      au.play().catch(() => {});
+    if (mineBufs[group]) {
+      const c = ac();
+      if (c) {
+        const src = c.createBufferSource();
+        src.buffer = mineBufs[group];
+        const g = c.createGain();
+        g.gain.value = vol;
+        src.connect(g); g.connect(c.destination);
+        src.start();
+        return true;
+      }
+    }
+    if (mineEls[group]) {
+      const el = mineEls[group];
+      el.volume = Math.max(0, Math.min(1, vol));
+      try { el.currentTime = 0; } catch (e) { /* not seekable yet — play from wherever it stands */ }
+      el.play().catch(() => {});
       return true;
     }
     const c = ac(); if (!c) return false;
@@ -211,7 +253,7 @@
        GAME has actually loaded — shown in Settings so a silent failure is
        never invisible again */
     ownerStatus() {
-      return Object.keys(GROUPS).map((k) => ({ key: k, mine: !!mineURLs[k] }));
+      return Object.keys(GROUPS).map((k) => ({ key: k, mine: !!(mineEls[k] || mineBufs[k]) }));
     },
 
     /* card selection and deselection: their own subtle voices, the quietest
