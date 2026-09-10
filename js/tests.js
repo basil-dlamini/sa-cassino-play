@@ -491,6 +491,31 @@
     eq(g2.players[0].pile.join(), ['S8', 'D2', 'C10'].join(), 'loose set sorted (8 above 2), played on top');
   });
 
+  test('v6 PREG FACING THE ENEMY VALUE: the 5 may capture his 5 OR fold it into my live 10', () => {
+    /* the owner's table: my live 10, Sipho's virgin 5 (4♦+A♠), a 5 in my hand */
+    const g = mkState(2, { table: ['H7'] });
+    g.builds = [
+      { value: 10, cards: ['S10', 'H5', 'C5'], owner: 0, augmented: false },
+      { value: 5, cards: ['D4', 'S1'], owner: 1, augmented: false }
+    ];
+    g.players[0].hand = ['D5', 'H9'];
+    g.players[1].hand = ['C2'];
+    const acts = R.legalActions(g).filter((a) => a.card === 'D5');
+    const cap = acts.find((a) => a.type === 'capture' && a.buildIds.length === 1);
+    assert(cap, 'capturing his 5 with my 5♦ is offered');
+    const preg = acts.find((a) => a.type === 'preg' && a.value === 10);
+    assert(preg, 'pregging his 5 into my 10 is offered too');
+    assert(preg.mergeInto === g.builds.indexOf(g.builds[0]), 'it folds into MY live 10');
+    assert(!acts.some((a) => a.type === 'discard'), 'the 5 stays reserved from discard while his 5 stands');
+    R.applyAction(g, preg);
+    eq(g.builds.length, 1, 'his 5 is gone — absorbed');
+    eq(g.builds[0].value, 10);
+    eq(g.builds[0].owner, 0, 'still mine');
+    eq(g.builds[0].augmented, true, 'locked by the fold');
+    assert(g.builds[0].cards.includes('D4') && g.builds[0].cards.includes('S1') && g.builds[0].cards.includes('D5'),
+      'his 4♦, his A♠ and my 5♦ all in');
+  });
+
   /* ================= the v6 table law (as taught by the owner) ================= */
   test('v6 CAPTURE: a build NEVER joins a sum — only its exact value takes it', () => {
     // the owner's original report, now law: topped 7-build + loose 3 vs a 10

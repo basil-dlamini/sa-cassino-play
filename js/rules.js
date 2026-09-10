@@ -195,7 +195,12 @@
       return holdsAnother;
     }
     const enemyV = g.builds.find((b) => b.value === v && !sameSide(g, seat, b.owner) && !b.scaffold);
-    if (enemyV && !(use.type === 'capture' && use.buildIds && use.buildIds.includes(g.builds.indexOf(enemyV)))) return false;
+    /* a card facing an enemy build of its value has TWO lawful doors:
+       capture that build, or preg THAT VERY BUILD (the owner's ruling
+       2026-09-10 — the 5 may capture his 5 or fold it into my live 10).
+       Everything else stays reserved */
+    if (enemyV && !(use.type === 'capture' && use.buildIds && use.buildIds.includes(g.builds.indexOf(enemyV))) &&
+        !(use.type === 'preg' && use.buildIdx === g.builds.indexOf(enemyV))) return false;
     return true;
   }
 
