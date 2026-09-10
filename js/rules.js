@@ -1082,10 +1082,10 @@
       awardMost(stats, 'cards', 'mostCards');
       awardMost(stats, 'spades', 'mostSpades');
     }
-    /* SWEEP BONUSES (owner's law 2026-09-08): all the POINT cards (the four
-       Aces, the Spy 2♠, the Big 10♦) in one side's pile at game end = sweep;
-       every card of the forty = clean sweep. The clean sweep pays ONLY its
-       own award — never stacked on the sweep. A bonus, not points in play */
+    /* SWEEP (owner's law, corrected 2026-09-10): a sweep IS the score — the
+       11 points doubled to 22, or quadrupled to 44 for a clean sweep (three
+       hands: 11 and 22). The flat total REPLACES the computed score; it is
+       never added to it. No sweep — the score is points + most bonuses */
     const SWEEP_PTS = teamMode ? 22 : 11;
     const CLEAN_PTS = teamMode ? 44 : 22;
     const POINT_CARDS = ['S1', 'H1', 'D1', 'C1', 'S2', 'D10'];
@@ -1094,7 +1094,7 @@
       t.sweep = pile.length === 40 ? CLEAN_PTS
         : POINT_CARDS.every((c) => pile.includes(c)) ? SWEEP_PTS : 0;
     }
-    for (const t of stats) t.total = t.points + t.mostCards + t.mostSpades + t.sweep;
+    for (const t of stats) t.total = t.sweep > 0 ? t.sweep : (t.points + t.mostCards + t.mostSpades);
     const max = Math.max(...stats.map((t) => t.total));
     const winners = stats.filter((t) => t.total === max).map((t) => t.name);
     return { teamMode, totalInPlay: teamMode ? 11 : 7, stats, winners, tie: winners.length > 1 };

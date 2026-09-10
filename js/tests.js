@@ -395,16 +395,17 @@
     g.players[0].pile = points.concat(['H4', 'C6']);
     g.players[1].pile = deck.filter((c) => !points.includes(c) && c !== 'H4' && c !== 'C6');
     const r = R.scoreGame(g);
-    eq(r.stats[0].sweep, 22, 'all point cards = the 22 sweep bonus');
+    eq(r.stats[0].sweep, 22, 'all point cards = the 22 sweep');
+    eq(r.stats[0].total, 22, 'the sweep IS the score — the 11 doubled, never added');
     eq(r.stats[1].sweep, 0, 'no sweep for the other side');
-    eq(r.totalInPlay, 11, 'bonuses are bonuses — points in play unchanged');
+    eq(r.totalInPlay, 11, 'points in play unchanged');
     /* clean sweep: all forty in one pile — the 44 REPLACES the 22 */
     const g2 = mkState(2, {});
     g2.players[0].pile = deck.slice();
     g2.players[1].pile = [];
     const r2 = R.scoreGame(g2);
     eq(r2.stats[0].sweep, 44, 'every card = the 44 clean sweep');
-    eq(r2.stats[0].total, r2.stats[0].points + 4 + 44, 'clean sweep pays once — never 22+44');
+    eq(r2.stats[0].total, 44, 'a clean sweep IS the score — the 11 quadrupled, never added');
     /* three hands: 11 and 22 */
     const g3 = mkState(3, {});
     g3.players[0].pile = points.concat(deck.slice(0, 9));
@@ -1500,7 +1501,8 @@
           /* bonuses sit on top of the points in play: verify the exact
              composition and that only a lawful sweep award exists */
           assert(allowedSweep.includes(t.sweep || 0), 'unlawful sweep bonus ' + (t.sweep || 0));
-          eq(t.total, t.points + t.mostCards + t.mostSpades + (t.sweep || 0), 'total composition');
+          eq(t.total, t.sweep ? t.sweep : (t.points + t.mostCards + t.mostSpades),
+            'the sweep IS the total — otherwise points plus bonuses only');
         }
         totalGames++;
       }

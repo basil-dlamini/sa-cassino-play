@@ -1483,13 +1483,13 @@
         '<td>' + tally(t.d10, t.d10 * 2, '') + '</td>' +
         '<td>' + tally(t.aces, t.aces, t.aces === 1 ? 'ace' : 'aces') + '</td>' +
         '<td>' + (t.sweep
-          ? '+' + t.sweep + '<small>' + (t.sweep >= clean ? 'clean sweep' : 'sweep') + '</small>'
+          ? t.sweep + '<small>' + (t.sweep >= clean ? 'clean sweep — the whole score' : 'sweep — the whole score') + '</small>'
           : '<span class="nil">—</span>') + '</td>' +
         '<td class="total">' + t.total + '</td></tr>';
     }
     html += '</table><div class="results-note">' + res.totalInPlay + ' points were in play' +
-      (res.teamMode ? ' (pairs scoring). Most cards and most spades score 2 — a tie pays 1 point to each tied side. A sweep (all the point cards) adds 22, a clean sweep (all forty cards) 44 — bonuses on top.'
-        : ' (singles scoring). Card points only — no most bonuses in three hands. A sweep adds 11, a clean sweep 22 — bonuses on top.') + '</div>';
+      (res.teamMode ? ' (pairs scoring). Most cards and most spades score 2 — a tie pays 1 point to each tied side. A sweep IS the score: the 11 doubled to 22, a clean sweep (all forty cards) quadrupled to 44.'
+        : ' (singles scoring). Card points only — no most bonuses in three hands. A sweep IS the score: 11; a clean sweep 22.') + '</div>';
     html += '<div class="results-tally">Session: ' + escapeHtml(sessionTallyText()) + '</div>';
     box.innerHTML = html;
     $('modal-results').classList.remove('hidden');
