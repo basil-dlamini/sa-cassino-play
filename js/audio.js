@@ -42,29 +42,32 @@
     deselect: ['playcard.wav']
   };
   /* the owner's own recordings (record.html, same site) outrank the shipped
-     samples on the device that made them — the personal table voice */
-  const ownerBufs = {};
+     samples on the device that made them — the personal table voice.
+     Played through plain Audio elements from blob URLs: the one pathway
+     that provably works everywhere recordings exist (the picker's path) —
+     no decode step left to fail silently */
+  const mineURLs = {};
   function openDb() {
     return new Promise((res) => {
+      let done = false;
+      const bail = () => { if (!done) { done = true; res(null); } };
+      const to = setTimeout(bail, 1500);
       const rq = indexedDB.open('sacassino', 1);
       rq.onupgradeneeded = () => rq.result.createObjectStore('ownerSounds');
-      rq.onsuccess = () => res(rq.result);
-      rq.onerror = () => res(null);
+      rq.onsuccess = () => { if (!done) { done = true; clearTimeout(to); res(rq.result); } };
+      rq.onerror = bail;
+      rq.onblocked = bail;
     });
   }
   function loadOwnerSounds() {
     openDb().then((db) => {
       if (!db) return;
       try {
-        const tx = db.transaction('ownerSounds', 'readonly').objectStore('ownerSounds');
-        const rq = tx.openCursor();
+        const rq = db.transaction('ownerSounds', 'readonly').objectStore('ownerSounds').openCursor();
         rq.onsuccess = () => {
           const cur = rq.result;
           if (!cur) return;
-          const blob = cur.value;
-          blob.arrayBuffer().then((ab) => ac().decodeAudioData(ab))
-            .then((buf) => { ownerBufs[cur.key] = buf; })
-            .catch(() => {});
+          if (cur.value && cur.value.size) mineURLs[cur.key] = URL.createObjectURL(cur.value);
           cur.continue();
         };
       } catch (e) { /* no personal voice — samples stand in */ }
@@ -84,20 +87,22 @@
     });
   }
   /* play the owner's own recording if present, else a random variant of the
-     group; returns false when nothing real is available */
+     group; returns false when nothing real is available. The personal take
+     plays through a plain Audio element — the picker's proven pathway */
   function sample(group, vol, rate) {
     if (root.Sound.muted) return true;
-    const c = ac(); if (!c) return false;
-    let buf = null;
-    if (ownerBufs[group]) buf = ownerBufs[group];
-    else {
-      const list = GROUPS[group].filter((n) => buffers[n]);
-      if (list.length) buf = buffers[list[Math.floor(Math.random() * list.length)]];
+    if (mineURLs[group]) {
+      const au = new Audio(mineURLs[group]);
+      au.volume = Math.max(0, Math.min(1, vol));
+      au.play().catch(() => {});
+      return true;
     }
-    if (!buf) return false;
+    const c = ac(); if (!c) return false;
+    const list = GROUPS[group].filter((n) => buffers[n]);
+    if (!list.length) return false;
     const src = c.createBufferSource();
-    src.buffer = buf;
-    src.playbackRate.value = (rate || 1) * (ownerBufs[group] ? 1 : (0.94 + Math.random() * 0.12));
+    src.buffer = buffers[list[Math.floor(Math.random() * list.length)]];
+    src.playbackRate.value = (rate || 1) * (0.94 + Math.random() * 0.12);
     const g = c.createGain();
     g.gain.value = vol;
     src.connect(g); g.connect(c.destination);
@@ -206,7 +211,7 @@
        GAME has actually loaded — shown in Settings so a silent failure is
        never invisible again */
     ownerStatus() {
-      return Object.keys(GROUPS).map((k) => ({ key: k, mine: !!ownerBufs[k] }));
+      return Object.keys(GROUPS).map((k) => ({ key: k, mine: !!mineURLs[k] }));
     },
 
     /* card selection and deselection: their own subtle voices, the quietest
