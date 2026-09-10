@@ -1341,14 +1341,11 @@
     turnArmed = false;   // and the incoming turn is not live until its moves are computed
     coachMsg = (opts && opts.why) || null;
     /* the table's own voice: your moves at full presence, the AI's the same
-       sounds a touch quieter — a real table being played on around you */
+       sounds a touch quieter — a real table being played on around you.
+       A capture ALWAYS speaks as a capture (the owner's recording) — the
+       sweep sound belongs to the end-of-game leftover sweep alone */
     const q = (opts && opts.human) ? 1 : 0.45;
-    /* one voice per move: a capture that clears the table speaks ONLY with
-       the sweep — never capture and sweep stacked (the owner's one-voice law) */
-    const sweeping = a.type === 'capture' && g.phase !== 'gameover' &&
-      g.table.length === 0 && g.builds.length === 0;
-    if (sweeping) Snd.sweep(q);
-    else if (a.type === 'capture') Snd.capture(q);
+    if (a.type === 'capture') Snd.capture(q);
     else if (a.type === 'build' || a.type === 'augment' || a.type === 'preg') Snd.build(q);
     else if (a.type === 'dig' || a.type === 'topdig') Snd.steal(q);
     else if (a.type === 'discard') Snd.drift(q);
@@ -1433,6 +1430,9 @@
 
   /* ---------------- end of game ---------------- */
   function finishGame() {
+    /* the end-of-game leftover sweep is the sweep sound's one moment
+       (owner's ruling 2026-09-10) — cards left on the table, swept up */
+    if (g.finalSweep > 0) Snd.sweep(1);
     Ads.onGameFinished();
     session.games++;
     /* finishing a tutorial unlocks the next table size */

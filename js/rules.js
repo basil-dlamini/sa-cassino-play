@@ -1037,6 +1037,9 @@
 
   function endGame(g) {
     const leftovers = g.table.length + g.builds.reduce((n, b) => n + b.cards.length, 0);
+    /* the end-of-game sweep of leftovers is the ONLY sweep sound moment
+       (owner's ruling 2026-09-10) — captures always speak as captures */
+    g.finalSweep = 0;
     if (leftovers > 0) {
       if (g.lastCapturer != null) {
         const p = g.players[g.lastCapturer];
@@ -1044,6 +1047,7 @@
         for (const b of g.builds) cards.push(...b.cards);
         g.builds = [];
         p.pile.push(...cards);
+        g.finalSweep = leftovers;
         addLog(g, 'capture', act(p, 'sweeps up', 'sweep up') + ' the ' + leftovers + ' leftover cards.');
       } else {
         addLog(g, 'info', 'Nobody ever captured; leftover cards score nothing.');
