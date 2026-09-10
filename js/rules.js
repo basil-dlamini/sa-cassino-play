@@ -801,7 +801,13 @@
           ? (buildCards.length + a.loose.length ? fmt(buildCards.concat(a.loose)) : '') + ' (build' + (a.buildIds.length > 1 ? 's' : '') + ')'
           : fmt(a.loose);
       }
-      me.pile.push(...sortDesc(taken));   // this capture's set, sorted — played card on top
+      /* pile order (owner's law 2026-09-10): a captured BUILD or scaffold
+         keeps its STACK ORDER — base at the bottom of the group, newest fold
+         on top, landing directly beneath the played card. Loose floor cards
+         go in sorted. A capture is always one or the other — never build
+         and loose mixed */
+      const ordered = a.scaffoldCap ? taken : sortDesc(a.loose).concat(taken.slice(a.loose.length));
+      me.pile.push(...ordered);
       me.pile.push(a.card);
       g.lastCapturer = me.id;
       if (g.openedCardless) g.resolved = true;   // a capture settles a cardless debt

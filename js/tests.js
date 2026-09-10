@@ -449,6 +449,47 @@
     eq(g2.builds[0].cards[g2.builds[0].cards.length - 1], 'D2', 'still the 2 on top');
   });
 
+  test('v6 CAPTURE ORDER: a captured build keeps its stack — the dug 10 sits under the played 10', () => {
+    /* the owner's table: my 10-build [9,A] fattened by a dug 10; Sipho
+       captures it with his 10 — the build's TOP card must land directly
+       beneath his played card, so the next dig finds the 10 */
+    const g = mkState(2, { table: ['H4'] });
+    g.builds = [{ value: 10, cards: ['H9', 'C1', 'D10'], owner: 0, augmented: true }];
+    g.players[0].hand = ['C8'];
+    g.players[1].hand = ['C10'];
+    g.players[1].pile = ['S8', 'D2'];
+    g.turn = 1;
+    const cap = R.legalActions(g).find((a) => a.type === 'capture' && a.card === 'C10');
+    assert(cap, 'Sipho can capture the 10-build with his 10♣');
+    R.applyAction(g, cap);
+    const p = g.players[1].pile;
+    eq(p.length, 6, '2 old + 9, A, dug 10 + the played 10♣');
+    eq(p[p.length - 1], 'C10', 'the played card on top');
+    eq(p[p.length - 2], 'D10', 'the build\'s top card DIRECTLY beneath it — ready to dig next');
+    eq(p[p.length - 3], 'C1', 'the Ace under that');
+    eq(p[p.length - 4], 'H9', 'the 9 at the group\'s bottom');
+    /* and the digs really follow: first his played 10♣, then the 10♦ under it */
+    g.turn = 0;
+    g.turnUsed = false;          // a fresh turn — Sipho's capture closed HIS turn
+    g.capturedThisTurn = false;
+    g.builds = [{ value: 10, cards: ['H5', 'D5'], owner: 0, augmented: false }];
+    g.players[0].hand = ['S10'];
+    let dig = R.legalActions(g).find((a) => a.type === 'topdig' && a.victim === 1);
+    assert(dig, 'the pile top is diggable');
+    R.applyAction(g, dig);
+    eq(g.builds[0].cards[g.builds[0].cards.length - 1], 'C10', 'his played 10♣ comes off first');
+    dig = R.legalActions(g).find((a) => a.type === 'topdig' && a.victim === 1);
+    assert(dig, 'the next card is diggable too');
+    R.applyAction(g, dig);
+    eq(g.builds[0].cards[g.builds[0].cards.length - 1], 'D10', 'the 10♦ right behind it — the owner\'s very case');
+    /* loose captures stay sorted with the played card on top (unchanged law) */
+    const g2 = mkState(2, { table: ['S8', 'D2', 'H4'] });
+    g2.players[0].hand = ['C10', 'H7'];
+    g2.turn = 0;
+    R.applyAction(g2, R.legalActions(g2).find((a) => a.type === 'capture' && a.card === 'C10'));
+    eq(g2.players[0].pile.join(), ['S8', 'D2', 'C10'].join(), 'loose set sorted (8 above 2), played on top');
+  });
+
   /* ================= the v6 table law (as taught by the owner) ================= */
   test('v6 CAPTURE: a build NEVER joins a sum — only its exact value takes it', () => {
     // the owner's original report, now law: topped 7-build + loose 3 vs a 10
