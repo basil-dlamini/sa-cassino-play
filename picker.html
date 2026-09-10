@@ -63,32 +63,41 @@ const LIB = [
 const mineURLs = {};   /* 'mine:capture' -> blob URL */
 function openDb() {
   return new Promise((res) => {
+    /* storage must never freeze the picker: if it does not answer, the
+       library builds without personal entries */
+    let done = false;
+    const bail = () => { if (!done) { done = true; res(null); } };
+    const to = setTimeout(bail, 1500);
     const rq = indexedDB.open('sacassino', 1);
     rq.onupgradeneeded = () => rq.result.createObjectStore('ownerSounds');
-    rq.onsuccess = () => res(rq.result);
-    rq.onerror = () => res(null);
+    rq.onsuccess = () => { if (!done) { done = true; clearTimeout(to); res(rq.result); } };
+    rq.onerror = bail;
+    rq.onblocked = bail;
   });
 }
 function loadMine() {
-  return openDb().then((db) => new Promise((res) => {
-    if (!db) return res([]);
-    try {
-      const out = [];
-      const rq = db.transaction('ownerSounds', 'readonly').objectStore('ownerSounds').openCursor();
-      rq.onsuccess = () => {
-        const cur = rq.result;
-        if (!cur) return res(out);
-        const key = cur.key, blob = cur.value;
-        if (blob && blob.size) {
-          const id = 'mine:' + key;
-          mineURLs[id] = URL.createObjectURL(blob);
-          out.push([id, '★ My ' + key + ' recording (' + Math.round(blob.size / 1024) + 'KB)', 'MY STUDIO']);
-        }
-        cur.continue();
-      };
-      rq.onerror = () => res(out);
-    } catch (e) { res([]); }
-  }));
+  return Promise.race([
+    openDb().then((db) => new Promise((res) => {
+      if (!db) return res([]);
+      try {
+        const out = [];
+        const rq = db.transaction('ownerSounds', 'readonly').objectStore('ownerSounds').openCursor();
+        rq.onsuccess = () => {
+          const cur = rq.result;
+          if (!cur) return res(out);
+          const key = cur.key, blob = cur.value;
+          if (blob && blob.size) {
+            const id = 'mine:' + key;
+            mineURLs[id] = URL.createObjectURL(blob);
+            out.push([id, '★ My ' + key + ' recording (' + Math.round(blob.size / 1024) + 'KB)', 'MY STUDIO']);
+          }
+          cur.continue();
+        };
+        rq.onerror = () => res(out);
+      } catch (e) { res([]); }
+    })),
+    new Promise((res) => setTimeout(() => res([]), 3000))
+  ]);
 }
 const ACTIONS = [
   { key: 'place',    title: 'Playing a card from your hand', vol: 0.85, cur: 'sounds/playcard.wav' },
