@@ -1571,6 +1571,20 @@
     $('speed-select').value = localStorage.getItem('sacassino.aiSpeed') || '900';
     $('btn-remove-ads').textContent = Ads.removed ? '✓ Ads removed — thank you!' : 'Remove ads — $2.99 (one-time)';
     $('btn-remove-ads').disabled = Ads.removed;
+    /* the personal table voice — the truth about which recordings the game
+       has loaded (a silent load failure must never be invisible) */
+    const box = $('my-sounds');
+    if (box) {
+      const st = Snd.ownerStatus();
+      const mine = st.filter((s) => s.mine).map((s) => s.key);
+      const labels = { place: 'card played', discard: 'discard', build: 'build', steal: 'dig',
+        deal: 'shuffle', capture: 'capture', sweep: 'sweep', win: 'win', lose: 'lose',
+        click: 'button', select: 'select', deselect: 'deselect' };
+      box.innerHTML = st.map((s) =>
+        '<span class="' + (s.mine ? 'snd-mine' : 'snd-ship') + '">' + (labels[s.key] || s.key) +
+        (s.mine ? ' ✓' : '') + '</span>').join('');
+      box.title = mine.length ? mine.length + ' of your recordings live' : 'no personal recordings loaded on this device';
+    }
   }
 
   function refreshMenu() {

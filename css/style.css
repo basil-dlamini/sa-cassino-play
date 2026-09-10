@@ -81,6 +81,15 @@ small { opacity: .75; }
 .btn.secondary { background: transparent; }
 .btn.subtle { opacity: .7; }
 .btn.small { padding: 6px 10px; font-size: 12px; border-radius: 8px; font-weight: 800; }
+
+/* my table voice — the personal recordings status in Settings */
+.my-sounds-row { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(244,239,226,.2); }
+.my-sounds-label { font-size: 11px; opacity: .7; margin-bottom: 6px; }
+.my-sounds-list { display: flex; flex-wrap: wrap; gap: 5px; }
+.my-sounds-list span { font-size: 11px; padding: 3px 8px; border-radius: 8px;
+  background: rgba(255,255,255,.07); color: #f4efe2; }
+.my-sounds-list span.snd-mine { background: rgba(60,180,100,.22); color: #9fe8b5; font-weight: 700; }
+.my-sounds-list span.snd-ship { opacity: .55; }
 .btn.big { font-size: 17px; padding: 14px 18px; width: 100%; }
 .btn.hint-chip {
   background: rgba(244,239,226,.12); border-color: var(--ivory); color: var(--ivory);

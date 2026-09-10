@@ -202,6 +202,13 @@
     lose() { if (sample('lose', 0.6, 0.75)) return;
       burst(0.06, 0.16, 900, 450, 'lowpass'); thump(120, 0.09, 0.1, 0.03); },
 
+    /* the truth about the personal table voice: which recorded sounds the
+       GAME has actually loaded — shown in Settings so a silent failure is
+       never invisible again */
+    ownerStatus() {
+      return Object.keys(GROUPS).map((k) => ({ key: k, mine: !!ownerBufs[k] }));
+    },
+
     /* card selection and deselection: their own subtle voices, the quietest
        in the game — distinct from each other (the owner records both) */
     select()   { if (sample('select', 0.22, 1.5)) return; tick(0.06); },
