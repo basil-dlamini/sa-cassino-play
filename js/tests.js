@@ -517,6 +517,43 @@
   });
 
   /* ================= the v6 table law (as taught by the owner) ================= */
+  test('v6 BASE LOCKS THE BUILD: founding on a base is augmented from birth — no preg (owner 2026-09-10)', () => {
+    /* the owner's exact table: 6 and 2 make a virgin 8, but the loose 8 is a
+       BASE — the virgin build AUGMENTS it. The object is locked from birth */
+    const g = mkState(2, { table: ['D6', 'H8'] });
+    g.players[0].hand = ['C2', 'S8'];
+    const found = R.legalActions(g).find((a) => a.type === 'build' && a.card === 'C2');
+    assert(found, 'the 8 founding is offered');
+    R.applyAction(g, found);
+    eq(g.builds[0].value, 8);
+    assert(g.builds[0].cards.includes('H8'), 'the loose 8 folded beneath as the base');
+    eq(g.builds[0].augmented, true, 'a build standing on a base is augmented — locked from birth');
+    /* Sipho's exact hand: a 2 to preg with, a 10 to hold — the preg must NOT
+       exist (his stack would be 8+6+2+2 = 18, not a 10 in any sense) */
+    g.players[1].hand = ['H2', 'D10'];
+    R.applyAction(g, { type: 'endturn' });   // the real turn handover, with its resets
+    const acts = R.legalActions(g);
+    assert(acts.length > 1, 'Sipho has a live turn (the check below is not vacuous)');
+    assert(!has(acts, (a) => a.type === 'preg'), 'no preg is ever offered against a based build');
+
+    /* control: the same founding with NO base on the table stays virgin —
+       and the very same preg IS offered (the confirmed 6→9 doctrine) */
+    const g2 = mkState(2, { table: ['D6', 'S10'] });
+    g2.players[0].hand = ['C2', 'S8'];
+    const found2 = R.legalActions(g2).find((a) => a.type === 'build' && a.card === 'C2');
+    R.applyAction(g2, found2);
+    eq(g2.builds[0].augmented, false, 'no base — the build is virgin');
+    g2.players[1].hand = ['H2', 'D10'];
+    R.applyAction(g2, { type: 'endturn' });
+    const preg = R.legalActions(g2).find((a) => a.type === 'preg' && a.card === 'H2' && a.value === 10);
+    assert(preg, 'the virgin 8 is pregable to 10 as always');
+    R.applyAction(g2, preg);
+    /* and the same doctrine follows the preg: it landed on the loose 10 base
+       (8+6+2+2 would be 18 — but 10-base + 6+2+2 is a true 10) — locked */
+    assert(g2.builds[0].cards.includes('S10'), 'the loose 10 joined as the base');
+    eq(g2.builds[0].augmented, true, 'a preg that lands on a base is locked too');
+  });
+
   test('v6 CAPTURE: a build NEVER joins a sum — only its exact value takes it', () => {
     // the owner's original report, now law: topped 7-build + loose 3 vs a 10
     const g = mkState(2, { table: ['H3'] });

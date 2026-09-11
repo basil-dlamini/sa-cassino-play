@@ -865,6 +865,7 @@
       /* founding set: a compound founding keeps its BASE at the very bottom,
          every other card sorted on top of it */
       let bCards, logLine;
+      let bornLocked = a.victim != null;   /* a dig-founding folds a stolen card in */
       if (a.victim != null) {
         const dug = g.players[a.victim].pile.pop();
         if (a.base != null) {
@@ -885,8 +886,12 @@
         bCards = [...bases, ...set];
         logLine = act(me, 'builds', 'build') + ' ' + a.value + ' (' + fmt(set) +
           (bases.length ? ' + ' + fmt(bases) + ' base' : '') + ')';
+        /* the base doctrine (owner's law 2026-09-10): the virgin build AUGMENTS
+           the base it stands on — an augmented object is locked from birth,
+           and no preg may ever touch it. A founding with no base stays virgin */
+        if (bases.length) bornLocked = true;
       }
-      g.builds.push({ value: a.value, cards: bCards, owner: a.owner, augmented: a.victim != null });
+      g.builds.push({ value: a.value, cards: bCards, owner: a.owner, augmented: bornLocked });
       g.players[a.owner].virtual[a.value] = true;
       if (a.owner !== me.id) logLine += ' (for ' + names(g, a.owner) + ')';
       addLog(g, 'build', logLine + '.');
@@ -955,6 +960,9 @@
         b.owner = a.owner;
         const pregBases = absorbBases(g, a.value);       // a loose V joins as the base
         if (pregBases.length) b.cards.unshift(...pregBases);
+        /* the same doctrine: a preg that lands on a base augments it — locked
+           from that moment (owner's law 2026-09-10) */
+        if (pregBases.length) b.augmented = true;
         g.players[a.owner].virtual[a.value] = true;
         addLog(g, 'build', act(me, 'pregs', 'preg') + ' the build up to ' + a.value +
           (a.owner !== me.id ? ' — it stands with ' + names(g, a.owner) + '.' : ' — now theirs!'));
