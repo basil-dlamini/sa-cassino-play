@@ -33,6 +33,7 @@
     build:   ['pcs-contact1.wav'],
     steal:   ['draw.wav'],
     deal:    ['mixkit-3175.mp3'],
+    dealout: ['draw.wav'],          /* the per-card slide of the dealing ceremony */
     capture: ['card-shove-1.ogg', 'card-shove-2.ogg'],
     sweep:   ['card-shove-1.ogg', 'card-shove-2.ogg'],
     win:     ['card-fan-1.ogg'],
@@ -342,6 +343,10 @@
 
     deal() { if (sample('deal', 0.9, 1)) return;
       riffle(16, 0.16, 0.42, 0); thump(150, 0.08, 0.05, 0.46); },
+
+    dealCard(v) { v = v || 1;   /* one card sliding from the deck — quiet, one per card */
+      if (sample('dealout', 0.3 * v, 1)) return;
+      tick(0.05 * v); },
 
     place(v) { v = v || 1;
       if (sample('place', 0.85 * v, 1)) return;

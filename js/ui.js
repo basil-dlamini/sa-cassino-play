@@ -1240,6 +1240,77 @@
   }
 
   /* ---------------- lifecycle ---------------- */
+  /* ---------------- the dealing ceremony ---------------- */
+  /* Cards slide out of the deck face down, one beat each, then the whole
+     hand turns face up — the riffle lands on the TURN (the owner's ruling:
+     the opening sound suits the moment the cards are flipped). Pure
+     staging: the engine has already dealt; nothing here touches a rule.
+     Any tap skips to the end — the tenth game of a session owes no wait. */
+  let dealSeq = null;
+  let lastHandLen = 0;
+  function runDealSequence(then) {
+    const hand = g.players[HUMAN].hand.slice().sort(C.compare);
+    const n = hand.length;
+    if (!n || dealSeq) { then(); return; }
+    const box = $('my-hand');
+    box.innerHTML = '';
+    /* the deck, face down at the table's middle */
+    const deckEl = document.createElement('div');
+    deckEl.id = 'deal-deck';
+    const stackN = Math.min(4, Math.max(2, Math.ceil(n / 3)));
+    for (let i = 0; i < stackN; i++) {
+      const b = cardBack();
+      b.style.setProperty('--i', i);
+      deckEl.appendChild(b);
+    }
+    $('table-middle').appendChild(deckEl);
+    /* the row of face-down cards */
+    const staged = [];
+    for (let i = 0; i < n; i++) {
+      const back = cardBack();
+      back.classList.add('in-hand', 'deal-in');
+      back.style.animationDelay = (i * 150) + 'ms';
+      box.appendChild(back);
+      staged.push(back);
+    }
+    const timers = [];
+    let finished = false;
+    const finish = (e) => {
+      if (finished) return;
+      finished = true;
+      if (e && e.stopPropagation) e.stopPropagation();
+      timers.forEach(clearTimeout);
+      deckEl.remove();
+      $('screen-game').removeEventListener('click', finish, true);
+      dealSeq = null;
+      clearSelection();
+      render();
+      then();
+    };
+    dealSeq = { finish };
+    $('screen-game').addEventListener('click', finish, true);
+    /* one slide voice per card; the deck thins as it goes */
+    for (let i = 0; i < n; i++) {
+      timers.push(setTimeout(() => Snd.dealCard(), i * 150 + 60));
+      if (i % 2 === 1 && deckEl.children.length > 1) {
+        timers.push(setTimeout(() => { if (deckEl.lastChild) deckEl.lastChild.remove(); }, i * 150 + 140));
+      }
+    }
+    /* the turn: the riffle first, then the faces stagger in */
+    const flipAt = n * 150 + 260;
+    timers.push(setTimeout(() => Snd.deal(), flipAt));
+    for (let i = 0; i < n; i++) {
+      timers.push(setTimeout(() => {
+        if (!staged[i].parentNode) return;
+        const real = cardEl(hand[i], {});
+        real.classList.add('in-hand', 'flip-in');
+        staged[i].parentNode.replaceChild(real, staged[i]);
+      }, flipAt + i * 70));
+    }
+    timers.push(setTimeout(finish, flipAt + n * 70 + 480));
+    timers.push(setTimeout(finish, flipAt + n * 70 + 1500));   /* safety: a game never hangs on a ceremony */
+  }
+
   function newGame(opts) {
     opts = opts || {};
     demoMode = !!opts.demo;   // the AI plays every seat ONLY in an explicit demo
@@ -1257,9 +1328,9 @@
     show('screen-game');
     $('screen-game').classList.toggle('p2', n === 2);   // the two-hand layout
     fitCards();
-    Snd.deal();   // the riffle that opens every game
     render();
-    tick();
+    lastHandLen = g.players[HUMAN].hand.length;
+    runDealSequence(() => tick());   // the ceremony, then the game goes live
   }
 
   function tick() {
@@ -1277,6 +1348,16 @@
       } else scheduleAi();
       return;
     }
+    /* the second round's deal gets the same ceremony (two hands: the stock
+       re-deals the moment the hands empty) */
+    const handLen = g.players[HUMAN].hand.length;
+    if (g.phase === 'play' && handLen > 0 && lastHandLen === 0 && !dealSeq) {
+      lastHandLen = handLen;
+      render();
+      runDealSequence(() => tick());
+      return;
+    }
+    lastHandLen = handLen;
     humanActions = R.legalActions(g);
     turnArmed = true;             // the turn is live — selections and controls may open
     if (!humanActions.length) { reportDeadlock(); return; }

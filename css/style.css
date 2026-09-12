@@ -446,6 +446,29 @@ small { opacity: .75; }
 .card.sel-table {
   box-shadow: 0 0 0 4px rgba(244,239,226,.95), 0 3px 10px rgba(0,0,0,.4);
 }
+/* ---------------- the dealing ceremony ---------------- */
+/* the deck of face-down cards at the table's middle while the hand is dealt */
+#table-middle { position: relative; }
+#deal-deck {
+  position: absolute; left: 50%; top: 38%; z-index: 40;
+  pointer-events: none;
+}
+#deal-deck .card {
+  position: absolute;
+  transform: translate(calc(-50% + var(--i) * 1.5px), calc(-50% - var(--i) * 1.2px));
+}
+/* a card sliding out of the deck into the hand, face down */
+.card.deal-in { animation: dealIn .3s ease-out both; }
+@keyframes dealIn {
+  from { transform: translateY(-32vh) rotate(5deg) scale(.94); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+/* the turn: the hand flips face up, one card after another */
+.card.flip-in { animation: flipIn .24s ease-out both; }
+@keyframes flipIn {
+  from { transform: rotateY(88deg); }
+  to   { transform: none; }
+}
 /* the correction window: a just-discarded card still live in its slot —
    quietly marked, tappable, waiting to be used (owner's law 2026-09-12) */
 .card.correctable {
