@@ -554,6 +554,59 @@
     eq(g2.builds[0].augmented, true, 'a preg that lands on a base is locked too');
   });
 
+  test('v6 CORRECTION WINDOW: a first-move discard stays live — usable as if in hand (owner 2026-09-12)', () => {
+    /* P0 discards C2 over a table 7 while Sipho holds a 5-build with a 5 on
+       his pile — plenty of cardless digs exist, and ALL of them are locked */
+    const g = mkState(2, { table: ['H7'], wave: 2 });
+    g.builds = [{ value: 5, cards: ['C4', 'S1'], owner: 1, augmented: false }];
+    g.players[0].hand = ['C2', 'S9'];
+    g.players[1].hand = ['D4'];
+    g.players[1].pile = ['D5'];
+    R.applyAction(g, { type: 'discard', card: 'C2' });
+    assert(g.correctable && g.correctable.seat === 0 && g.correctable.card === 'C2',
+      'the window opens on the discard');
+    assert(g.table.includes('C2'), 'the card sits on the table (in its slot)');
+    const acts = R.legalActions(g);
+    assert(acts.length > 1, 'the window offers more than End Turn');
+    assert(acts.every((a) => a.type === 'endturn' || a.card === 'C2'),
+      'no substitution, nothing else — only the live card');
+    assert(!acts.some((a) => a.type === 'topdig' || a.type === 'edig' || a.type === 'digfold'),
+      'cardless moves are locked while the card is live');
+    const build = acts.find((a) => a.type === 'build' && a.card === 'C2' && a.value === 9);
+    assert(build, 'the corrected card builds 9 with the table 7');
+    /* using the card: the discard never happened — C2 comes off the table */
+    R.applyAction(g, build);
+    assert(!g.table.includes('C2') && !g.table.includes('H7'), 'both cards left the table');
+    eq(g.builds.length, 2);
+    const mine = g.builds.find((b) => b.value === 9);
+    assert(mine.cards.includes('C2') && mine.cards.includes('H7'), 'the corrected card is in the build');
+    eq(g.correctable, null, 'the window closed');
+    assert(g.turnUsed, 'the corrected move IS the turn\u2019s hand move');
+    /* the cardless lock is gone with the window (the pile-top dig itself
+       stays barred HERE only because P0 now owns a build — the standing
+       top law, not the window) */
+    const after = R.legalActions(g);
+    assert(!after.some((a) => a.card === 'C2'), 'the live card is spent — its moves are gone');
+    assert(after.some((a) => a.type === 'endturn'), 'End Turn remains');
+
+    /* ending the turn instead: the discard stands forever */
+    const g2 = mkState(2, { table: ['H7'] });
+    g2.players[0].hand = ['C2', 'S9'];
+    R.applyAction(g2, { type: 'discard', card: 'C2' });
+    R.applyAction(g2, { type: 'endturn' });
+    eq(g2.turn, 1, 'the turn passed');
+    eq(g2.correctable, null, 'the window is dead');
+    assert(g2.table.includes('C2'), 'the discard stands on the table');
+
+    /* a card that could capture can never be discarded — so the window can
+       never offer a capture or a top (the owner's clause 2 falls out of
+       the discard rules themselves) */
+    const g3 = mkState(2, { table: ['H3'] });
+    g3.players[0].hand = ['C3', 'S9'];
+    assert(!R.legalActions(g3).some((a) => a.type === 'discard' && a.card === 'C3'),
+      'the loose-twin law bars discarding a capturable card');
+  });
+
   test('v6 CAPTURE: a build NEVER joins a sum — only its exact value takes it', () => {
     // the owner's original report, now law: topped 7-build + loose 3 vs a 10
     const g = mkState(2, { table: ['H3'] });
@@ -1377,7 +1430,8 @@
               // multi-move turn: hand-card moves only while the card is unspent;
               // end turn only through the v4 gate
               const handMove = ['capture', 'discard', 'build', 'augment', 'dig', 'preg'].includes(a.type);
-              if (handMove) assert(!g.turnUsed, 'second hand-card move offered in one turn');
+              if (handMove) assert(!g.turnUsed || (g.correctable && a.card === g.correctable.card),
+                'second hand-card move offered in one turn');
               if (a.type === 'endturn') {
                 assert(g.turnUsed, 'endturn before the hand card');
                 assert(!g.builds.some((b) => b.scaffold), 'endturn with a scaffold live');

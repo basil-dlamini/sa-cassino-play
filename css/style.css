@@ -446,6 +446,15 @@ small { opacity: .75; }
 .card.sel-table {
   box-shadow: 0 0 0 4px rgba(244,239,226,.95), 0 3px 10px rgba(0,0,0,.4);
 }
+/* the correction window: a just-discarded card still live in its slot —
+   quietly marked, tappable, waiting to be used (owner's law 2026-09-12) */
+.card.correctable {
+  box-shadow: 0 0 0 3px rgba(255, 214, 130, .85), 0 3px 10px rgba(0,0,0,.4);
+}
+.card.correctable.selected {
+  transform: translateY(-14px) scale(1.06);
+  box-shadow: 0 0 0 3px rgba(255, 214, 130, 1), 0 8px 18px rgba(0,0,0,.45);
+}
 .build-box.selected, .pile-box.selected {
   border-color: var(--ivory);
   box-shadow: 0 0 0 2px rgba(244,239,226,.7);

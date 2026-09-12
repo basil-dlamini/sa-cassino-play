@@ -118,6 +118,7 @@
       openedCardless: false, // the turn opened with a no-hand-card move
       resolved: false,       // the capture-or-top owed for a cardless opening
       capturedThisTurn: false, // a capture closes the taking — End Turn only
+      correctable: null,       // a first-move discard still live: {seat, card, unmark}
       stock: [],
       table: [],
       builds: [],            // live builds: {value, cards, owner, augmented}
@@ -214,6 +215,27 @@
     /* a capture closes the turn's taking: only End Turn remains */
     if (g.capturedThisTurn) {
       return [{ type: 'endturn' }];
+    }
+
+    /* ---- the correction window (owner's law 2026-09-12) ----
+       After a discard — which is always the turn's FIRST move (the debt rules
+       bar discards after a cardless opening) — the card stays LIVE: it plays
+       as if it had never left the hand, and NOTHING else moves: no other hand
+       card (no substitution), no cardless moves (those unlock only once this
+       card is used). Capture and top are impossible by construction — the
+       discard rules only ever pass a card that captures nothing and tops
+       nothing — so the window offers building, pregging and digging. Ending
+       the turn lets the discard stand. */
+    if (g.correctable && g.correctable.seat === g.turn) {
+      const card = g.correctable.card, save = g.correctable;
+      const ti = g.table.indexOf(card);
+      if (ti < 0) return [{ type: 'endturn' }];
+      g.correctable = null;
+      g.table.splice(ti, 1); g.players[g.turn].hand.push(card); g.turnUsed = false;
+      const win = legalActions(g).filter((x) => x.card === card);
+      g.turnUsed = true; g.players[g.turn].hand.pop(); g.table.splice(ti, 0, card);
+      g.correctable = save;
+      return win.concat([{ type: 'endturn' }]);
     }
 
     const me = g.turn;
@@ -690,6 +712,22 @@
     g.actionCount++;
     const me = g.players[g.turn];
 
+    /* the correction made real: using the live discarded card pulls it off
+       the table as if it had never left the hand — the discard it replaces
+       never happened (owner's law 2026-09-12) */
+    if (g.correctable && a.card === g.correctable.card && g.turn === g.correctable.seat) {
+      const ti = g.table.indexOf(a.card);
+      if (ti >= 0) {
+        g.table.splice(ti, 1);
+        me.hand.push(a.card);
+        g.turnUsed = false;
+        if (g.correctable.unmark) delete me.virtual[C.rank(a.card)];
+        addLog(g, 'drift', act(me, 'takes back', 'take back') + ' ' + C.label(a.card) +
+          ' — the discard is corrected.');
+      }
+    }
+    g.correctable = null;   // any action at all closes the window
+
     if (a.type === 'skip') {
       const sp = g.shiyaPending;
       addLog(g, 'build', names(g, sp.caller) + ' let the capture stand (no Shiya).');
@@ -781,6 +819,9 @@
     }
 
     /* every remaining action spends the turn's one hand card */
+    const wasFresh = !g.turnUsed && !g.openedCardless;   /* the discard below is
+       only ever offered pre-hand-move and debt-free, so this is always true —
+       kept as the guard so the window can never open on a stale turn */
     g.turnUsed = true;
 
     if (a.type === 'capture') {
@@ -840,8 +881,13 @@
 
     if (a.type === 'discard') {
       takeFromHand(me, a.card);
+      const wasMarked = !!me.virtual[C.rank(a.card)];
       playedVirtual(g, me.id, a.card);
       g.table.push(a.card);
+      /* the correction window opens: the card stays live until used or the
+       turn ends (owner's law 2026-09-12). unmark: if this discard is what
+       set the value's virtual flag, a correction must clear it again */
+      if (wasFresh) g.correctable = { seat: me.id, card: a.card, unmark: !wasMarked };
       addLog(g, 'drift', act(me, 'discards', 'discard') + ' ' + C.label(a.card) + ' into the discard area.');
       return;
     }
@@ -1041,6 +1087,7 @@
     g.openedCardless = false;    // and no cardless debt carries over
     g.resolved = false;
     g.capturedThisTurn = false;
+    g.correctable = null;        // the discard stood — its window is closed
   }
 
   function endGame(g) {

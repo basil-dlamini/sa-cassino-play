@@ -604,7 +604,9 @@
       if (id) {
         const involved = lastAction && lastAction.loose && lastAction.loose.includes(id);
         const arrived = lastAction && lastAction.type === 'discard' && lastAction.card === id;
-        el = cardEl(id, { highlight: involved || arrived });
+        const live = g.correctable && g.correctable.seat === HUMAN && id === g.correctable.card;
+        el = cardEl(id, { highlight: involved || arrived, selected: selectedCard === id });
+        if (live) el.classList.add('correctable');   // still in play — tap to use it
         el.style.gridArea = s;
       } else {
         el = document.createElement('div');
@@ -997,8 +999,13 @@
 
   /* selection highlights on the board */
   function applySelClasses() {
-    document.querySelectorAll('#table-cards .card').forEach((el) =>
-      el.classList.toggle('sel-table', tableSel.has(el.dataset.id)));
+    document.querySelectorAll('#table-cards .card').forEach((el) => {
+      el.classList.toggle('sel-table', tableSel.has(el.dataset.id));
+      /* the live discarded card: still selectable in its slot, still glowing */
+      el.classList.toggle('selected', selectedCard === el.dataset.id);
+      el.classList.toggle('correctable',
+        !!(g.correctable && g.correctable.seat === HUMAN && el.dataset.id === g.correctable.card));
+    });
     document.querySelectorAll('.build-box.has-build').forEach((z) =>
       z.classList.toggle('selected', buildSel === Number(z.dataset.idx)));
     document.querySelectorAll('.pile-box').forEach((z) =>
@@ -1664,7 +1671,9 @@
       const el = e.target.closest('.card');
       if (!el || !isHumanTurn() || humanBusy || !turnArmed) return;
       if (g.turnUsed) {           // the turn's one hand card is already spent
-        if (tutorialMode) toast('You already used your hand card this turn — dig or end the turn.');
+        if (tutorialMode) toast(g.correctable && g.correctable.seat === HUMAN
+          ? 'That discard is still live — tap it in its slot to use it, or end the turn.'
+          : 'You already used your hand card this turn — dig or end the turn.');
         return;
       }
       if (el.dataset.id === selectedCard) {   // tap the selected card again → deselect
@@ -1684,9 +1693,21 @@
       const cell = e.target.closest('.grid-cell');
       if (cell) { tryDiscardTo(cell.dataset.area); return; }
       const el = e.target.closest('.card');
+      if (!el) return;
+      /* the correction window: the just-discarded card plays as if still in
+         hand — tapping it in its slot selects it as the move's hand card */
+      if (g.correctable && g.correctable.seat === HUMAN && el.dataset.id === g.correctable.card &&
+          isHumanTurn() && !humanBusy && turnArmed) {
+        if (selectedCard === el.dataset.id) {
+          clearSelection(); pendingConfirm = null; Snd.deselect(); render(); return;
+        }
+        selectedCard = el.dataset.id;
+        if (!refreshAfterSelect()) Snd.select();
+        return;
+      }
       /* a scaffold stack's face is the STACK, not a loose card — toggling it
          into the table selection poisoned the capture match and froze the game */
-      if (el && !el.closest('.build-box')) toggleTableSel(el.dataset.id);
+      if (!el.closest('.build-box')) toggleTableSel(el.dataset.id);
     });
     $('screen-game').addEventListener('click', (e) => {
       const bz = e.target.closest('.build-box.has-build');
