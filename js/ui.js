@@ -878,6 +878,12 @@
   function tryDiscardTo(areaStr) {
     if (!isHumanTurn() || !turnArmed || !selectedCard || hasSideSelection()) return;
     const card = selectedCard;
+    /* the live discarded card is not droppable again — a re-discard is not a
+       correction; use it for a move or end the turn */
+    if (g.correctable && g.correctable.seat === HUMAN && card === g.correctable.card) {
+      if (tutorialMode) toast('That discard is made — use the card for a move, or end the turn.');
+      return;
+    }
     if (discardLegalFor(card)) {
       if (directMode()) { executeHuman({ type: 'discard', card }, areaStr); return; }
       pendingConfirm = { matches: [{ type: 'discard', card }], discardArea: areaStr };

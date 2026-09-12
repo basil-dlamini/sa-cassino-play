@@ -232,7 +232,11 @@
       if (ti < 0) return [{ type: 'endturn' }];
       g.correctable = null;
       g.table.splice(ti, 1); g.players[g.turn].hand.push(card); g.turnUsed = false;
-      const win = legalActions(g).filter((x) => x.card === card);
+      /* the window offers the DIFFERENT moves only — build, preg, dig (the
+         owner's list). A re-discard is not a different move, and offering it
+         loops the AI forever: discard, take back, discard again (the freeze
+         of 2026-09-12). End Turn stays: the discard may stand */
+      const win = legalActions(g).filter((x) => x.card === card && x.type !== 'discard');
       g.turnUsed = true; g.players[g.turn].hand.pop(); g.table.splice(ti, 0, card);
       g.correctable = save;
       return win.concat([{ type: 'endturn' }]);

@@ -607,6 +607,30 @@
       'the loose-twin law bars discarding a capturable card');
   });
 
+  test('v6 CORRECTION WINDOW: no re-discard in the window — the AI loop freeze (2026-09-12)', () => {
+    /* the owner's frozen game: Sipho discards, the window offered the card
+       back as a discard, the chooser took it forever — discard, take back,
+       discard, the sound looping. A re-discard is not a different move */
+    const g = mkState(2, { table: ['H7'] });
+    g.players[1].hand = ['C2', 'S4'];   /* no 9 held — nothing combinable */
+    g.turn = 1;
+    R.applyAction(g, { type: 'discard', card: 'C2' });
+    assert(g.correctable && g.correctable.seat === 1, 'Sipho\u2019s window is open');
+    const w = R.legalActions(g);
+    assert(!w.some((a) => a.type === 'discard'), 'the window never offers a re-discard — that is the loop');
+    const pick = AI.chooseAction(g);
+    assert(pick && pick.type === 'endturn', 'Sipho ends his turn — the game moves on');
+    /* and with a real correction available, the window still offers it */
+    const g2 = mkState(2, { table: ['H7'] });
+    g2.players[1].hand = ['C2', 'S9'];
+    g2.turn = 1;
+    R.applyAction(g2, { type: 'discard', card: 'C2' });
+    const w2 = R.legalActions(g2);
+    assert(w2.some((a) => a.type === 'build' && a.card === 'C2' && a.value === 9),
+      'the corrected build is still offered');
+    assert(!w2.some((a) => a.type === 'discard'), 'and still no re-discard');
+  });
+
   test('v6 CAPTURE: a build NEVER joins a sum — only its exact value takes it', () => {
     // the owner's original report, now law: topped 7-build + loose 3 vs a 10
     const g = mkState(2, { table: ['H3'] });
