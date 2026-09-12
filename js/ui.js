@@ -879,7 +879,7 @@
     if (!isHumanTurn() || !turnArmed || !selectedCard || hasSideSelection()) return;
     const card = selectedCard;
     /* the live discarded card is not droppable again — a re-discard is not a
-       correction; use it for a move or end the turn */
+       Card down rule; use it for a move or end the turn */
     if (g.correctable && g.correctable.seat === HUMAN && card === g.correctable.card) {
       if (tutorialMode) toast('That discard is made — use the card for a move, or end the turn.');
       return;
@@ -1759,7 +1759,7 @@
       if (!el || !isHumanTurn() || humanBusy || !turnArmed) return;
       if (g.turnUsed) {           // the turn's one hand card is already spent
         if (tutorialMode) toast(g.correctable && g.correctable.seat === HUMAN
-          ? 'That discard is still live — tap it in its slot to use it, or end the turn.'
+          ? 'Card down rule — tap the discarded card in its slot to use it, or end the turn.'
           : 'You already used your hand card this turn — dig or end the turn.');
         return;
       }
@@ -1781,7 +1781,7 @@
       if (cell) { tryDiscardTo(cell.dataset.area); return; }
       const el = e.target.closest('.card');
       if (!el) return;
-      /* the correction window: the just-discarded card plays as if still in
+      /* the Card down rule: the just-discarded card plays as if still in
          hand — tapping it in its slot selects it as the move's hand card */
       if (g.correctable && g.correctable.seat === HUMAN && el.dataset.id === g.correctable.card &&
           isHumanTurn() && !humanBusy && turnArmed) {

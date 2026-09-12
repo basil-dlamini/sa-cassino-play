@@ -554,7 +554,7 @@
     eq(g2.builds[0].augmented, true, 'a preg that lands on a base is locked too');
   });
 
-  test('v6 CORRECTION WINDOW: a first-move discard stays live — usable as if in hand (owner 2026-09-12)', () => {
+  test('v6 CARD DOWN RULE: a first-move discard stays live — usable as if in hand (owner 2026-09-12)', () => {
     /* P0 discards C2 over a table 7 while Sipho holds a 5-build with a 5 on
        his pile — plenty of cardless digs exist, and ALL of them are locked */
     const g = mkState(2, { table: ['H7'], wave: 2 });
@@ -607,7 +607,7 @@
       'the loose-twin law bars discarding a capturable card');
   });
 
-  test('v6 CORRECTION WINDOW: no re-discard in the window — the AI loop freeze (2026-09-12)', () => {
+  test('v6 CARD DOWN RULE: no re-discard in the window — the AI loop freeze (2026-09-12)', () => {
     /* the owner's frozen game: Sipho discards, the window offered the card
        back as a discard, the chooser took it forever — discard, take back,
        discard, the sound looping. A re-discard is not a different move */

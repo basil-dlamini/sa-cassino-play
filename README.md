@@ -48,6 +48,12 @@ augmented), **dig** (take an opponent's matching pile-top into a build),
    values are ever live. Last capturer sweeps leftovers at game end.
 10. Scoring universe: 11 points (2 players and 4-hand pairs: Most cards 2,
     Most spades 2, 2♠ 1, 10♦ 2, four Aces 4); 7 points for 3 singles.
+11. **The Card down rule**: after a player's discard — always the turn's
+    first move — the discarded card stays live and may be used as if it had
+    never left the hand, for building, pregging or digging only (capture and
+    top are impossible by the discard rules themselves). No other hand card
+    may take its place; cardless moves are locked until the card is used or
+    the turn ends. The rule binds every player.
 
 ## The AI opponents
 - **Sipho (Aggressive)** — grabs points and steals quickly, builds less.

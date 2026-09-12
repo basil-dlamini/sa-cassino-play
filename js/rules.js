@@ -217,7 +217,7 @@
       return [{ type: 'endturn' }];
     }
 
-    /* ---- the correction window (owner's law 2026-09-12) ----
+    /* ---- the CARD DOWN RULE (owner's law 2026-09-12) ----
        After a discard — which is always the turn's FIRST move (the debt rules
        bar discards after a cardless opening) — the card stays LIVE: it plays
        as if it had never left the hand, and NOTHING else moves: no other hand
@@ -716,7 +716,7 @@
     g.actionCount++;
     const me = g.players[g.turn];
 
-    /* the correction made real: using the live discarded card pulls it off
+    /* the Card down rule made real: using the live discarded card pulls it off
        the table as if it had never left the hand — the discard it replaces
        never happened (owner's law 2026-09-12) */
     if (g.correctable && a.card === g.correctable.card && g.turn === g.correctable.seat) {
@@ -727,7 +727,7 @@
         g.turnUsed = false;
         if (g.correctable.unmark) delete me.virtual[C.rank(a.card)];
         addLog(g, 'drift', act(me, 'takes back', 'take back') + ' ' + C.label(a.card) +
-          ' — the discard is corrected.');
+          ' — the Card down rule.');
       }
     }
     g.correctable = null;   // any action at all closes the window
@@ -888,7 +888,7 @@
       const wasMarked = !!me.virtual[C.rank(a.card)];
       playedVirtual(g, me.id, a.card);
       g.table.push(a.card);
-      /* the correction window opens: the card stays live until used or the
+      /* the Card down rule opens: the card stays live until used or the
        turn ends (owner's law 2026-09-12). unmark: if this discard is what
        set the value's virtual flag, a correction must clear it again */
       if (wasFresh) g.correctable = { seat: me.id, card: a.card, unmark: !wasMarked };
