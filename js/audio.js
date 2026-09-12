@@ -41,6 +41,11 @@
     select:  ['playcard.wav'],
     deselect: ['playcard.wav']
   };
+  /* the owner's voice map (SOUND MAP 2026-09-11): discard speaks with the
+     PLACE recording — the card slipping into place. The take keyed 'discard'
+     stays in storage, simply unused */
+  const PERSONAL_VOICE = { discard: 'place' };
+  const personalKey = (g) => PERSONAL_VOICE[g] || g;
   /* the owner's own recordings (record.html, same site) outrank the shipped
      samples on the device that made them — the personal table voice.
      Two routes, fastest wins: DECODED buffers (instant, sample-accurate)
@@ -238,11 +243,12 @@
      player built at play time */
   function sample(group, vol, rate) {
     if (root.Sound.muted) return true;
-    if (mineBufs[group]) {
+    const pk = personalKey(group);
+    if (mineBufs[pk]) {
       const c = ac();
       if (c) {
         const src = c.createBufferSource();
-        src.buffer = mineBufs[group];
+        src.buffer = mineBufs[pk];
         const g = c.createGain();
         g.gain.value = vol;
         src.connect(g); g.connect(c.destination);
@@ -250,8 +256,8 @@
         return true;
       }
     }
-    if (mineEls[group]) {
-      const el = mineEls[group];
+    if (mineEls[pk]) {
+      const el = mineEls[pk];
       el.volume = Math.max(0, Math.min(1, vol));
       try { el.currentTime = 0; } catch (e) { /* not seekable yet — play from wherever it stands */ }
       el.play().catch(() => {});
@@ -371,11 +377,14 @@
        GAME has actually loaded and BY WHICH ROUTE — shown in Settings so a
        silent failure is never invisible again */
     ownerStatus() {
-      return Object.keys(GROUPS).map((k) => ({
-        key: k, mine: !!(mineEls[k] || mineBufs[k]),
-        route: mineRoute[k] || null,
-        ms: mineBufs[k] ? Math.round(mineBufs[k].duration * 1000) : null
-      }));
+      return Object.keys(GROUPS).map((k) => {
+        const pk = personalKey(k);        // report the voice actually played
+        return {
+          key: k, mine: !!(mineEls[pk] || mineBufs[pk]),
+          route: mineRoute[pk] || null,
+          ms: mineBufs[pk] ? Math.round(mineBufs[pk].duration * 1000) : null
+        };
+      });
     },
     /* the dead-air trimmer, exposed for diagnostics (diag.html) — pure:
        buffer in, trimmed buffer or null out */
