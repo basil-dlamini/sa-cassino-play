@@ -54,6 +54,11 @@ augmented), **dig** (take an opponent's matching pile-top into a build),
     top are impossible by the discard rules themselves). No other hand card
     may take its place; cardless moves are locked until the card is used or
     the turn ends. The rule binds every player.
+12. **The facing card is free** (2026-09-13): a card facing an ENEMY build
+    of its value carries no obligation — it may capture that build, preg it,
+    or be spent on anything else the law allows. Only the BUILDER's own
+    matching card is reserved (law 3). No player is ever cornered into
+    capturing a build that isn't theirs.
 
 ## The AI opponents
 - **Sipho (Aggressive)** — grabs points and steals quickly, builds less.

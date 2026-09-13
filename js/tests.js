@@ -189,15 +189,20 @@
   });
 
   /* ================= owner / opponent card-use restrictions ================= */
-  test('opponent holding the build value may ONLY capture the build with it', () => {
+  test('the facing card is FREE against an enemy build (owner 2026-09-13)', () => {
+    /* the old reservation cornered the opponent's 8 into capturing the
+       build — abolished: a choice, never an obligation */
     const g = mkState(2, { table: ['C3', 'H5'] });
     g.builds = [{ value: 8, cards: ['H3', 'S5'], owner: 0, augmented: false }];
     g.players[1].hand = ['D8', 'H9'];
     g.turn = 1;
     const acts = R.legalActions(g).filter((a) => a.card === 'D8');
-    assert(acts.length > 0, 'some use of the 8 must exist');
-    assert(acts.every((a) => a.type === 'capture' && a.buildIds.length === 1), 'only capturing the build');
-    assert(!has(R.legalActions(g), (a) => a.type === 'discard' && a.card === 'D8'), 'no discard');
+    assert(acts.some((a) => a.type === 'capture' && a.buildIds.length === 1),
+      'capturing his 8-build with my 8 is offered');
+    assert(acts.some((a) => a.type === 'capture' && !a.buildIds.length && a.loose.length === 2),
+      'and so is capturing the loose 3+5 instead — never an obligation');
+    assert(!has(R.legalActions(g), (a) => a.type === 'discard' && a.card === 'D8'),
+      'the discard bar stands: no discarding a value while its build is live');
   });
   test("owner's LAST matching card is reserved: it may only capture that build", () => {
     const g = mkState(2, { table: ['C3', 'H5'] });
@@ -489,6 +494,29 @@
     g2.turn = 0;
     R.applyAction(g2, R.legalActions(g2).find((a) => a.type === 'capture' && a.card === 'C10'));
     eq(g2.players[0].pile.join(), ['S8', 'D2', 'C10'].join(), 'loose set sorted (8 above 2), played on top');
+  });
+
+  test('v6 THE FACING CARD IS FREE (owner 2026-09-13): an enemy build binds only its builder', () => {
+    /* the owner's table: Sipho's virgin 9-build, an Ace loose, my 9 and 10.
+       The old reservation law cornered my 9 into capturing HIS build — the
+       owner ruled it wrong: no obligation to a build that isn't mine */
+    const g = mkState(2, { table: ['S1'] });
+    g.builds = [{ value: 9, cards: ['H5', 'C4'], owner: 1, augmented: false }];
+    g.players[0].hand = ['C9', 'D10'];
+    const acts = R.legalActions(g);
+    const build = acts.find((a) => a.type === 'build' && a.card === 'C9' && a.value === 10);
+    assert(build, 'my 9 + the Ace founds the 10 — the enemy 9-build does not bind me');
+    assert(build && build.loose.includes('S1'), 'the Ace is the founding set');
+    const cap = acts.find((a) => a.type === 'capture' && a.card === 'C9' &&
+      a.buildIds && a.buildIds.includes(0));
+    assert(cap, 'capturing HIS 9-build with my 9 is still offered — a choice, never an obligation');
+    assert(!acts.some((a) => a.type === 'discard' && a.card === 'C9'),
+      'the discard bar stands: no discarding a value while its build is live');
+    R.applyAction(g, build);
+    eq(g.builds.length, 2, 'both builds live');
+    const mine = g.builds.find((b) => b.value === 10);
+    eq(mine.owner, 0, 'my 10 stands');
+    assert(mine.cards.includes('C9') && mine.cards.includes('S1'), 'the 9 and the Ace in the stack');
   });
 
   test('v6 PREG FACING THE ENEMY VALUE: the 5 may capture his 5 OR fold it into my live 10', () => {

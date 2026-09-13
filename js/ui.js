@@ -807,6 +807,38 @@
     });
   }
 
+  /* could this hand+table selection still GROW into a legal move by adding
+     more table cards? A growing selection is mid-assembly, not dead — the
+     explainer stays quiet until the shape is final */
+  function selectionCouldGrow() {
+    return humanActions.some((a) => {
+      if (a.card !== selectedCard) return false;
+      const loose = a.loose || [];
+      return loose.length > tableSel.size && [...tableSel].every((id) => loose.includes(id));
+    });
+  }
+
+  /* the table explains its own law: a finished hand+table selection with no
+     legal move gets one small line of WHY (the owner's ruling 2026-09-13 —
+     no more silent dead ends) */
+  function explainDeadSelection() {
+    const me = g.players[HUMAN];
+    const hv = C.rank(selectedCard);
+    const v = hv + [...tableSel].reduce((n, id) => n + C.rank(id), 0);
+    if (v > 10) { toast('That makes ' + v + ' — past the ceiling of 10.'); return; }
+    if (g.builds.some((b) => b.value === v && !b.scaffold)) {
+      toast('A ' + v + '-build already stands — two of a value never live together.'); return;
+    }
+    if (!me.hand.some((h) => h !== selectedCard && C.rank(h) === v)) {
+      toast('A ' + v + '-build needs a ' + v + ' in hand to capture it later — you hold none.'); return;
+    }
+    if (g.builds.find((b) => b.value === hv && b.owner === HUMAN && !b.scaffold)) {
+      toast('Your ' + hv + ' stands on your own ' + hv + '-build — it may only capture or augment it, unless you hold another.');
+      return;
+    }
+    toast('That combination makes no legal move.');
+  }
+
   function afterSelectionChange() {
     const m = matchesForSelection();
     const armed = selectedCard ? hasSideSelection() : (pileTopSel != null || tableSel.size > 0);
@@ -824,6 +856,9 @@
     /* a cardless combine that matched nothing: if the shape would otherwise
        be legal, the failing reason is the reservation law — say so */
     if (!m.length && !selectedCard && tableSel.size + (pileTopSel != null ? 1 : 0) >= 2) maybeReservedAlert();
+    /* and a hand+table selection that is final and dead gets its one line */
+    else if (!m.length && selectedCard && tableSel.size && pileTopSel == null && buildSel == null &&
+             !selectionCouldGrow()) explainDeadSelection();
     return false;
   }
 

@@ -195,13 +195,11 @@
       if (augOwn) return true;
       return holdsAnother;
     }
-    const enemyV = g.builds.find((b) => b.value === v && !sameSide(g, seat, b.owner) && !b.scaffold);
-    /* a card facing an enemy build of its value has TWO lawful doors:
-       capture that build, or preg THAT VERY BUILD (the owner's ruling
-       2026-09-10 — the 5 may capture his 5 or fold it into my live 10).
-       Everything else stays reserved */
-    if (enemyV && !(use.type === 'capture' && use.buildIds && use.buildIds.includes(g.builds.indexOf(enemyV))) &&
-        !(use.type === 'preg' && use.buildIdx === g.builds.indexOf(enemyV))) return false;
+    /* the owner's ruling 2026-09-13: an enemy's build reserves NOBODY's card
+       but the builder's own (the block above). A card facing an enemy build
+       of its value is FREE — found, dig, combine, capture loose cards, or
+       capture and preg that very build: the choice belongs to the player
+       holding the card, not the table */
     return true;
   }
 
