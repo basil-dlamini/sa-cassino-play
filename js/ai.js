@@ -199,6 +199,12 @@
     const acts = R.legalActions(g);
     if (!acts.length) return null;
 
+    /* the Card down rule corrects a MISTAKE — the AI makes none. Its
+       discard was chosen over every alternative; it stands (the owner's
+       ruling 2026-09-14). The window still binds the AI's options — no
+       cardless digs before End Turn — but it never reaches for the card */
+    if (g.correctable && g.correctable.seat === g.turn) return { type: 'endturn' };
+
     if (g.phase === 'shiya') {
       // Shiya converts the partner's capture into a build I own and must
       // capture later. Call it when the cards are worth the commitment.

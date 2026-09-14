@@ -657,6 +657,9 @@
     assert(w2.some((a) => a.type === 'build' && a.card === 'C2' && a.value === 9),
       'the corrected build is still offered');
     assert(!w2.some((a) => a.type === 'discard'), 'and still no re-discard');
+    const pick2 = AI.chooseAction(g2);
+    assert(pick2 && pick2.type === 'endturn',
+      'the AI declines the correction even with the build available — it makes no mistakes (owner 2026-09-14)');
   });
 
   test('v6 CAPTURE: a build NEVER joins a sum — only its exact value takes it', () => {
