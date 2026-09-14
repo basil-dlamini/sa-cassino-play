@@ -533,10 +533,11 @@ small { opacity: .75; }
 .score-row b { white-space: nowrap; }
 .score-row b.nil { opacity: .45; font-weight: 400; }
 .score-sweep {
-  margin-top: 3px; padding: 7px 10px; border-radius: 8px; text-align: center;
+  margin: 3px 0 5px; padding: 7px 10px; border-radius: 8px; text-align: center;
   background: rgba(255,214,130,.14); border: 1px solid rgba(255,214,130,.5);
   color: #ffd682; font-weight: 700; letter-spacing: .05em; font-size: .9rem;
 }
+.score-card .score-sweep + .score-row { padding-top: 0; }
 details.score-law { margin: 10px 2px 4px; font-size: .8rem; }
 details.score-law summary { cursor: pointer; color: var(--ivory); }
 details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }

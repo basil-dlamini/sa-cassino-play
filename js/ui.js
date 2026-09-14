@@ -1627,7 +1627,11 @@
         const clean = res.teamMode ? 44 : 22;
         html += '<div class="score-sweep">' + (t.sweep >= clean ? 'Clean sweep' : 'Sweep') +
           ' &mdash; ' + t.sweep + ' &middot; the whole score</div>';
-      } else {
+      }
+      /* the detailed score NEVER disappears — a sweep changes the total,
+         not the story: the ledger rows always tell the counts (owner's
+         report 2026-09-15: the sweep band had replaced them entirely) */
+      {
         const mostWord = (p) => p === 2 ? ' &middot; most' : (p === 1 ? ' &middot; tie' : '');
         html += row(t.cards + ' cards' + mostWord(t.mostCards), t.mostCards);
         html += row(t.spades + ' &spades;' + mostWord(t.mostSpades), t.mostSpades);
