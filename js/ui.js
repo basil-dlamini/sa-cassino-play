@@ -1594,41 +1594,58 @@
     const soloWinner = res.stats.find((t) => res.winners.includes(t.name) && t.members.length === 1);
     lastWinnerSeat = soloWinner ? soloWinner.members[0] : null;
     $('btn-again').classList.toggle('hidden', g.numPlayers !== 2);
-    const verb = (res.winners.length > 1 || res.winners[0] === 'You' || res.winners[0].indexOf('&') >= 0) ? ' win!' : ' wins!';
-    let html = res.tie
-      ? '<div class="results-banner tie">It&rsquo;s a tie — ' + escapeHtml(res.winners.join(' and ')) + ' share it!</div>'
-      : '<div class="results-banner win">' + escapeHtml(res.winners[0]) + verb + '</div>';
-    /* the arithmetic in the open: every cell shows its count AND the points
-       it earned — 28 cards = 2 pts, 12 ♠ = 2 pts, the Big 10 = 2 pts, the
-       Spy 2 = 1 pt, each ace = 1 pt */
-    const tally = (count, pts, unit) => {
-      if (!count) return '<span class="nil">—</span>';
-      const head = unit ? count + ' ' + unit : String(count);
-      return head + '<small>= ' + pts + (pts === 1 ? ' pt' : ' pts') + '</small>';
-    };
-    html += '<table class="results-table"><tr><th></th><th>Cards</th><th>Spades</th><th>Spy 2</th><th>Big 10</th><th>Aces</th><th>Sweep</th><th>Total</th></tr>';
-    for (const t of res.stats) {
-      const clean = res.teamMode ? 44 : 22;
-      html += '<tr><td class="name">' + escapeHtml(t.name) + '</td>' +
-        '<td>' + tally(t.cards, t.mostCards, 'cards') + '</td>' +
-        '<td>' + tally(t.spades, t.mostSpades, '&#9824;') + '</td>' +
-        '<td>' + tally(t.s2, t.s2, '') + '</td>' +
-        '<td>' + tally(t.d10, t.d10 * 2, '') + '</td>' +
-        '<td>' + tally(t.aces, t.aces, t.aces === 1 ? 'ace' : 'aces') + '</td>' +
-        '<td>' + (t.sweep
-          ? t.sweep + '<small>' + (t.sweep >= clean ? 'clean sweep — the whole score' : 'sweep — the whole score') + '</small>'
-          : '<span class="nil">—</span>') + '</td>' +
-        '<td class="total">' + t.total + '</td></tr>';
+
+    /* the portrait ledger (owner-approved 2026-09-14): the verdict first,
+       then one card per side stacked full-width — counts left, points right,
+       your card always on top. The arithmetic stays in the open; only the
+       shape turns sideways to fit the phone */
+    const mineIdx = res.stats.findIndex((t) => t.members.includes(HUMAN));
+    const stats = res.stats.slice();
+    if (mineIdx > 0) stats.unshift(stats.splice(mineIdx, 1)[0]);
+    const youWon = res.stats.some((t) => t.members.includes(HUMAN) && res.winners.includes(t.name));
+    let title, vClass;
+    if (res.tie) { title = 'It&rsquo;s a tie'; vClass = 'tie'; }
+    else if (youWon) { title = 'You win!'; vClass = 'win'; }
+    else {
+      const verb = (res.winners.length > 1 || res.winners[0] === 'You' || res.winners[0].indexOf('&') >= 0) ? ' win!' : ' wins!';
+      title = escapeHtml(res.winners[0]) + verb; vClass = 'lose';
     }
-    html += '</table><div class="results-note">' + res.totalInPlay + ' points were in play' +
-      (res.teamMode ? ' (pairs scoring). Most cards and most spades score 2 — a tie pays 1 point to each tied side. A sweep IS the score: the 11 doubled to 22, a clean sweep (all forty cards) quadrupled to 44.'
-        : ' (singles scoring). Card points only — no most bonuses in three hands. A sweep IS the score: 11; a clean sweep 22.') + '</div>';
-    html += '<div class="results-tally">Session: ' + escapeHtml(sessionTallyText()) + '</div>';
+    let html = '<div class="verdict ' + vClass + '">' +
+      '<div class="verdict-title">' + title + '</div>' +
+      '<div class="verdict-score">' + stats.map((t) => t.total).join('<small>&ndash;</small>') + '</div>' +
+      '<div class="verdict-session">Session: ' + escapeHtml(sessionTallyText()) + '</div>' +
+      '</div><div class="sheet-ledger">';
+    const row = (label, pts) => '<div class="score-row"><span>' + label + '</span><i class="lead"></i>' +
+      (pts ? '<b>' + pts + (pts === 1 ? ' pt' : ' pts') + '</b>' : '<b class="nil">&mdash;</b>') + '</div>';
+    for (const t of stats) {
+      html += '<div class="score-card' + (res.winners.includes(t.name) ? ' winner' : '') +
+        (t.members.includes(HUMAN) ? ' mine' : '') + '">' +
+        '<div class="score-head"><span class="score-name">' +
+        (t.members.includes(HUMAN) ? 'You' + (t.members.length > 1 ? ' &amp; partner' : '') : escapeHtml(t.name)) +
+        '</span><span class="score-total">' + t.total + '</span></div>';
+      if (t.sweep) {
+        const clean = res.teamMode ? 44 : 22;
+        html += '<div class="score-sweep">' + (t.sweep >= clean ? 'Clean sweep' : 'Sweep') +
+          ' &mdash; ' + t.sweep + ' &middot; the whole score</div>';
+      } else {
+        const mostWord = (p) => p === 2 ? ' &middot; most' : (p === 1 ? ' &middot; tie' : '');
+        html += row(t.cards + ' cards' + mostWord(t.mostCards), t.mostCards);
+        html += row(t.spades + ' &spades;' + mostWord(t.mostSpades), t.mostSpades);
+        html += row(t.aces ? 'Aces &times;' + t.aces : 'Aces', t.aces);
+        html += row('2&spades; Spy', t.s2);
+        html += row('10&diams; Big 10', t.d10 ? t.d10 * 2 : 0);
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+    html += '<details class="score-law"><summary>&#9432; ' + res.totalInPlay +
+      ' points were in play &mdash; how scoring works</summary><p>' +
+      (res.teamMode
+        ? 'Pairs scoring. Most cards and most spades score 2 — a tie pays 1 point to each tied side. A sweep IS the score: the 11 doubled to 22, a clean sweep (all forty cards) quadrupled to 44.'
+        : 'Singles scoring. Card points only — no most bonuses in three hands. A sweep IS the score: 11; a clean sweep 22.') +
+      '</p></details>';
     box.innerHTML = html;
     $('modal-results').classList.remove('hidden');
-    const youWon = res.stats.some((t) => t.members.includes(HUMAN) && res.winners.includes(t.name));
-    /* the sweep is the headline when it happens — its moment sounds over the
-       plain win/lose; placeholders until the owner's recordings arrive */
     const mine = res.stats.find((t) => t.members.includes(HUMAN));
     const other = res.stats.find((t) => !t.members.includes(HUMAN));
     const cleanPts = res.teamMode ? 44 : 22;
