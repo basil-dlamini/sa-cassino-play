@@ -100,7 +100,11 @@
       const wH = Math.floor((col.clientHeight - 175) / (5 * 1.4));
       const w = Math.max(52, Math.min(104, Math.min(wDeep, wGrid, wH)));
       document.documentElement.style.setProperty('--card-w', w + 'px');
-      if (g) renderHand();   // the fan's overlap follows the card size
+      /* the fan's overlap follows the card size — but NEVER mid-ceremony:
+         a first-load viewport settle fires resize right as the first deal
+         plays, and re-rendering the hand here wiped the staged face-down
+         cards (the owner's missing first-game animation, 2026-09-14) */
+      if (g && !dealSeq) renderHand();
       return;
     }
     const wW = Math.floor(availW / (1 + (n - 1) / 3));
