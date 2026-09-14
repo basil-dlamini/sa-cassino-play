@@ -494,52 +494,62 @@ small { opacity: .75; }
   animation: sheetUp .3s ease-out;
 }
 @keyframes sheetUp { from { transform: translateY(6%); opacity: .4; } to { transform: none; opacity: 1; } }
-#results-body { flex: 1; overflow-y: auto; padding: 22px 18px 10px; }
+#results-body { flex: 1; overflow-y: auto; padding: 12px 14px 4px; }
 .sheet-actions {
-  display: flex; gap: 10px; padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+  display: flex; gap: 10px; padding: 9px 14px calc(9px + env(safe-area-inset-bottom));
   border-top: 1px solid rgba(244,239,226,.14); background: rgba(10,16,30,.55);
 }
-.sheet-actions .btn { flex: 1; padding: 14px 10px; font-size: 1.02rem; }
-.verdict { text-align: center; padding: 8px 0 16px; }
+.sheet-actions .btn { flex: 1; padding: 11px 8px; font-size: .95rem; }
+.verdict { text-align: center; padding: 0 0 10px; }
 .verdict-title {
-  font-size: clamp(1.5rem, 7vw, 2.2rem); font-weight: 700;
+  font-size: clamp(1.2rem, 5.5vw, 1.6rem); font-weight: 700;
   letter-spacing: .12em; text-transform: uppercase;
 }
 .verdict.win .verdict-title { color: #ffd682; }
 .verdict.lose .verdict-title { color: #9fb0cc; }
 .verdict.tie .verdict-title { color: var(--ivory); }
 .verdict-score {
-  font-size: clamp(2.4rem, 13vw, 3.6rem); font-weight: 800;
-  line-height: 1.05; color: var(--ivory);
+  font-size: clamp(1.9rem, 9.5vw, 2.6rem); font-weight: 800;
+  line-height: 1; color: var(--ivory);
 }
 .verdict-score small { font-size: .55em; opacity: .6; padding: 0 .12em; }
-.verdict-session { margin-top: 6px; font-size: .82rem; opacity: .72; }
-.sheet-ledger { display: flex; flex-direction: column; gap: 12px; }
+.verdict-session { margin-top: 3px; font-size: .78rem; opacity: .72; }
+.sheet-ledger { display: flex; flex-direction: column; gap: 8px; }
 .score-card {
-  border: 1px solid rgba(244,239,226,.16); border-radius: 12px;
-  padding: 12px 14px; background: rgba(244,239,226,.04);
+  border: 1px solid rgba(244,239,226,.16); border-radius: 10px;
+  padding: 7px 12px; background: rgba(244,239,226,.04);
 }
-.score-card.winner { border-color: rgba(255,214,130,.85); box-shadow: 0 0 14px rgba(255,214,130,.15); }
+.score-card.winner { border-color: rgba(255,214,130,.85); box-shadow: 0 0 12px rgba(255,214,130,.15); }
 .score-card:not(.winner) { opacity: .82; }
-.score-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
-.score-name { font-size: 1.02rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
-.score-total { font-size: 2rem; font-weight: 800; color: var(--ivory); }
-.score-row { display: flex; align-items: baseline; font-size: .95rem; padding: 3px 0; }
+.score-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3px; }
+.score-name { font-size: .95rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.score-total { font-size: 1.5rem; font-weight: 800; color: var(--ivory); }
+.score-row { display: flex; align-items: baseline; font-size: .9rem; padding: 2px 0; }
 .score-row span { white-space: nowrap; }
 .score-row .lead {
   flex: 1; border-bottom: 2px dotted rgba(244,239,226,.28);
-  margin: 0 8px; transform: translateY(-3px);
+  margin: 0 6px; transform: translateY(-3px);
 }
 .score-row b { white-space: nowrap; }
 .score-row b.nil { opacity: .45; font-weight: 400; }
 .score-sweep {
-  margin-top: 4px; padding: 10px 12px; border-radius: 8px; text-align: center;
+  margin-top: 3px; padding: 7px 10px; border-radius: 8px; text-align: center;
   background: rgba(255,214,130,.14); border: 1px solid rgba(255,214,130,.5);
-  color: #ffd682; font-weight: 700; letter-spacing: .05em;
+  color: #ffd682; font-weight: 700; letter-spacing: .05em; font-size: .9rem;
 }
-details.score-law { margin: 14px 2px 8px; font-size: .84rem; }
+details.score-law { margin: 10px 2px 4px; font-size: .8rem; }
 details.score-law summary { cursor: pointer; color: var(--ivory); }
-details.score-law p { margin: 8px 0 0; line-height: 1.5; opacity: .85; }
+details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
+/* short viewports: the ledger compresses further rather than scroll */
+@media (max-height: 680px) {
+  .verdict { padding-bottom: 6px; }
+  .verdict-score { font-size: clamp(1.7rem, 8.5vw, 2.2rem); }
+  .score-card { padding: 5px 10px; }
+  .score-row { padding: 1px 0; font-size: .86rem; }
+  .score-total { font-size: 1.3rem; }
+  .sheet-ledger { gap: 6px; }
+  details.score-law { margin: 8px 2px 2px; }
+}
 @media (min-width: 600px) {
   #modal-results { align-items: center; justify-content: center; padding: 16px; }
   #modal-results .modal-card.results-sheet {
