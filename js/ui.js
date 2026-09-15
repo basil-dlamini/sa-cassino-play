@@ -1517,18 +1517,21 @@
       return b ? buildRect(g.builds.indexOf(b)) : null;
     };
     const pileRect = (seat) => rectOf('.pile-box[data-seat="' + seat + '"]');
-    /* an AI's hand is never rendered — their cards leave from the middle of
-       the table, where the deck lives (owner 2026-09-15), sized to their
-       destination so the flight reads as one card */
+    /* your cards lift from your hand. An AI's hand is never rendered — their
+       cards SLIDE IN FROM THE TOP: out of their banner at the middle top of
+       the screen, down into the play area (owner 2026-09-15); tables without
+       a single banner use the top-centre itself */
     const origin = (id, to) => {
       if (prev.cards[id]) return prev.cards[id];
-      const sg = $('screen-game').getBoundingClientRect();
       const w = (to && to.width) || 60, h = (to && to.height) || 84;
-      return {
-        left: sg.left + sg.width / 2 - w / 2,
-        top: sg.top + sg.height / 2 - h / 2,
-        width: w, height: h
-      };
+      let cx = null, top = null;
+      if (g.numPlayers === 2) {
+        const bar = document.querySelector('#opp-zone .namebar');
+        if (bar) { const r = bar.getBoundingClientRect(); cx = r.left + r.width / 2; top = r.top; }
+      }
+      const sg = $('screen-game').getBoundingClientRect();
+      if (cx == null) { cx = sg.left + sg.width / 2; top = sg.top; }
+      return { left: cx - w / 2, top: top, width: w, height: h };
     };
     const add = (id, from, to) => { if (id && from && to) travellers.push({ id, from, to }); };
     const bIdx = (a.buildIdx != null && g.builds[a.buildIdx]) ? a.buildIdx : null;
