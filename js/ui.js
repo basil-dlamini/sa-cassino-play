@@ -1716,21 +1716,22 @@
         transformOrigin: 'top left', transition: 'none', opacity: '1'
       });
       el.style.transform = transform0 || 'none';
-      return { el, id, w: rect.width || 1, h: rect.height || 1 };
+      /* the card remembers only its OWN start — every hop tells it exactly
+        where to stand (target minus own start), so a card collected
+        mid-journey joins the stack precisely where it stands (2026-09-15) */
+      return { el, id, bx: rect.left, by: rect.top, w: rect.width || 1, h: rect.height || 1 };
     };
     let carrier = [makeGhost(parts[0].id, parts[0].rect)];
-    let accX = 0, accY = 0;
     let curL = parts[0].rect.left, curT = parts[0].rect.top;
     let curW = parts[0].rect.width, curH = parts[0].rect.height;
     const hop = (to, done) => {
       if (!to) { done(); return; }
       flyLayer();   /* self-heal: if anything detached the corridor, its flying cards return with it */
-      accX += to.left - curL; accY += to.top - curT;
       curL = to.left; curT = to.top; curW = to.width || curW; curH = to.height || curH;
       carrier.forEach((gh) => {
         gh.el.style.transition = 'transform ' + dur + 'ms cubic-bezier(.25,.7,.3,1)';
-        gh.el.style.transform = 'translate(' + accX + 'px,' + accY + 'px) scale(' +
-          (curW / gh.w) + ',' + (curH / gh.h) + ')';
+        gh.el.style.transform = 'translate(' + (to.left - gh.bx) + 'px,' + (to.top - gh.by) +
+          'px) scale(' + (curW / gh.w) + ',' + (curH / gh.h) + ')';
       });
       setTimeout(done, dur + 20);
     };
@@ -1752,8 +1753,7 @@
           const pin = pins.get(p.id);
           if (pin) pin.remove();
           const gh = makeGhost(p.id,
-            { left: curL, top: curT, width: p.rect.width || curW, height: p.rect.height || curH },
-            'translate(' + accX + 'px,' + accY + 'px)');
+            { left: curL, top: curT, width: p.rect.width || curW, height: p.rect.height || curH });
           /* beneath — the mover rides on top */
           if (carrier[0].el.parentNode === layer) layer.insertBefore(gh.el, carrier[0].el);
           else layer.appendChild(gh.el);
