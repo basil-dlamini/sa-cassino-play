@@ -283,9 +283,11 @@
     if (!g.turnUsed && !scaffold && !lock) {
 
       /* ---- captures: a registered build falls ONLY to its exact value;
-             floor cards fall ONE SET per capture, the set summing exactly to
-             the played card. Never a build mixed into a sum, never two sets
-             in one capture — the game takes exactly what was highlighted ---- */
+             a floor capture takes EXACTLY ONE loose card — never a set
+             (owner's law 2026-09-15: capturing multiple table cards is done
+             in more than one move — the player founds the scaffold first,
+             then captures the whole stack; the game never does it for them).
+             Never a build mixed into a sum ---- */
       const byRank = {};
       for (const card of P.hand) (byRank[C.rank(card)] = byRank[C.rank(card)] || []).push(card);
       /* PAIRS RESERVATION (owner's law): when your card and its identical
@@ -298,12 +300,12 @@
         /* EVERY copy of the rank gets its actions — the player selects the
            actual card, so a second 10 must work exactly like the first */
         for (const card of byRank[r]) {
-          for (const set of allSubsets(g.table, Number(r), 12)) {
-            if (!set.length) continue;
-            /* a single-card set IS the identical twin — reserved when the
-               pair sums to a live own-side build */
-            if (set.length === 1 && pairReserved(Number(r))) continue;
-            const use = { type: 'capture', card, loose: set, buildIds: [] };
+          for (const t of g.table) {
+            if (C.rank(t) !== Number(r)) continue;
+            /* the identical twin — reserved when the pair sums to a live
+               own-side build */
+            if (pairReserved(Number(r))) continue;
+            const use = { type: 'capture', card, loose: [t], buildIds: [] };
             if (cardUseLegal(g, me, card, use)) acts.push(use);
           }
           for (const b of g.builds) {

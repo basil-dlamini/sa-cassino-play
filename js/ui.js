@@ -154,6 +154,10 @@
      any card in this set at draw time, whatever render draws it. The ghost
      re-shows itself; landing clears the id */
   const flyingIds = new Set();
+  /* the moment every animation of the current move completes — the table
+     waits for it: the next move (and the player's input) begins only when
+     the cards have settled (owner's ruling 2026-09-15) */
+  let motionEndsAt = 0;
   function cardEl(id, opts) {
     opts = opts || {};
     const c = C.parse(id);
@@ -887,9 +891,10 @@
     else if (me.hand.some((h) => C.rank(h) === sum) && !g.builds.some((b) => b.value === sum)) value = sum;
     if (value == null) return;   // not a reservation shape — stay silent
     const held = me.hand.filter((h) => C.rank(h) === value).length;
-    openAlertDialog(held >= 2 ? 'Top or capture' : 'Capture',
-      'Those table cards are reserved — you must capture or top the ' + value +
-      ' before this turn can end. Fold other cards, or play your ' + value + '.');
+    openAlertDialog(held >= 2 ? 'Top, capture or scaffold' : 'Capture or scaffold',
+      'Those table cards are reserved for the ' + value +
+      ' — scaffold them into a stack, then capture the whole stack with your ' + value +
+      ' (one card or one stack per capture), or top it.');
   }
 
   function openAlertDialog(title, text) {
@@ -1381,6 +1386,11 @@
   function tick() {
     if (!g) return;
     if (g.phase === 'gameover') { finishGame(); return; }
+    /* the table waits for the cards to settle before the next move lives */
+    if (Date.now() < motionEndsAt) {
+      setTimeout(() => tick(), motionEndsAt - Date.now() + 30);
+      return;
+    }
     if (g.phase === 'shiya') {
       render();
       if (g.shiyaPending.caller === HUMAN && !demoMode) {
@@ -1474,11 +1484,13 @@
      the turn flow itself never waits. A safety timer always clears up. */
   let flyLayerEl = null;
   function flyLayer() {
-    if (!flyLayerEl || !flyLayerEl.parentNode) {
+    if (!flyLayerEl) {
       flyLayerEl = document.createElement('div');
       flyLayerEl.id = 'fly-layer';
-      $('screen-game').appendChild(flyLayerEl);
     }
+    /* RE-ATTACH the same element — a rebuild must never orphan the ghosts
+       already flying inside it (the stalled chains of 2026-09-15) */
+    if (!flyLayerEl.parentNode) $('screen-game').appendChild(flyLayerEl);
     return flyLayerEl;
   }
   function motionDur() {
@@ -1506,9 +1518,10 @@
     return { cards, piles, builds, buildFaces, pileTops, buildRendered, pileTopRendered, table: g.table.slice() };
   }
   /* returns the landing delay for the played card (0 when nothing flies) */
+  /* returns the TOTAL animation time — the table waits for all of it */
   function playMotion(prev, a, actor) {
     const dur = motionDur();
-    const travellers = [];
+    const pause = 70;   /* a breath between hops so each collection reads */
     const rectOf = (sel) => { const el = document.querySelector(sel); return el ? el.getBoundingClientRect() : null; };
     const cardRect = (id) => rectOf('#screen-game .card[data-id="' + id + '"]:not(.flying)');
     const buildRect = (idx) => rectOf('.build-box.has-build[data-idx="' + idx + '"]');
@@ -1519,8 +1532,8 @@
     const pileRect = (seat) => rectOf('.pile-box[data-seat="' + seat + '"]');
     /* your cards lift from your hand. An AI's hand is never rendered — their
        cards SLIDE IN FROM THE TOP: out of their banner at the middle top of
-       the screen, down into the play area (owner 2026-09-15); tables without
-       a single banner use the top-centre itself */
+       the screen, down into the play area; tables without a single banner
+       use the top-centre itself */
     const origin = (id, to) => {
       if (prev.cards[id]) return prev.cards[id];
       const w = (to && to.width) || 60, h = (to && to.height) || 84;
@@ -1533,120 +1546,146 @@
       if (cx == null) { cx = sg.left + sg.width / 2; top = sg.top; }
       return { left: cx - w / 2, top: top, width: w, height: h };
     };
-    const add = (id, from, to) => { if (id && from && to) travellers.push({ id, from, to }); };
     const bIdx = (a.buildIdx != null && g.builds[a.buildIdx]) ? a.buildIdx : null;
-    switch (a.type) {
-      case 'discard': {
-        const slot = cardRect(a.card);
-        add(a.card, origin(a.card, slot), slot);
-        break;
+
+    /* THE CHAIN (owner's choreography 2026-09-15): the mover travels to the
+       card it combines with and sits ON TOP of it; the stack then moves as a
+       stack to the next higher card, collecting upward; when every card is
+       gathered the whole stack settles into its designated place. A hand
+       card always moves FIRST — to the lowest card; without one, the lowest
+       card itself starts the chain. A capture's hand card flies onto what it
+       captures (one card or one whole stack), then the stack goes to the pile */
+    const parts = [];   /* {id, rect} in motion order — parts[0] moves first */
+    let dest = null;
+    const asc = (ids) => ids.filter(Boolean).sort((x, y) => C.rank(x) - C.rank(y));
+    const dug = (victim) => (victim != null ? prev.pileTops[victim] : null);
+    const dugRect = (victim) => (victim != null ? prev.piles[victim] : null);
+    const collectInto = (hand, ids, destRect) => {
+      const movers = (hand ? [hand] : []).concat(asc(ids));
+      for (const id of movers) {
+        const rect = (id === hand) ? origin(hand, destRect)
+          : (prev.cards[id] || dugRect(a.victim) || cardRect(id));
+        if (id && rect) parts.push({ id, rect });
       }
+      dest = destRect;
+    };
+    switch (a.type) {
+      case 'discard':
+        parts.push({ id: a.card, rect: origin(a.card, cardRect(a.card)) });
+        dest = cardRect(a.card);
+        break;
       case 'capture': {
+        /* one card or one whole stack (owner's law): the target joins under
+           the played card, then both go to the pile together */
         const to = pileRect(actor);
-        add(a.card, origin(a.card, to));
-        for (const id of (a.loose || [])) add(id, prev.cards[id], to);
-        for (const idx of (a.buildIds || [])) add(prev.buildFaces[idx],
-          prev.builds[idx] || prev.cards[prev.buildFaces[idx]], to);
+        let target = null, tRect = null;
+        if (a.scaffoldCap || (a.buildIds || []).length) {
+          const idx = a.scaffoldCap ? a.buildIds[0] : a.buildIds[0];
+          target = prev.buildFaces[idx];
+          tRect = prev.builds[idx] || prev.cards[target];
+        } else if ((a.loose || []).length) {
+          target = a.loose[0];
+          tRect = prev.cards[target];
+        }
+        if (target && tRect && to) {
+          parts.push({ id: a.card, rect: origin(a.card, to) });
+          parts.push({ id: target, rect: tRect });
+          dest = to;
+        }
         break;
       }
       case 'build': {
         const to = buildRectByValue(a.value);
-        add(a.card, origin(a.card, to));
-        for (const id of (a.loose || [])) add(id, prev.cards[id], to);
-        if (a.victim != null) add(prev.pileTops[a.victim], prev.piles[a.victim], to);
+        const ids = (a.loose || []).filter((id) => id !== a.base).concat([dug(a.victim)]);
+        collectInto(a.card, ids, to);   /* the base stays — the stack stands on it */
         break;
       }
       case 'augment': case 'dig': {
         const to = bIdx != null ? buildRect(bIdx) : buildRectByValue(a.value);
-        add(a.card, origin(a.card, to));
-        for (const id of (a.loose || [])) add(id, prev.cards[id], to);
-        if (a.victim != null) add(prev.pileTops[a.victim], prev.piles[a.victim], to);
+        const ids = (a.loose || []).concat([dug(a.victim)]);
+        collectInto(a.card, ids, to);
         break;
       }
       case 'preg':
-        add(a.card, origin(a.card, buildRectByValue(a.value)));
+        parts.push({ id: a.card, rect: origin(a.card, buildRectByValue(a.value)) });
+        dest = buildRectByValue(a.value);
         break;
       case 'topdig':
-        add(prev.pileTops[a.victim], prev.piles[a.victim], bIdx != null ? buildRect(bIdx) : null);
+        parts.push({ id: dug(a.victim), rect: dugRect(a.victim) });
+        dest = bIdx != null ? buildRect(bIdx) : null;
         break;
       case 'digfold': case 'edig': {
         const to = bIdx != null ? buildRect(bIdx) : null;
-        for (const s of (a.victims || (a.victim != null ? [a.victim] : [])))
-          add(prev.pileTops[s], prev.piles[s], to);
-        for (const id of (a.loose || [])) add(id, prev.cards[id], to);
+        const ids = (a.victims || (a.victim != null ? [a.victim] : [])).map(dug)
+          .concat(a.loose || []);
+        collectInto(null, ids, to);
         break;
       }
       case 'scaffold': {
         const to = buildRectByValue(a.value);
-        for (const id of (a.cards || [])) add(id, prev.cards[id], to);
-        if (a.victim != null) add(prev.pileTops[a.victim], prev.piles[a.victim], to);
+        const ids = (a.cards || []).concat([dug(a.victim)]);
+        collectInto(null, ids, to);
         break;
       }
       case 'basetop':
-        add(a.card, origin(a.card, buildRectByValue(C.rank(a.card))));
+        parts.push({ id: a.card, rect: origin(a.card, buildRectByValue(C.rank(a.card))) });
+        dest = buildRectByValue(C.rank(a.card));
         break;
       case 'caugment': case 'efold': {
         const to = bIdx != null ? buildRect(bIdx) : null;
-        for (const id of (a.loose || [])) add(id, prev.cards[id], to);
+        collectInto(null, a.loose || [], to);
         break;
       }
       case 'endturn':
         /* the gameover sweep: the leftovers glide to the last capturer */
         if (g.phase === 'gameover' && g.lastCapturer != null) {
           const to = pileRect(g.lastCapturer);
-          for (const id of prev.table) add(id, prev.cards[id], to);
+          collectInto(null, prev.table, to);
         }
         break;
     }
-    if (!travellers.length) return 0;
+    parts.splice(0, parts.length, ...parts.filter((p) => p && p.id && p.rect));
+    if (!parts.length || !dest) return 0;
+
     const layer = flyLayer();
-    const stagger = Math.min(70, Math.round(dur / 6));
-    travellers.forEach((t, i) => {
-      const delay = i * stagger;
-      flyingIds.add(t.id);   // every render keeps the destination seat empty
-      const ghost = cardEl(t.id);
-      ghost.classList.add('flying');
-      ghost.style.visibility = 'visible';   // the flyer itself always shows
-      Object.assign(ghost.style, {
-        position: 'fixed', margin: 0, zIndex: 95,
-        left: t.from.left + 'px', top: t.from.top + 'px',
-        width: t.from.width + 'px', height: t.from.height + 'px',
-        transformOrigin: 'top left', transform: 'none', transition: 'none', opacity: '1'
+    /* every card hides from the renders while its journey plays — the table
+       shows pins where each waiting card lay */
+    parts.forEach((p) => flyingIds.add(p.id));
+    const pins = new Map();
+    for (let i = 1; i < parts.length; i++) {
+      const p = parts[i];
+      const pin = cardEl(p.id);
+      pin.style.visibility = 'visible';   /* a pin SHOWS the waiting card — the in-flight rule must not hide it */
+      Object.assign(pin.style, {
+        position: 'fixed', margin: 0, zIndex: 55,
+        left: p.rect.left + 'px', top: p.rect.top + 'px',
+        width: p.rect.width + 'px', height: p.rect.height + 'px'
       });
-      layer.appendChild(ghost);
-      const dx = t.to.left - t.from.left, dy = t.to.top - t.from.top;
-      const sx = t.from.width ? t.to.width / t.from.width : 1;
-      const sy = t.from.height ? t.to.height / t.from.height : 1;
-      setTimeout(() => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            /* full opacity door to door (owner 2026-09-15: a card remains
-               visible at all times) — no fade; the landing swaps the ghost
-               for the real card in the same instant */
-            ghost.style.transition = 'transform ' + dur + 'ms cubic-bezier(.25,.7,.3,1)';
-            ghost.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(' + sx + ',' + sy + ')';
-          });
-        });
-      }, delay);
-      const land = () => {
-        flyingIds.delete(t.id);
-        const cur = document.querySelector('#screen-game .card[data-id="' + t.id + '"]:not(.flying)');
-        if (cur) cur.style.visibility = '';
-        ghost.remove();
+      layer.appendChild(pin);
+      pins.set(p.id, pin);
+    }
+    /* the destination keeps its PREVIOUS occupant until the stack settles */
+    const holdDest = () => {
+      let boxSel = null, oldId = null;
+      const buildSelByValue = (v) => {
+        const b = g.builds.find((x) => x.value === v);
+        return b ? '.build-box.has-build[data-idx="' + g.builds.indexOf(b) + '"]' : null;
       };
-      setTimeout(land, delay + dur + 20);
-    });
-    /* the seat never empties (owner 2026-09-15): when the destination's
-       displayed card IS the incoming one (a build's new face, the pile's new
-       top), the hidden-in-flight card would leave the slot blank — so the
-       destination keeps showing its PREVIOUS card until the swap at landing */
-    const pins = [];
-    const pinAt = (boxSel, oldId) => {
-      if (!boxSel || !oldId) return;
+      if (a.type === 'capture') { boxSel = '.pile-box[data-seat="' + actor + '"]'; oldId = prev.pileTopRendered[actor]; }
+      else if (a.type === 'build' || a.type === 'basetop') { boxSel = buildSelByValue(a.value); oldId = a.base || null; }
+      else if (a.type === 'augment' || a.type === 'dig' || a.type === 'topdig' ||
+               a.type === 'digfold' || a.type === 'edig' || a.type === 'caugment' || a.type === 'efold') {
+        boxSel = bIdx != null ? '.build-box.has-build[data-idx="' + bIdx + '"]' : buildSelByValue(a.value);
+        oldId = prev.buildRendered[a.buildIdx];
+      } else if (a.type === 'preg') {
+        boxSel = buildSelByValue(a.value);
+        oldId = prev.buildRendered[(a.mergeInto != null ? a.mergeInto : a.buildIdx)];
+      }
+      if (!boxSel || !oldId) return null;
       const box = document.querySelector(boxSel);
-      if (!box) return;
+      if (!box) return null;
       const now = box.querySelector('.card[data-id]');
-      if (!now || !flyingIds.has(now.dataset.id)) return;   // occupant visible — hold nothing
+      if (!now || !flyingIds.has(now.dataset.id)) return null;
       const r = now.getBoundingClientRect();
       const pin = cardEl(oldId);
       Object.assign(pin.style, {
@@ -1655,32 +1694,80 @@
         width: r.width + 'px', height: r.height + 'px'
       });
       layer.appendChild(pin);
-      pins.push(pin);
+      return pin;
     };
-    const pileSel = '.pile-box[data-seat="' + actor + '"]';
-    const buildSelByValue = (v) => {
-      const b = g.builds.find((x) => x.value === v);
-      return b ? '.build-box.has-build[data-idx="' + g.builds.indexOf(b) + '"]' : null;
+    const destPin = holdDest();
+
+    /* the carrier: a perfect stack of ghosts — joiners slot BENEATH, so the
+       mover rides on top (owner's rule) */
+    const makeGhost = (id, rect, transform0) => {
+      const el = cardEl(id);
+      el.classList.add('flying');
+      el.style.visibility = 'visible';
+      Object.assign(el.style, {
+        position: 'fixed', margin: 0, zIndex: 95,
+        left: rect.left + 'px', top: rect.top + 'px',
+        width: rect.width + 'px', height: rect.height + 'px',
+        transformOrigin: 'top left', transition: 'none', opacity: '1'
+      });
+      el.style.transform = transform0 || 'none';
+      return { el, id, w: rect.width || 1, h: rect.height || 1 };
     };
-    if (a.type === 'capture') pinAt(pileSel, prev.pileTopRendered[actor]);
-    else if (a.type === 'build' || a.type === 'basetop') pinAt(buildSelByValue(a.value), a.base || null);
-    else if (a.type === 'augment' || a.type === 'dig' || a.type === 'topdig' ||
-             a.type === 'digfold' || a.type === 'edig' || a.type === 'caugment' || a.type === 'efold')
-      pinAt(bIdx != null ? '.build-box.has-build[data-idx="' + bIdx + '"]' : buildSelByValue(a.value),
-        prev.buildRendered[a.buildIdx]);
-    else if (a.type === 'preg')
-      pinAt(buildSelByValue(a.value),
-        prev.buildRendered[(a.mergeInto != null ? a.mergeInto : a.buildIdx)]);
-    const totalMs = travellers.length * stagger + dur;
-    setTimeout(() => { pins.forEach((p) => p.remove()); }, totalMs + 160);
-    /* safety: no card may stay hidden forever — but never unhide a card a
-       NEWER flight is still carrying */
-    setTimeout(() => {
-      for (const t of travellers) {
-        if (!layer.querySelector('.card.flying[data-id="' + t.id + '"]')) flyingIds.delete(t.id);
+    let carrier = [makeGhost(parts[0].id, parts[0].rect)];
+    let accX = 0, accY = 0;
+    let curL = parts[0].rect.left, curT = parts[0].rect.top;
+    let curW = parts[0].rect.width, curH = parts[0].rect.height;
+    const hop = (to, done) => {
+      if (!to) { done(); return; }
+      flyLayer();   /* self-heal: if anything detached the corridor, its flying cards return with it */
+      accX += to.left - curL; accY += to.top - curT;
+      curL = to.left; curT = to.top; curW = to.width || curW; curH = to.height || curH;
+      carrier.forEach((gh) => {
+        gh.el.style.transition = 'transform ' + dur + 'ms cubic-bezier(.25,.7,.3,1)';
+        gh.el.style.transform = 'translate(' + accX + 'px,' + accY + 'px) scale(' +
+          (curW / gh.w) + ',' + (curH / gh.h) + ')';
+      });
+      setTimeout(done, dur + 20);
+    };
+    const settle = () => {
+      carrier.forEach((gh) => gh.el.remove());
+      if (destPin) destPin.remove();
+      for (const p of parts) {
+        flyingIds.delete(p.id);
+        const cur = document.querySelector('#screen-game .card[data-id="' + p.id + '"]:not(.flying)');
+        if (cur) cur.style.visibility = '';
       }
-    }, travellers.length * stagger + dur + 1200);
-    return dur;
+    };
+    let i = 1;
+    const total = parts.length * (dur + pause);
+    const nextHop = () => {
+      if (i < parts.length) {
+        const p = parts[i];
+        hop(p.rect, () => {
+          const pin = pins.get(p.id);
+          if (pin) pin.remove();
+          const gh = makeGhost(p.id,
+            { left: curL, top: curT, width: p.rect.width || curW, height: p.rect.height || curH },
+            'translate(' + accX + 'px,' + accY + 'px)');
+          /* beneath — the mover rides on top */
+          if (carrier[0].el.parentNode === layer) layer.insertBefore(gh.el, carrier[0].el);
+          else layer.appendChild(gh.el);
+          carrier.unshift(gh);
+          i++;
+          setTimeout(nextHop, pause);
+        });
+      } else {
+        hop(dest, () => settle());
+      }
+    };
+    nextHop();
+    /* safety: no card may stay hidden forever, whatever happens to a timer */
+    setTimeout(() => {
+      for (const p of parts) {
+        if (!layer.querySelector('.flying[data-id="' + p.id + '"]')) flyingIds.delete(p.id);
+      }
+    }, total + 1500);
+    return total;
   }
 
   function performAction(a, opts) {
@@ -1714,6 +1801,9 @@
       else if (a.type === 'discard') Snd.drift(q);
     };
     if (landAt > 0) {
+      /* the whole chain plays out; the table — next move and input alike —
+         waits for the cards to settle (owner's ruling 2026-09-15) */
+      motionEndsAt = Date.now() + landAt + 40;
       humanBusy = true;   // no taps while the cards are in the air
       setTimeout(() => { humanBusy = false; }, landAt + 160);
       setTimeout(fire, landAt);

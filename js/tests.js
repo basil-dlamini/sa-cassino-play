@@ -151,13 +151,12 @@
   });
 
   test('BASE (Shiya exception): a Shiya build does NOT absorb a loose base', () => {
-    const g = mkState(4, { table: ['C9', 'C3', 'H6'] });
+    const g = mkState(4, { table: ['C9', 'C3'] });
     g.players[0].hand = ['D9'];       // I hold a 9 → I can call Shiya
     g.players[2].hand = ['S9'];
-    g.players[1].hand = ['C2'];
-    g.players[3].hand = ['H2'];
+    g.builds = [{ value: 9, cards: ['H4', 'S5'], owner: 3, augmented: false }];
     g.turn = 2;                        // my partner plays
-    R.applyAction(g, R.legalActions(g).find((a) => a.type === 'capture' && a.card === 'S9' && a.loose.length === 2));
+    R.applyAction(g, R.legalActions(g).find((a) => a.type === 'capture' && a.card === 'S9' && a.buildIds.length === 1));
     eq(g.phase, 'shiya', 'shiya window opens');
     R.applyAction(g, { type: 'shiya' });
     eq(g.builds[0].value, 9, 'the Shiya build exists');
@@ -192,20 +191,22 @@
   test('the facing card is FREE against an enemy build (owner 2026-09-13)', () => {
     /* the old reservation cornered the opponent's 8 into capturing the
        build — abolished: a choice, never an obligation */
-    const g = mkState(2, { table: ['C3', 'H5'] });
+    const g = mkState(2, { table: ['C3', 'H5', 'S8'] });
     g.builds = [{ value: 8, cards: ['H3', 'S5'], owner: 0, augmented: false }];
     g.players[1].hand = ['D8', 'H9'];
     g.turn = 1;
     const acts = R.legalActions(g).filter((a) => a.card === 'D8');
     assert(acts.some((a) => a.type === 'capture' && a.buildIds.length === 1),
       'capturing his 8-build with my 8 is offered');
-    assert(acts.some((a) => a.type === 'capture' && !a.buildIds.length && a.loose.length === 2),
-      'and so is capturing the loose 3+5 instead — never an obligation');
+    assert(acts.some((a) => a.type === 'capture' && !a.buildIds.length && a.loose.length === 1),
+      'and so is capturing the loose 8 instead — never an obligation');
+    assert(!acts.some((a) => a.type === 'capture' && a.loose.length > 1),
+      'and NEVER a set: one card or one stack only (owner 2026-09-15)');
     assert(!has(R.legalActions(g), (a) => a.type === 'discard' && a.card === 'D8'),
       'the discard bar stands: no discarding a value while its build is live');
   });
   test("owner's LAST matching card is reserved: it may only capture that build", () => {
-    const g = mkState(2, { table: ['C3', 'H5'] });
+    const g = mkState(2, { table: ['C3', 'H5', 'S8'] });
     g.builds = [{ value: 8, cards: ['H3', 'S5'], owner: 0, augmented: false }];
     g.players[0].hand = ['D8'];              // single matching card
     const acts = R.legalActions(g);
@@ -213,10 +214,10 @@
     eq(uses8.length, 1, 'exactly one use of the lone 8');
     eq(uses8[0].type, 'capture');
     eq(uses8[0].buildIds.length, 1, 'and it captures the build');
-    // with a second 8 held, other uses open up (capturing 3+5)
+    // with a second 8 held, other uses open up (capturing the loose 8)
     g.players[0].hand = ['D8', 'C8'];
     const acts2 = R.legalActions(g);
-    assert(has(acts2, (a) => a.type === 'capture' && a.card === 'D8' && !a.buildIds.length && a.loose.length === 2),
+    assert(has(acts2, (a) => a.type === 'capture' && a.card === 'D8' && !a.buildIds.length && a.loose.length === 1),
       'loose capture allowed while holding another 8');
   });
 
@@ -488,12 +489,16 @@
     assert(dig, 'the next card is diggable too');
     R.applyAction(g, dig);
     eq(g.builds[0].cards[g.builds[0].cards.length - 1], 'D10', 'the 10♦ right behind it — the owner\'s very case');
-    /* loose captures stay sorted with the played card on top (unchanged law) */
-    const g2 = mkState(2, { table: ['S8', 'D2', 'H4'] });
+    /* loose captures: one card at a time, the played card on top (the set
+       shortcut is gone — owner's law 2026-09-15) */
+    const g2 = mkState(2, { table: ['S10', 'H4', 'D2'] });
     g2.players[0].hand = ['C10', 'H7'];
     g2.turn = 0;
-    R.applyAction(g2, R.legalActions(g2).find((a) => a.type === 'capture' && a.card === 'C10'));
-    eq(g2.players[0].pile.join(), ['S8', 'D2', 'C10'].join(), 'loose set sorted (8 above 2), played on top');
+    const single = R.legalActions(g2).find((a) => a.type === 'capture' && a.card === 'C10');
+    assert(single && single.loose.length === 1 && single.loose[0] === 'S10',
+      'the 10 takes exactly ONE ten — never the 4+2+... sum');
+    R.applyAction(g2, single);
+    eq(g2.players[0].pile.join(), ['S10', 'C10'].join(), 'the single card taken, played card on top');
   });
 
   test('v6 THE FACING CARD IS FREE (owner 2026-09-13): an enemy build binds only its builder', () => {
@@ -681,15 +686,29 @@
     assert(g.table.includes('H3'), 'the loose 3 stays on the table');
   });
 
-  test('v6 CAPTURE: floor cards fall ONE SET per capture — never two sets at once', () => {
-    const g = mkState(2, { table: ['H2', 'H5', 'C3', 'C4'] });
-    g.players[0].hand = ['D7'];
+  test('v6 CAPTURE: one card or one stack — never a set (owner 2026-09-15)', () => {
+    /* capturing multiple table cards is done in MORE THAN ONE MOVE: the
+       player founds the scaffold first, then captures the whole stack —
+       the game never does it for them */
+    const g = mkState(2, { table: ['H2', 'H5', 'C3', 'C4', 'D7'] });
+    g.players[0].hand = ['S7'];
     g.players[1].hand = ['C9'];
-    const caps = R.legalActions(g).filter((a) => a.type === 'capture' && a.card === 'D7');
-    assert(caps.some((a) => a.loose.length === 2 && a.loose.includes('H2') && a.loose.includes('H5')), '2+5 offered');
-    assert(caps.some((a) => a.loose.length === 2 && a.loose.includes('C3') && a.loose.includes('C4')), '3+4 offered');
-    assert(!caps.some((a) => a.loose.length === 4), 'all four in ONE capture — never two sets at once');
-    caps.forEach((a) => eq(a.loose.reduce((n, id) => n + C.rank(id), 0), 7, 'set sums to the card'));
+    const caps = R.legalActions(g).filter((a) => a.type === 'capture' && a.card === 'S7');
+    eq(caps.length, 1, 'only the single 7 is capturable with a 7');
+    eq(caps[0].loose.length, 1, 'exactly one card');
+    eq(caps[0].loose[0], 'D7', 'the loose 7');
+    /* and the lawful road to taking 2+5: found the scaffold, then seize it */
+    const scaff = R.legalActions(g).find((a) => a.type === 'scaffold' && a.value === 7 &&
+      a.cards.includes('H2') && a.cards.includes('H5'));
+    assert(scaff, 'the 2+5 scaffold is offered — the player initiates it');
+    R.applyAction(g, scaff);
+    const seize = R.legalActions(g).find((a) => a.type === 'capture' && a.card === 'S7' && a.scaffoldCap);
+    assert(seize, 'the capture of the whole stack is offered');
+    R.applyAction(g, seize);
+    const p = g.players[0].pile;
+    eq(p.length, 4, '2 + 5 + the loose 7 (it folded beneath as the scaffold\u2019s base) + the played 7');
+    eq(p[p.length - 1], 'S7', 'the played card on top');
+    assert(!g.table.includes('H2') && !g.table.includes('H5'), 'both cards taken through the scaffold');
   });
 
   test('v6 PREG: a HAND CARD ALONE — floor and pile cards never join', () => {
@@ -943,9 +962,13 @@
   /* ================= Shiya ================= */
   test('SHIYA: partner converts a capture into an augmented build they own', () => {
     const g = mkState(4, { table: ['C3', 'H5'] });
-    g.players[0].hand = ['S8'];      // I capture 3+5 with the 8
+    g.players[0].hand = ['S8'];      // I found the scaffold, then capture with the 8
     g.players[2].hand = ['D8'];      // partner holds an 8 → can call Shiya
     g.turn = 0;
+    /* one card or one stack (owner 2026-09-15): the 3+5 go through a
+       scaffold the player initiates — the game never bundles them */
+    R.applyAction(g, R.legalActions(g).find((a) => a.type === 'scaffold' && a.value === 8 &&
+      a.cards.includes('C3') && a.cards.includes('H5')));
     R.applyAction(g, R.legalActions(g).find((a) => a.type === 'capture' && a.card === 'S8'));
     eq(g.phase, 'shiya', 'shiya window opens');
     eq(g.shiyaPending.caller, 2);
@@ -1548,12 +1571,12 @@
                   eq(a.loose.length, 0, 'a build capture never sweeps floor cards');
                   eq(g.builds[a.buildIds[0]].value, C.rank(a.card), 'build taken by a NON-matching card');
                 } else {
-                  assert(a.loose.length >= 1, 'empty capture offered');
-                  eq(a.loose.reduce((n, id) => n + C.rank(id), 0), C.rank(a.card),
-                    'floor set does not sum to the card');
+                  /* one card or one stack (owner 2026-09-15) — never a set */
+                  eq(a.loose.length, 1, 'a floor capture takes exactly ONE card');
+                  eq(C.rank(a.loose[0]), C.rank(a.card), 'floor card does not match the capture card');
                   /* the pairs reservation: an identical pair is never offered
                      when it sums to a live own-side registered build */
-                  if (a.loose.length === 1 && C.rank(a.loose[0]) === C.rank(a.card)) {
+                  {
                     const V = 2 * C.rank(a.card);
                     assert(!g.builds.some((b) => !b.scaffold && b.value === V &&
                       R.sameSide(g, b.owner, g.turn)), 'pairs reservation violated');

@@ -59,6 +59,11 @@ augmented), **dig** (take an opponent's matching pile-top into a build),
     or be spent on anything else the law allows. Only the BUILDER's own
     matching card is reserved (law 3). No player is ever cornered into
     capturing a build that isn't theirs.
+13. **One card or one stack — never a set** (2026-09-15): a capture takes
+    exactly ONE loose card, or ONE whole stack (a build or scaffold).
+    Capturing multiple table cards is done in more than one move: the player
+    founds the scaffold first (their own move), then captures the whole
+    stack. The game never bundles table cards for the player.
 
 ## The AI opponents
 - **Sipho (Aggressive)** — grabs points and steals quickly, builds less.
