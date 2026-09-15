@@ -1626,14 +1626,15 @@
       stats.map((t) => '<div class="vs-side' + (res.winners.includes(t.name) ? ' winner' : '') + '">' +
         '<span class="vs-name">' + lab(t) + '</span><span class="vs-total">' + t.total + '</span></div>')
         .join(stats.length === 2 ? '<span class="vs-mid">vs</span>' : '') + '</div>';
-    const P = (t, pts) => '<b class="t-pts' + (pts ? ' win' : '') + '">' +
-      (pts ? pts + (pts === 1 ? ' pt' : ' pts') : '&mdash;') + '</b>';
+    /* bare numbers only (owner 2026-09-15): no ×, no suit icons, no 'pts'
+       suffix — and the Spy 2 / Big 10 indicators read 1 or 0 */
+    const P = (t, pts) => '<b class="t-pts' + (pts ? ' win' : '') + '">' + (pts || '&mdash;') + '</b>';
     const rows = [
       { name: 'Cards', val: (t) => String(t.cards), pts: (t) => t.mostCards },
-      { name: 'Spades', val: (t) => t.spades + ' &spades;', pts: (t) => t.mostSpades },
-      { name: 'Aces', val: (t) => t.aces ? '&times;' + t.aces : '&mdash;', pts: (t) => t.aces },
-      { name: '2&spades; Spy', val: (t) => t.s2 ? 'held' : '&mdash;', pts: (t) => t.s2 },
-      { name: '10&diams; Big 10', val: (t) => t.d10 ? 'held' : '&mdash;', pts: (t) => t.d10 * 2 },
+      { name: 'Spades', val: (t) => String(t.spades), pts: (t) => t.mostSpades },
+      { name: 'Aces', val: (t) => String(t.aces), pts: (t) => t.aces },
+      { name: '2&spades; Spy', val: (t) => t.s2 ? '1' : '0', pts: (t) => t.s2 },
+      { name: '10&diams; Big 10', val: (t) => t.d10 ? '1' : '0', pts: (t) => t.d10 * 2 },
       { name: 'Sweep', val: (t) => t.sweep ? 'ALL' : '&mdash;', pts: (t) => t.sweep }
     ];
     html += '<div class="vs-table">';
