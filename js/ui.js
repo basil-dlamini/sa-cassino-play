@@ -1599,20 +1599,21 @@
       setTimeout(() => {
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
-            ghost.style.transition = 'transform ' + dur + 'ms cubic-bezier(.25,.7,.3,1), opacity ' +
-              Math.round(dur * .45) + 'ms ease ' + Math.round(dur * .55) + 'ms';
+            /* full opacity door to door (owner 2026-09-15: a card remains
+               visible at all times) — no fade; the landing swaps the ghost
+               for the real card in the same instant */
+            ghost.style.transition = 'transform ' + dur + 'ms cubic-bezier(.25,.7,.3,1)';
             ghost.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(' + sx + ',' + sy + ')';
-            ghost.style.opacity = '0';
           });
         });
       }, delay);
       const land = () => {
         flyingIds.delete(t.id);
-        ghost.remove();
         const cur = document.querySelector('#screen-game .card[data-id="' + t.id + '"]:not(.flying)');
         if (cur) cur.style.visibility = '';
+        ghost.remove();
       };
-      setTimeout(land, delay + dur + 40);
+      setTimeout(land, delay + dur + 20);
     });
     /* safety: no card may stay hidden forever — but never unhide a card a
        NEWER flight is still carrying */
