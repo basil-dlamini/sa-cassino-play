@@ -1517,17 +1517,30 @@
       return b ? buildRect(g.builds.indexOf(b)) : null;
     };
     const pileRect = (seat) => rectOf('.pile-box[data-seat="' + seat + '"]');
-    /* an AI's hand is never rendered — their cards leave from their area */
-    const origin = (id) => prev.cards[id] || pileRect(actor);
+    /* an AI's hand is never rendered — their cards leave from the middle of
+       the table, where the deck lives (owner 2026-09-15), sized to their
+       destination so the flight reads as one card */
+    const origin = (id, to) => {
+      if (prev.cards[id]) return prev.cards[id];
+      const sg = $('screen-game').getBoundingClientRect();
+      const w = (to && to.width) || 60, h = (to && to.height) || 84;
+      return {
+        left: sg.left + sg.width / 2 - w / 2,
+        top: sg.top + sg.height / 2 - h / 2,
+        width: w, height: h
+      };
+    };
     const add = (id, from, to) => { if (id && from && to) travellers.push({ id, from, to }); };
     const bIdx = (a.buildIdx != null && g.builds[a.buildIdx]) ? a.buildIdx : null;
     switch (a.type) {
-      case 'discard':
-        add(a.card, origin(a.card), cardRect(a.card));
+      case 'discard': {
+        const slot = cardRect(a.card);
+        add(a.card, origin(a.card, slot), slot);
         break;
+      }
       case 'capture': {
         const to = pileRect(actor);
-        add(a.card, origin(a.card), to);
+        add(a.card, origin(a.card, to));
         for (const id of (a.loose || [])) add(id, prev.cards[id], to);
         for (const idx of (a.buildIds || [])) add(prev.buildFaces[idx],
           prev.builds[idx] || prev.cards[prev.buildFaces[idx]], to);
@@ -1535,20 +1548,20 @@
       }
       case 'build': {
         const to = buildRectByValue(a.value);
-        add(a.card, origin(a.card), to);
+        add(a.card, origin(a.card, to));
         for (const id of (a.loose || [])) add(id, prev.cards[id], to);
         if (a.victim != null) add(prev.pileTops[a.victim], prev.piles[a.victim], to);
         break;
       }
       case 'augment': case 'dig': {
         const to = bIdx != null ? buildRect(bIdx) : buildRectByValue(a.value);
-        add(a.card, origin(a.card), to);
+        add(a.card, origin(a.card, to));
         for (const id of (a.loose || [])) add(id, prev.cards[id], to);
         if (a.victim != null) add(prev.pileTops[a.victim], prev.piles[a.victim], to);
         break;
       }
       case 'preg':
-        add(a.card, origin(a.card), buildRectByValue(a.value));
+        add(a.card, origin(a.card, buildRectByValue(a.value)));
         break;
       case 'topdig':
         add(prev.pileTops[a.victim], prev.piles[a.victim], bIdx != null ? buildRect(bIdx) : null);
@@ -1567,7 +1580,7 @@
         break;
       }
       case 'basetop':
-        add(a.card, origin(a.card), buildRectByValue(C.rank(a.card)));
+        add(a.card, origin(a.card, buildRectByValue(C.rank(a.card))));
         break;
       case 'caugment': case 'efold': {
         const to = bIdx != null ? buildRect(bIdx) : null;
