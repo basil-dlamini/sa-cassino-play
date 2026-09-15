@@ -149,6 +149,11 @@
       '" style="left:' + x * 100 + '%;top:' + y * 100 + '%">' + glyph + '</span>'
     ).join('');
   }
+  /* cards currently in flight (owner 2026-09-15): the board re-renders at
+     any moment, so "hidden until landing" must live in state — cardEl hides
+     any card in this set at draw time, whatever render draws it. The ghost
+     re-shows itself; landing clears the id */
+  const flyingIds = new Set();
   function cardEl(id, opts) {
     opts = opts || {};
     const c = C.parse(id);
@@ -157,6 +162,7 @@
       + (opts.selected ? ' selected' : '')
       + (opts.highlight ? ' highlight' : '') + (opts.dim ? ' dim' : '');
     el.dataset.id = id;
+    if (flyingIds.has(id)) el.style.visibility = 'hidden';
     const glyph = C.SUIT_GLYPH[c.suit];
     const rank = C.RANK_LABEL[c.rank];
     el.innerHTML =
@@ -1576,8 +1582,10 @@
     const stagger = Math.min(70, Math.round(dur / 6));
     travellers.forEach((t, i) => {
       const delay = i * stagger;
+      flyingIds.add(t.id);   // every render keeps the destination seat empty
       const ghost = cardEl(t.id);
       ghost.classList.add('flying');
+      ghost.style.visibility = 'visible';   // the flyer itself always shows
       Object.assign(ghost.style, {
         position: 'fixed', margin: 0, zIndex: 95,
         left: t.from.left + 'px', top: t.from.top + 'px',
@@ -1585,9 +1593,6 @@
         transformOrigin: 'top left', transform: 'none', transition: 'none', opacity: '1'
       });
       layer.appendChild(ghost);
-      /* the real destination stays hidden until the ghost lands on it */
-      const destEl = document.querySelector('#screen-game .card[data-id="' + t.id + '"]:not(.flying)');
-      if (destEl) destEl.style.visibility = 'hidden';
       const dx = t.to.left - t.from.left, dy = t.to.top - t.from.top;
       const sx = t.from.width ? t.to.width / t.from.width : 1;
       const sy = t.from.height ? t.to.height / t.from.height : 1;
@@ -1601,11 +1606,21 @@
           });
         });
       }, delay);
-      setTimeout(() => {
+      const land = () => {
+        flyingIds.delete(t.id);
         ghost.remove();
-        if (destEl) destEl.style.visibility = '';
-      }, delay + dur + 40);
+        const cur = document.querySelector('#screen-game .card[data-id="' + t.id + '"]:not(.flying)');
+        if (cur) cur.style.visibility = '';
+      };
+      setTimeout(land, delay + dur + 40);
     });
+    /* safety: no card may stay hidden forever — but never unhide a card a
+       NEWER flight is still carrying */
+    setTimeout(() => {
+      for (const t of travellers) {
+        if (!layer.querySelector('.card.flying[data-id="' + t.id + '"]')) flyingIds.delete(t.id);
+      }
+    }, travellers.length * stagger + dur + 1200);
     return dur;
   }
 
