@@ -1458,8 +1458,161 @@
     toast('\u26A0 Special case: no legal moves — please report.');
   }
 
+  /* ---------------- the motion layer ---------------- */
+  /* Every card tells its journey (owner 2026-09-15): the move applies in the
+     engine at once; the cards then visibly travel — hand to slot, table to
+     build, pile to build, everything to the pile on captures. Ghosts fly in
+     a fixed layer above the board; the real destination stays hidden until
+     the ghost lands on it. The action sound lands WITH the card. Flights
+     ride inside the AI pacing (never longer than ~half the AI speed), so
+     the turn flow itself never waits. A safety timer always clears up. */
+  let flyLayerEl = null;
+  function flyLayer() {
+    if (!flyLayerEl || !flyLayerEl.parentNode) {
+      flyLayerEl = document.createElement('div');
+      flyLayerEl.id = 'fly-layer';
+      $('screen-game').appendChild(flyLayerEl);
+    }
+    return flyLayerEl;
+  }
+  function motionDur() {
+    return Math.max(220, Math.min(600, Math.round(aiSpeed() * 0.45)));
+  }
+  function boardSnapshot() {
+    const cards = {}, piles = {}, builds = {}, buildFaces = {}, pileTops = {};
+    document.querySelectorAll('#screen-game .card[data-id]').forEach((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.width && !cards[el.dataset.id]) cards[el.dataset.id] = r;
+    });
+    document.querySelectorAll('.pile-box[data-seat]').forEach((el) => {
+      piles[el.dataset.seat] = el.getBoundingClientRect();
+    });
+    document.querySelectorAll('.build-box.has-build[data-idx]').forEach((el) => {
+      builds[Number(el.dataset.idx)] = el.getBoundingClientRect();
+    });
+    g.builds.forEach((b, i) => { if (b.cards.length) buildFaces[i] = b.cards[b.cards.length - 1]; });
+    g.players.forEach((p, s) => { pileTops[s] = p.pile.length ? p.pile[p.pile.length - 1] : null; });
+    return { cards, piles, builds, buildFaces, pileTops, table: g.table.slice() };
+  }
+  /* returns the landing delay for the played card (0 when nothing flies) */
+  function playMotion(prev, a, actor) {
+    const dur = motionDur();
+    const travellers = [];
+    const rectOf = (sel) => { const el = document.querySelector(sel); return el ? el.getBoundingClientRect() : null; };
+    const cardRect = (id) => rectOf('#screen-game .card[data-id="' + id + '"]:not(.flying)');
+    const buildRect = (idx) => rectOf('.build-box.has-build[data-idx="' + idx + '"]');
+    const buildRectByValue = (v) => {
+      const b = g.builds.find((x) => x.value === v);
+      return b ? buildRect(g.builds.indexOf(b)) : null;
+    };
+    const pileRect = (seat) => rectOf('.pile-box[data-seat="' + seat + '"]');
+    /* an AI's hand is never rendered — their cards leave from their area */
+    const origin = (id) => prev.cards[id] || pileRect(actor);
+    const add = (id, from, to) => { if (id && from && to) travellers.push({ id, from, to }); };
+    const bIdx = (a.buildIdx != null && g.builds[a.buildIdx]) ? a.buildIdx : null;
+    switch (a.type) {
+      case 'discard':
+        add(a.card, origin(a.card), cardRect(a.card));
+        break;
+      case 'capture': {
+        const to = pileRect(actor);
+        add(a.card, origin(a.card), to);
+        for (const id of (a.loose || [])) add(id, prev.cards[id], to);
+        for (const idx of (a.buildIds || [])) add(prev.buildFaces[idx],
+          prev.builds[idx] || prev.cards[prev.buildFaces[idx]], to);
+        break;
+      }
+      case 'build': {
+        const to = buildRectByValue(a.value);
+        add(a.card, origin(a.card), to);
+        for (const id of (a.loose || [])) add(id, prev.cards[id], to);
+        if (a.victim != null) add(prev.pileTops[a.victim], prev.piles[a.victim], to);
+        break;
+      }
+      case 'augment': case 'dig': {
+        const to = bIdx != null ? buildRect(bIdx) : buildRectByValue(a.value);
+        add(a.card, origin(a.card), to);
+        for (const id of (a.loose || [])) add(id, prev.cards[id], to);
+        if (a.victim != null) add(prev.pileTops[a.victim], prev.piles[a.victim], to);
+        break;
+      }
+      case 'preg':
+        add(a.card, origin(a.card), buildRectByValue(a.value));
+        break;
+      case 'topdig':
+        add(prev.pileTops[a.victim], prev.piles[a.victim], bIdx != null ? buildRect(bIdx) : null);
+        break;
+      case 'digfold': case 'edig': {
+        const to = bIdx != null ? buildRect(bIdx) : null;
+        for (const s of (a.victims || (a.victim != null ? [a.victim] : [])))
+          add(prev.pileTops[s], prev.piles[s], to);
+        for (const id of (a.loose || [])) add(id, prev.cards[id], to);
+        break;
+      }
+      case 'scaffold': {
+        const to = buildRectByValue(a.value);
+        for (const id of (a.cards || [])) add(id, prev.cards[id], to);
+        if (a.victim != null) add(prev.pileTops[a.victim], prev.piles[a.victim], to);
+        break;
+      }
+      case 'basetop':
+        add(a.card, origin(a.card), buildRectByValue(C.rank(a.card)));
+        break;
+      case 'caugment': case 'efold': {
+        const to = bIdx != null ? buildRect(bIdx) : null;
+        for (const id of (a.loose || [])) add(id, prev.cards[id], to);
+        break;
+      }
+      case 'endturn':
+        /* the gameover sweep: the leftovers glide to the last capturer */
+        if (g.phase === 'gameover' && g.lastCapturer != null) {
+          const to = pileRect(g.lastCapturer);
+          for (const id of prev.table) add(id, prev.cards[id], to);
+        }
+        break;
+    }
+    if (!travellers.length) return 0;
+    const layer = flyLayer();
+    const stagger = Math.min(70, Math.round(dur / 6));
+    travellers.forEach((t, i) => {
+      const delay = i * stagger;
+      const ghost = cardEl(t.id);
+      ghost.classList.add('flying');
+      Object.assign(ghost.style, {
+        position: 'fixed', margin: 0, zIndex: 95,
+        left: t.from.left + 'px', top: t.from.top + 'px',
+        width: t.from.width + 'px', height: t.from.height + 'px',
+        transformOrigin: 'top left', transform: 'none', transition: 'none', opacity: '1'
+      });
+      layer.appendChild(ghost);
+      /* the real destination stays hidden until the ghost lands on it */
+      const destEl = document.querySelector('#screen-game .card[data-id="' + t.id + '"]:not(.flying)');
+      if (destEl) destEl.style.visibility = 'hidden';
+      const dx = t.to.left - t.from.left, dy = t.to.top - t.from.top;
+      const sx = t.from.width ? t.to.width / t.from.width : 1;
+      const sy = t.from.height ? t.to.height / t.from.height : 1;
+      setTimeout(() => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            ghost.style.transition = 'transform ' + dur + 'ms cubic-bezier(.25,.7,.3,1), opacity ' +
+              Math.round(dur * .45) + 'ms ease ' + Math.round(dur * .55) + 'ms';
+            ghost.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(' + sx + ',' + sy + ')';
+            ghost.style.opacity = '0';
+          });
+        });
+      }, delay);
+      setTimeout(() => {
+        ghost.remove();
+        if (destEl) destEl.style.visibility = '';
+      }, delay + dur + 40);
+    });
+    return dur;
+  }
+
   function performAction(a, opts) {
     opts = opts || {};
+    const actor = g.turn;
+    const prev = boardSnapshot();   // where every card sits before the move
     try {
       R.applyAction(g, a);
     } catch (err) {
@@ -1473,16 +1626,24 @@
     humanActions = [];   // stale actions must not flash into the next player's ribbon
     turnArmed = false;   // and the incoming turn is not live until its moves are computed
     coachMsg = (opts && opts.why) || null;
-    /* the table's own voice: your moves at full presence, the AI's the same
-       sounds a touch quieter — a real table being played on around you.
-       A capture ALWAYS speaks as a capture (the owner's recording) — the
-       sweep sound belongs to the end-of-game leftover sweep alone */
-    const q = (opts && opts.human) ? 1 : 0.45;
-    if (a.type === 'capture') Snd.capture(q);
-    else if (a.type === 'build' || a.type === 'augment' || a.type === 'preg') Snd.build(q);
-    else if (a.type === 'dig' || a.type === 'topdig') Snd.steal(q);
-    else if (a.type === 'discard') Snd.drift(q);
     render();
+    /* the cards tell their journey — and the table's own voice lands WITH
+       the card (owner 2026-09-15): your moves at full presence, the AI's a
+       touch quieter. A capture ALWAYS speaks as a capture (the owner's
+       recording) — the sweep sound belongs to the end-of-game sweep alone */
+    const landAt = playMotion(prev, a, actor);
+    const q = (opts && opts.human) ? 1 : 0.45;
+    const fire = () => {
+      if (a.type === 'capture') Snd.capture(q);
+      else if (a.type === 'build' || a.type === 'augment' || a.type === 'preg') Snd.build(q);
+      else if (a.type === 'dig' || a.type === 'topdig') Snd.steal(q);
+      else if (a.type === 'discard') Snd.drift(q);
+    };
+    if (landAt > 0) {
+      humanBusy = true;   // no taps while the cards are in the air
+      setTimeout(() => { humanBusy = false; }, landAt + 160);
+      setTimeout(fire, landAt);
+    } else fire();
     /* pairs: the partner just completed a build whose value the human holds —
        offer Shiya immediately */
     if (a.type === 'build' && g.numPlayers === 4 && a.owner === 2 && !opts.human && g.phase === 'play') {

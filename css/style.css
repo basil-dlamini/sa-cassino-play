@@ -482,6 +482,11 @@ small { opacity: .75; }
   border-color: var(--ivory);
   box-shadow: 0 0 0 2px rgba(244,239,226,.7);
 }
+/* ---------------- the motion layer ---------------- */
+/* the corridor the flying cards travel through — above the board,
+   never catching a tap */
+#fly-layer { position: fixed; inset: 0; pointer-events: none; z-index: 95; }
+#fly-layer .card { transition: none; }
 /* ---------------- the results sheet: the versus ledger ---------------- */
 /* one side left, the other right, the category names down the middle —
    every line reads as yours vs theirs; gold marks who earned the row */
