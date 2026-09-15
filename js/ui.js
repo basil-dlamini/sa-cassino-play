@@ -1614,32 +1614,35 @@
       '<div class="verdict-title">' + title + '</div>' +
       '<div class="verdict-score">' + stats.map((t) => t.total).join('<small>&ndash;</small>') + '</div>' +
       '<div class="verdict-session">Session: ' + escapeHtml(sessionTallyText()) + '</div>' +
-      '</div><div class="sheet-ledger">';
-    const row = (label, pts) => '<div class="score-row"><span>' + label + '</span><i class="lead"></i>' +
-      (pts ? '<b>' + pts + (pts === 1 ? ' pt' : ' pts') + '</b>' : '<b class="nil">&mdash;</b>') + '</div>';
-    for (const t of stats) {
-      html += '<div class="score-card' + (res.winners.includes(t.name) ? ' winner' : '') +
-        (t.members.includes(HUMAN) ? ' mine' : '') + '">' +
-        '<div class="score-head"><span class="score-name">' +
-        (t.members.includes(HUMAN) ? 'You' + (t.members.length > 1 ? ' &amp; partner' : '') : escapeHtml(t.name)) +
-        '</span><span class="score-total">' + t.total + '</span></div>';
-      if (t.sweep) {
-        const clean = res.teamMode ? 44 : 22;
-        html += '<div class="score-sweep">' + (t.sweep >= clean ? 'Clean sweep' : 'Sweep') +
-          ' &mdash; ' + t.sweep + ' &middot; the whole score</div>';
-      }
-      /* the detailed score NEVER disappears — a sweep changes the total,
-         not the story: the ledger rows always tell the counts (owner's
-         report 2026-09-15: the sweep band had replaced them entirely) */
-      {
-        const mostWord = (p) => p === 2 ? ' &middot; most' : (p === 1 ? ' &middot; tie' : '');
-        html += row(t.cards + ' cards' + mostWord(t.mostCards), t.mostCards);
-        html += row(t.spades + ' &spades;' + mostWord(t.mostSpades), t.mostSpades);
-        html += row(t.aces ? 'Aces &times;' + t.aces : 'Aces', t.aces);
-        html += row('2&spades; Spy', t.s2);
-        html += row('10&diams; Big 10', t.d10 ? t.d10 * 2 : 0);
-      }
-      html += '</div>';
+      '</div>';
+    /* the comparative ledger (owner 2026-09-15): one side left, the other
+       right, the category names down the middle — every line reads as
+       yours vs theirs. The side that earned a row's points shines gold */
+    const lab = (t) => t.members.includes(HUMAN)
+      ? 'You' + (t.members.length > 1 ? ' &amp; partner' : '')
+      : escapeHtml(t.name);
+    const cell = (main, pts, whole) =>
+      '<b class="vs-val' + ((pts || whole) ? ' win' : '') + '">' + main +
+      (pts ? '<small>= ' + pts + (pts === 1 ? ' pt' : ' pts') + '</small>' : '') +
+      (whole ? '<small>&middot; the whole score</small>' : '') + '</b>';
+    html += '<div class="versus' + (stats.length === 3 ? ' three' : '') + '">';
+    html += '<div class="vs-head">' + (stats.length === 3 ? '<i></i>' : '') +
+      stats.map((t) => '<div class="vs-side' + (res.winners.includes(t.name) ? ' winner' : '') + '">' +
+        '<span class="vs-name">' + lab(t) + '</span><span class="vs-total">' + t.total + '</span></div>')
+        .join(stats.length === 2 ? '<span class="vs-mid">vs</span>' : '') + '</div>';
+    const rows = [
+      { name: 'Cards', val: (t) => cell(t.cards, t.mostCards) },
+      { name: 'Spades', val: (t) => cell(t.spades + ' &spades;', t.mostSpades) },
+      { name: 'Aces', val: (t) => t.aces ? cell('&times;' + t.aces, t.aces) : cell('&mdash;') },
+      { name: '2&spades; Spy', val: (t) => t.s2 ? cell('held', t.s2) : cell('&mdash;') },
+      { name: '10&diams; Big 10', val: (t) => t.d10 ? cell('held', t.d10 * 2) : cell('&mdash;') },
+      { name: 'Sweep', val: (t) => t.sweep ? cell(String(t.sweep), 0, true) : cell('&mdash;') }
+    ];
+    for (const r of rows) {
+      const vals = stats.map((t) => r.val(t));
+      html += '<div class="vs-row">' + (stats.length === 3
+        ? '<span class="vs-lab">' + r.name + '</span>' + vals.join('')
+        : vals.join('<span class="vs-lab">' + r.name + '</span>')) + '</div>';
     }
     html += '</div>';
     html += '<details class="score-law"><summary>&#9432; ' + res.totalInPlay +

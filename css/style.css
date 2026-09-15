@@ -482,9 +482,9 @@ small { opacity: .75; }
   border-color: var(--ivory);
   box-shadow: 0 0 0 2px rgba(244,239,226,.7);
 }
-/* ---------------- the results sheet: the portrait ledger ---------------- */
-/* the full-screen sheet: verdict first, one score card per side stacked,
-   dotted leaders from count to points, buttons in the thumb zone */
+/* ---------------- the results sheet: the versus ledger ---------------- */
+/* one side left, the other right, the category names down the middle —
+   every line reads as yours vs theirs; gold marks who earned the row */
 #modal-results { align-items: stretch; justify-content: stretch; padding: 0; }
 #modal-results .modal-card.results-sheet {
   display: flex; flex-direction: column;
@@ -514,30 +514,45 @@ small { opacity: .75; }
 }
 .verdict-score small { font-size: .55em; opacity: .6; padding: 0 .12em; }
 .verdict-session { margin-top: 3px; font-size: .78rem; opacity: .72; }
-.sheet-ledger { display: flex; flex-direction: column; gap: 8px; }
-.score-card {
+.versus {
   border: 1px solid rgba(244,239,226,.16); border-radius: 10px;
-  padding: 7px 12px; background: rgba(244,239,226,.04);
+  padding: 6px 10px 8px; background: rgba(244,239,226,.04);
 }
-.score-card.winner { border-color: rgba(255,214,130,.85); box-shadow: 0 0 12px rgba(255,214,130,.15); }
-.score-card:not(.winner) { opacity: .82; }
-.score-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3px; }
-.score-name { font-size: .95rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
-.score-total { font-size: 1.5rem; font-weight: 800; color: var(--ivory); }
-.score-row { display: flex; align-items: baseline; font-size: .9rem; padding: 2px 0; }
-.score-row span { white-space: nowrap; }
-.score-row .lead {
-  flex: 1; border-bottom: 2px dotted rgba(244,239,226,.28);
-  margin: 0 6px; transform: translateY(-3px);
+.vs-head {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  gap: 6px; padding: 4px 0 8px; border-bottom: 1px solid rgba(244,239,226,.18);
 }
-.score-row b { white-space: nowrap; }
-.score-row b.nil { opacity: .45; font-weight: 400; }
-.score-sweep {
-  margin: 3px 0 5px; padding: 7px 10px; border-radius: 8px; text-align: center;
-  background: rgba(255,214,130,.14); border: 1px solid rgba(255,214,130,.5);
-  color: #ffd682; font-weight: 700; letter-spacing: .05em; font-size: .9rem;
+.vs-side { text-align: center; min-width: 0; }
+.vs-side:not(.winner) { opacity: .78; }
+.vs-name {
+  display: block; font-size: .88rem; font-weight: 700;
+  letter-spacing: .04em; text-transform: uppercase;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.score-card .score-sweep + .score-row { padding-top: 0; }
+.vs-side.winner .vs-name, .vs-side.winner .vs-total { color: #ffd682; }
+.vs-total { font-size: 1.7rem; font-weight: 800; line-height: 1.1; color: var(--ivory); }
+.vs-mid {
+  font-size: .72rem; font-weight: 700; opacity: .5;
+  text-transform: uppercase; letter-spacing: .1em;
+}
+.vs-row {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: baseline;
+  gap: 6px; padding: 5px 0; border-top: 1px dotted rgba(244,239,226,.12);
+}
+.vs-row:first-of-type { border-top: none; }
+.vs-val { font-size: 1rem; font-weight: 700; white-space: nowrap; }
+.vs-val small { display: block; font-weight: 400; font-size: .72em; opacity: .68; }
+.vs-row .vs-val:first-child { text-align: right; }
+.vs-row .vs-val:last-child { text-align: left; }
+.vs-val.win { color: #ffd682; }
+.vs-lab {
+  font-size: .78rem; opacity: .82; text-align: center; white-space: nowrap;
+  text-transform: uppercase; letter-spacing: .05em;
+}
+/* three hands: the labels lead on the left, one column per player */
+.versus.three .vs-head { grid-template-columns: 76px 1fr 1fr 1fr; }
+.versus.three .vs-row { grid-template-columns: 76px 1fr 1fr 1fr; }
+.versus.three .vs-val { text-align: center !important; }
 details.score-law { margin: 10px 2px 4px; font-size: .8rem; }
 details.score-law summary { cursor: pointer; color: var(--ivory); }
 details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
@@ -545,10 +560,8 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
 @media (max-height: 680px) {
   .verdict { padding-bottom: 6px; }
   .verdict-score { font-size: clamp(1.7rem, 8.5vw, 2.2rem); }
-  .score-card { padding: 5px 10px; }
-  .score-row { padding: 1px 0; font-size: .86rem; }
-  .score-total { font-size: 1.3rem; }
-  .sheet-ledger { gap: 6px; }
+  .vs-total { font-size: 1.4rem; }
+  .vs-row { padding: 3px 0; }
   details.score-law { margin: 8px 2px 2px; }
 }
 @media (min-width: 600px) {
