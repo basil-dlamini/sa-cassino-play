@@ -1486,19 +1486,24 @@
   }
   function boardSnapshot() {
     const cards = {}, piles = {}, builds = {}, buildFaces = {}, pileTops = {};
+    const buildRendered = {}, pileTopRendered = {};
     document.querySelectorAll('#screen-game .card[data-id]').forEach((el) => {
       const r = el.getBoundingClientRect();
       if (r.width && !cards[el.dataset.id]) cards[el.dataset.id] = r;
     });
     document.querySelectorAll('.pile-box[data-seat]').forEach((el) => {
       piles[el.dataset.seat] = el.getBoundingClientRect();
+      const c = el.querySelector('.pile-top .card[data-id]');
+      if (c) pileTopRendered[el.dataset.seat] = c.dataset.id;
     });
     document.querySelectorAll('.build-box.has-build[data-idx]').forEach((el) => {
       builds[Number(el.dataset.idx)] = el.getBoundingClientRect();
+      const c = el.querySelector('.card[data-id]');
+      if (c) buildRendered[Number(el.dataset.idx)] = c.dataset.id;
     });
     g.builds.forEach((b, i) => { if (b.cards.length) buildFaces[i] = b.cards[b.cards.length - 1]; });
     g.players.forEach((p, s) => { pileTops[s] = p.pile.length ? p.pile[p.pile.length - 1] : null; });
-    return { cards, piles, builds, buildFaces, pileTops, table: g.table.slice() };
+    return { cards, piles, builds, buildFaces, pileTops, buildRendered, pileTopRendered, table: g.table.slice() };
   }
   /* returns the landing delay for the played card (0 when nothing flies) */
   function playMotion(prev, a, actor) {
@@ -1615,6 +1620,43 @@
       };
       setTimeout(land, delay + dur + 20);
     });
+    /* the seat never empties (owner 2026-09-15): when the destination's
+       displayed card IS the incoming one (a build's new face, the pile's new
+       top), the hidden-in-flight card would leave the slot blank — so the
+       destination keeps showing its PREVIOUS card until the swap at landing */
+    const pins = [];
+    const pinAt = (boxSel, oldId) => {
+      if (!boxSel || !oldId) return;
+      const box = document.querySelector(boxSel);
+      if (!box) return;
+      const now = box.querySelector('.card[data-id]');
+      if (!now || !flyingIds.has(now.dataset.id)) return;   // occupant visible — hold nothing
+      const r = now.getBoundingClientRect();
+      const pin = cardEl(oldId);
+      Object.assign(pin.style, {
+        position: 'fixed', margin: 0, zIndex: 60,
+        left: r.left + 'px', top: r.top + 'px',
+        width: r.width + 'px', height: r.height + 'px'
+      });
+      layer.appendChild(pin);
+      pins.push(pin);
+    };
+    const pileSel = '.pile-box[data-seat="' + actor + '"]';
+    const buildSelByValue = (v) => {
+      const b = g.builds.find((x) => x.value === v);
+      return b ? '.build-box.has-build[data-idx="' + g.builds.indexOf(b) + '"]' : null;
+    };
+    if (a.type === 'capture') pinAt(pileSel, prev.pileTopRendered[actor]);
+    else if (a.type === 'build' || a.type === 'basetop') pinAt(buildSelByValue(a.value), a.base || null);
+    else if (a.type === 'augment' || a.type === 'dig' || a.type === 'topdig' ||
+             a.type === 'digfold' || a.type === 'edig' || a.type === 'caugment' || a.type === 'efold')
+      pinAt(bIdx != null ? '.build-box.has-build[data-idx="' + bIdx + '"]' : buildSelByValue(a.value),
+        prev.buildRendered[a.buildIdx]);
+    else if (a.type === 'preg')
+      pinAt(buildSelByValue(a.value),
+        prev.buildRendered[(a.mergeInto != null ? a.mergeInto : a.buildIdx)]);
+    const totalMs = travellers.length * stagger + dur;
+    setTimeout(() => { pins.forEach((p) => p.remove()); }, totalMs + 160);
     /* safety: no card may stay hidden forever — but never unhide a card a
        NEWER flight is still carrying */
     setTimeout(() => {
