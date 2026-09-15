@@ -543,17 +543,18 @@ small { opacity: .75; }
 }
 .t-row {
   display: grid;
-  grid-template-columns: minmax(3.6em, auto) 1fr minmax(5.6em, auto) 1fr minmax(3.6em, auto);
+  grid-template-columns: auto auto auto auto auto;   /* columns hug their content */
+  justify-content: space-between;                    /* and spread across the width */
   align-items: baseline;
 }
 .t-row + .t-row { border-top: 1px solid rgba(244,239,226,.14); }
-.t-row > * { padding: 5px 8px; }
+.t-row > * { padding: 3px 10px; }
 .t-row > * + * { border-left: 1px solid rgba(244,239,226,.14); }
-.t-pts { font-size: .82rem; font-weight: 700; white-space: nowrap; }
+.t-pts { font-size: 1.02rem; font-weight: 800; white-space: nowrap; }
 .t-pts.win { color: #ffd682; }
-.t-val { font-size: .98rem; font-weight: 700; color: var(--ivory); white-space: nowrap; }
+.t-val { font-size: 1.12rem; font-weight: 800; color: var(--ivory); white-space: nowrap; }
 .t-lab {
-  font-size: .72rem; opacity: .82; text-align: center; white-space: nowrap;
+  font-size: .84rem; font-weight: 700; opacity: .85; text-align: center; white-space: nowrap;
   text-transform: uppercase; letter-spacing: .05em;
 }
 /* mirrored: values lean toward the centre labels, points to the outer edge */
@@ -562,10 +563,10 @@ small { opacity: .75; }
 .t-row > .t-val:nth-child(2) { text-align: right; }
 .t-row > .t-val:nth-child(4) { text-align: left; }
 .t-row.total { border-top: 2px solid rgba(244,239,226,.3); background: rgba(244,239,226,.05); }
-.t-pts.tot { font-size: 1.2rem; font-weight: 800; }
+.t-pts.tot { font-size: 1.4rem; }
 /* three hands: the row headers lead on the left, then value+points per player */
 .versus.three .vs-head { grid-template-columns: minmax(5.6em, auto) repeat(3, 1fr); }
-.versus.three .t-row { grid-template-columns: minmax(5.6em, auto) repeat(3, 1fr minmax(3em, auto)); }
+.versus.three .t-row { grid-template-columns: auto repeat(3, auto auto); justify-content: space-between; }
 .versus.three .t-val { text-align: center; }
 .versus.three .t-pts { text-align: right; }
 details.score-law { margin: 10px 2px 4px; font-size: .8rem; }
@@ -576,7 +577,11 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
   .verdict { padding-bottom: 6px; }
   .verdict-score { font-size: clamp(1.7rem, 8.5vw, 2.2rem); }
   .vs-total { font-size: 1.4rem; }
-  .vs-row { padding: 3px 0; }
+  .t-row > * { padding: 1px 8px; }
+  .t-val { font-size: 1rem; }
+  .t-pts { font-size: .92rem; }
+  .t-lab { font-size: .76rem; }
+  .t-pts.tot { font-size: 1.2rem; }
   details.score-law { margin: 8px 2px 2px; }
 }
 @media (min-width: 600px) {

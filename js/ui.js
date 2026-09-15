@@ -1641,10 +1641,21 @@
       const held = (t) => pileOf(t).includes(s + '1');
       rows.push({ name: 'A' + glyph, val: (t) => held(t) ? '1' : '0', pts: (t) => held(t) ? 1 : 0 });
     }
+    /* the two sweeps (owner 2026-09-15): POINTS sweep (all six point cards)
+       and CARDS sweep (all forty) — each reads 1/0 from the final pile,
+       and only the one that scored carries its flat points */
+    const pointCards = ['S1', 'H1', 'D1', 'C1', 'S2', 'D10'];
+    const allPoints = (t) => pointCards.every((c) => pileOf(t).includes(c));
+    const allCards = (t) => pileOf(t).length === 40;
+    const cleanPts2 = res.teamMode ? 44 : 22;
+    const pointSweepPts = res.teamMode ? 22 : 11;
     rows.push(
       { name: 'Spades', val: (t) => String(t.spades), pts: (t) => t.mostSpades },
       { name: 'Cards', val: (t) => String(t.cards), pts: (t) => t.mostCards },
-      { name: 'Sweep', val: (t) => t.sweep ? 'ALL' : '&mdash;', pts: (t) => t.sweep }
+      { name: 'Points sweep', val: (t) => allPoints(t) ? '1' : '0',
+        pts: (t) => (t.sweep && t.sweep < cleanPts2) ? pointSweepPts : 0 },
+      { name: 'Cards sweep', val: (t) => allCards(t) ? '1' : '0',
+        pts: (t) => t.sweep >= cleanPts2 ? t.sweep : 0 }
     );
     html += '<div class="vs-table">';
     for (const r of rows) {
