@@ -1374,6 +1374,11 @@
     turnArmed = false;
     oppNote = null;
     tableSlots = {};          // fresh discard grid
+    /* the fly corridor starts clean — a finished game's sweep pins must
+       never float over the new one (found in verification 2026-09-15) */
+    flyingIds.clear();
+    if (flyLayerEl) flyLayerEl.innerHTML = '';
+    motionEndsAt = 0;
     shiyaTick = null; shiyaOfferValue = null; clearTimeout(shiyaTimer);
     show('screen-game');
     $('screen-game').classList.toggle('p2', n === 2);   // the two-hand layout
@@ -1760,7 +1765,10 @@
         hop(dest, () => settle());
       }
     };
-    nextHop();
+    /* the browser must SEE the mover standing at its start before the first
+       hop fires — two frames of rest, or the opening leg teleports (the
+       guard lost in the chain rebuild, restored 2026-09-15) */
+    requestAnimationFrame(() => { requestAnimationFrame(() => nextHop()); });
     /* safety: no card may stay hidden forever, whatever happens to a timer */
     setTimeout(() => {
       for (const p of parts) {
