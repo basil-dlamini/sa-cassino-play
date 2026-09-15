@@ -1627,16 +1627,25 @@
         '<span class="vs-name">' + lab(t) + '</span><span class="vs-total">' + t.total + '</span></div>')
         .join(stats.length === 2 ? '<span class="vs-mid">vs</span>' : '') + '</div>';
     /* bare numbers only (owner 2026-09-15): no ×, no suit icons, no 'pts'
-       suffix — and the Spy 2 / Big 10 indicators read 1 or 0 */
+       suffix — and the Spy 2 / Big 10 indicators read 1 or 0.
+       Row order (owner 2026-09-15): Big 10, Spy 2, ONE ROW PER ACE from the
+       final pile, then Spades, then Cards; Sweep and Total close */
     const P = (t, pts) => '<b class="t-pts' + (pts ? ' win' : '') + '">' + (pts || '&mdash;') + '</b>';
+    const pileOf = (t) => t.members.flatMap((m) => g.players[m].pile);
     const rows = [
-      { name: 'Cards', val: (t) => String(t.cards), pts: (t) => t.mostCards },
-      { name: 'Spades', val: (t) => String(t.spades), pts: (t) => t.mostSpades },
-      { name: 'Aces', val: (t) => String(t.aces), pts: (t) => t.aces },
-      { name: '2&spades; Spy', val: (t) => t.s2 ? '1' : '0', pts: (t) => t.s2 },
       { name: '10&diams; Big 10', val: (t) => t.d10 ? '1' : '0', pts: (t) => t.d10 * 2 },
-      { name: 'Sweep', val: (t) => t.sweep ? 'ALL' : '&mdash;', pts: (t) => t.sweep }
+      { name: '2&spades; Spy', val: (t) => t.s2 ? '1' : '0', pts: (t) => t.s2 }
     ];
+    for (const s of ['S', 'H', 'D', 'C']) {
+      const glyph = { S: '&spades;', H: '&hearts;', D: '&diams;', C: '&clubs;' }[s];
+      const held = (t) => pileOf(t).includes(s + '1');
+      rows.push({ name: 'A' + glyph, val: (t) => held(t) ? '1' : '0', pts: (t) => held(t) ? 1 : 0 });
+    }
+    rows.push(
+      { name: 'Spades', val: (t) => String(t.spades), pts: (t) => t.mostSpades },
+      { name: 'Cards', val: (t) => String(t.cards), pts: (t) => t.mostCards },
+      { name: 'Sweep', val: (t) => t.sweep ? 'ALL' : '&mdash;', pts: (t) => t.sweep }
+    );
     html += '<div class="vs-table">';
     for (const r of rows) {
       if (stats.length === 3) {
