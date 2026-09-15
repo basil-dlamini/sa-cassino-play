@@ -1615,36 +1615,52 @@
       '<div class="verdict-score">' + stats.map((t) => t.total).join('<small>&ndash;</small>') + '</div>' +
       '<div class="verdict-session">Session: ' + escapeHtml(sessionTallyText()) + '</div>' +
       '</div>';
-    /* the comparative ledger (owner 2026-09-15): one side left, the other
-       right, the category names down the middle — every line reads as
-       yours vs theirs. The side that earned a row's points shines gold */
+    /* the table (owner 2026-09-15): no column headers — the middle column
+       carries the row headers, the values flank them, and the OUTERMOST
+       columns carry the points, one per side, reading down to the total */
     const lab = (t) => t.members.includes(HUMAN)
       ? 'You' + (t.members.length > 1 ? ' &amp; partner' : '')
       : escapeHtml(t.name);
-    const cell = (main, pts, whole) =>
-      '<b class="vs-val' + ((pts || whole) ? ' win' : '') + '">' + main +
-      (pts ? '<small>= ' + pts + (pts === 1 ? ' pt' : ' pts') + '</small>' : '') +
-      (whole ? '<small>&middot; the whole score</small>' : '') + '</b>';
     html += '<div class="versus' + (stats.length === 3 ? ' three' : '') + '">';
     html += '<div class="vs-head">' + (stats.length === 3 ? '<i></i>' : '') +
       stats.map((t) => '<div class="vs-side' + (res.winners.includes(t.name) ? ' winner' : '') + '">' +
         '<span class="vs-name">' + lab(t) + '</span><span class="vs-total">' + t.total + '</span></div>')
         .join(stats.length === 2 ? '<span class="vs-mid">vs</span>' : '') + '</div>';
+    const P = (t, pts) => '<b class="t-pts' + (pts ? ' win' : '') + '">' +
+      (pts ? pts + (pts === 1 ? ' pt' : ' pts') : '&mdash;') + '</b>';
     const rows = [
-      { name: 'Cards', val: (t) => cell(t.cards, t.mostCards) },
-      { name: 'Spades', val: (t) => cell(t.spades + ' &spades;', t.mostSpades) },
-      { name: 'Aces', val: (t) => t.aces ? cell('&times;' + t.aces, t.aces) : cell('&mdash;') },
-      { name: '2&spades; Spy', val: (t) => t.s2 ? cell('held', t.s2) : cell('&mdash;') },
-      { name: '10&diams; Big 10', val: (t) => t.d10 ? cell('held', t.d10 * 2) : cell('&mdash;') },
-      { name: 'Sweep', val: (t) => t.sweep ? cell(String(t.sweep), 0, true) : cell('&mdash;') }
+      { name: 'Cards', val: (t) => String(t.cards), pts: (t) => t.mostCards },
+      { name: 'Spades', val: (t) => t.spades + ' &spades;', pts: (t) => t.mostSpades },
+      { name: 'Aces', val: (t) => t.aces ? '&times;' + t.aces : '&mdash;', pts: (t) => t.aces },
+      { name: '2&spades; Spy', val: (t) => t.s2 ? 'held' : '&mdash;', pts: (t) => t.s2 },
+      { name: '10&diams; Big 10', val: (t) => t.d10 ? 'held' : '&mdash;', pts: (t) => t.d10 * 2 },
+      { name: 'Sweep', val: (t) => t.sweep ? 'ALL' : '&mdash;', pts: (t) => t.sweep }
     ];
+    html += '<div class="vs-table">';
     for (const r of rows) {
-      const vals = stats.map((t) => r.val(t));
-      html += '<div class="vs-row">' + (stats.length === 3
-        ? '<span class="vs-lab">' + r.name + '</span>' + vals.join('')
-        : vals.join('<span class="vs-lab">' + r.name + '</span>')) + '</div>';
+      if (stats.length === 3) {
+        html += '<div class="t-row"><span class="t-lab">' + r.name + '</span>' +
+          stats.map((t) => '<b class="t-val">' + r.val(t) + '</b>' + P(t, r.pts(t))).join('') + '</div>';
+      } else {
+        const a = stats[0], b = stats[1];
+        html += '<div class="t-row">' + P(a, r.pts(a)) +
+          '<b class="t-val">' + r.val(a) + '</b><span class="t-lab">' + r.name + '</span>' +
+          '<b class="t-val">' + r.val(b) + '</b>' + P(b, r.pts(b)) + '</div>';
+      }
     }
-    html += '</div>';
+    /* the totals close the table: each side's points column sums to it */
+    if (stats.length === 3) {
+      html += '<div class="t-row total"><span class="t-lab">Total</span>' +
+        stats.map((t) => '<b class="t-val"></b>' +
+          '<b class="t-pts tot' + (res.winners.includes(t.name) ? ' win' : '') + '">' + t.total + '</b>').join('') + '</div>';
+    } else {
+      const a = stats[0], b = stats[1];
+      html += '<div class="t-row total">' +
+        '<b class="t-pts tot' + (res.winners.includes(a.name) ? ' win' : '') + '">' + a.total + '</b>' +
+        '<b class="t-val"></b><span class="t-lab">Total</span><b class="t-val"></b>' +
+        '<b class="t-pts tot' + (res.winners.includes(b.name) ? ' win' : '') + '">' + b.total + '</b></div>';
+    }
+    html += '</div></div>';
     html += '<details class="score-law"><summary>&#9432; ' + res.totalInPlay +
       ' points were in play &mdash; how scoring works</summary><p>' +
       (res.teamMode
