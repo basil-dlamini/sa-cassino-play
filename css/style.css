@@ -550,25 +550,18 @@ small { opacity: .75; }
 .t-row + .t-row { border-top: 1px solid rgba(244,239,226,.14); }
 .t-row > * { padding: 3px 10px; }
 .t-row > * + * { border-left: 1px solid rgba(244,239,226,.14); }
-.t-pts { font-size: 1.02rem; font-weight: 800; white-space: nowrap; }
+.t-pts { font-size: 1.02rem; font-weight: 800; white-space: nowrap; text-align: center; }
 .t-pts.win { color: #ffd682; }
-.t-val { font-size: 1.12rem; font-weight: 800; color: var(--ivory); white-space: nowrap; }
+.t-val { font-size: 1.12rem; font-weight: 800; color: var(--ivory); white-space: nowrap; text-align: center; }
 .t-lab {
   font-size: .84rem; font-weight: 700; opacity: .85; text-align: center; white-space: nowrap;
   text-transform: uppercase; letter-spacing: .05em;
 }
-/* mirrored: values lean toward the centre labels, points to the outer edge */
-.t-row > .t-pts:first-child { text-align: left; }
-.t-row > .t-pts:last-child { text-align: right; }
-.t-row > .t-val:nth-child(2) { text-align: right; }
-.t-row > .t-val:nth-child(4) { text-align: left; }
 .t-row.total { border-top: 2px solid rgba(244,239,226,.3); background: rgba(244,239,226,.05); }
 .t-pts.tot { font-size: 1.4rem; }
 /* three hands: the row headers lead on the left, then value+points per player */
 .versus.three .vs-head { grid-template-columns: minmax(5.6em, auto) repeat(3, 1fr); }
 .versus.three .t-row { grid-template-columns: auto repeat(3, auto auto); justify-content: space-between; }
-.versus.three .t-val { text-align: center; }
-.versus.three .t-pts { text-align: right; }
 details.score-law { margin: 10px 2px 4px; font-size: .8rem; }
 details.score-law summary { cursor: pointer; color: var(--ivory); }
 details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }

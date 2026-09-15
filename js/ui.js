@@ -1630,7 +1630,7 @@
        suffix — and the Spy 2 / Big 10 indicators read 1 or 0.
        Row order (owner 2026-09-15): Big 10, Spy 2, ONE ROW PER ACE from the
        final pile, then Spades, then Cards; Sweep and Total close */
-    const P = (t, pts) => '<b class="t-pts' + (pts ? ' win' : '') + '">' + (pts || '&mdash;') + '</b>';
+    const P = (t, pts) => '<b class="t-pts' + (pts ? ' win' : '') + '">' + (pts || '') + '</b>';
     const pileOf = (t) => t.members.flatMap((m) => g.players[m].pile);
     const rows = [
       { name: '10&diams; Big 10', val: (t) => t.d10 ? '1' : '0', pts: (t) => t.d10 * 2 },
