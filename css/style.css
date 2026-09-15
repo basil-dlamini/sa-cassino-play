@@ -535,33 +535,31 @@ small { opacity: .75; }
   font-size: .72rem; font-weight: 700; opacity: .5;
   text-transform: uppercase; letter-spacing: .1em;
 }
-/* the table itself: no column headers — the middle column holds the row
-   headers, values flank it, points sit in the outermost columns */
-.vs-table {
-  border: 1px solid rgba(244,239,226,.22); border-radius: 10px;
-  overflow: hidden; background: rgba(244,239,226,.04);
+/* one true table (owner-approved preview 2026-09-15): shared columns,
+   straight lines, centred text */
+table.vs-table {
+  width: 100%; border-collapse: collapse;
+  background: rgba(244,239,226,.04);
+  border: 1px solid rgba(244,239,226,.22);
 }
-.t-row {
-  display: grid;
-  grid-template-columns: auto auto auto auto auto;   /* columns hug their content */
-  justify-content: space-between;                    /* and spread across the width */
-  align-items: baseline;
+table.vs-table td, table.vs-table th {
+  text-align: center; padding: 3px 10px;
+  border: 1px solid rgba(244,239,226,.14); white-space: nowrap;
 }
-.t-row + .t-row { border-top: 1px solid rgba(244,239,226,.14); }
-.t-row > * { padding: 3px 10px; }
-.t-row > * + * { border-left: 1px solid rgba(244,239,226,.14); }
-.t-pts { font-size: 1.02rem; font-weight: 800; white-space: nowrap; text-align: center; }
+.t-pts { font-size: 1.02rem; font-weight: 800; }
 .t-pts.win { color: #ffd682; }
-.t-val { font-size: 1.12rem; font-weight: 800; color: var(--ivory); white-space: nowrap; text-align: center; }
+.t-val { font-size: 1.12rem; font-weight: 800; color: var(--ivory); }
 .t-lab {
-  font-size: .84rem; font-weight: 700; opacity: .85; text-align: center; white-space: nowrap;
+  font-size: .84rem; font-weight: 700; opacity: .85;
   text-transform: uppercase; letter-spacing: .05em;
 }
-.t-row.total { border-top: 2px solid rgba(244,239,226,.3); background: rgba(244,239,226,.05); }
+table.vs-table tr.total td, table.vs-table tr.total th {
+  border-top: 2px solid rgba(244,239,226,.3);
+  background: rgba(244,239,226,.05);
+}
 .t-pts.tot { font-size: 1.4rem; }
 /* three hands: the row headers lead on the left, then value+points per player */
 .versus.three .vs-head { grid-template-columns: minmax(5.6em, auto) repeat(3, 1fr); }
-.versus.three .t-row { grid-template-columns: auto repeat(3, auto auto); justify-content: space-between; }
 details.score-law { margin: 10px 2px 4px; font-size: .8rem; }
 details.score-law summary { cursor: pointer; color: var(--ivory); }
 details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
@@ -570,7 +568,7 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
   .verdict { padding-bottom: 6px; }
   .verdict-score { font-size: clamp(1.7rem, 8.5vw, 2.2rem); }
   .vs-total { font-size: 1.4rem; }
-  .t-row > * { padding: 1px 8px; }
+  table.vs-table td, table.vs-table th { padding: 1px 8px; }
   .t-val { font-size: 1rem; }
   .t-pts { font-size: .92rem; }
   .t-lab { font-size: .76rem; }

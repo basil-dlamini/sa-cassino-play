@@ -1630,7 +1630,7 @@
        suffix — and the Spy 2 / Big 10 indicators read 1 or 0.
        Row order (owner 2026-09-15): Big 10, Spy 2, ONE ROW PER ACE from the
        final pile, then Spades, then Cards; Sweep and Total close */
-    const P = (t, pts) => '<b class="t-pts' + (pts ? ' win' : '') + '">' + (pts || '') + '</b>';
+    const P = (t, pts) => '<td class="t-pts' + (pts ? ' win' : '') + '">' + (pts || '') + '</td>';
     const pileOf = (t) => t.members.flatMap((m) => g.players[m].pile);
     const rows = [
       { name: '10&diams; Big 10', val: (t) => t.d10 ? '1' : '0', pts: (t) => t.d10 * 2 },
@@ -1657,31 +1657,34 @@
       { name: 'Cards sweep', val: (t) => allCards(t) ? '1' : '0',
         pts: (t) => t.sweep >= cleanPts2 ? t.sweep : 0 }
     );
-    html += '<div class="vs-table">';
+    /* one true table (owner-approved preview 2026-09-15): every column a
+       single shared channel — the vertical lines run straight from the
+       first row to the Total, all text centred in its cell */
+    html += '<table class="vs-table">';
     for (const r of rows) {
       if (stats.length === 3) {
-        html += '<div class="t-row"><span class="t-lab">' + r.name + '</span>' +
-          stats.map((t) => '<b class="t-val">' + r.val(t) + '</b>' + P(t, r.pts(t))).join('') + '</div>';
+        html += '<tr><th class="t-lab" scope="row">' + r.name + '</th>' +
+          stats.map((t) => '<td class="t-val">' + r.val(t) + '</td>' + P(t, r.pts(t))).join('') + '</tr>';
       } else {
         const a = stats[0], b = stats[1];
-        html += '<div class="t-row">' + P(a, r.pts(a)) +
-          '<b class="t-val">' + r.val(a) + '</b><span class="t-lab">' + r.name + '</span>' +
-          '<b class="t-val">' + r.val(b) + '</b>' + P(b, r.pts(b)) + '</div>';
+        html += '<tr>' + P(a, r.pts(a)) +
+          '<td class="t-val">' + r.val(a) + '</td><th class="t-lab" scope="row">' + r.name + '</th>' +
+          '<td class="t-val">' + r.val(b) + '</td>' + P(b, r.pts(b)) + '</tr>';
       }
     }
     /* the totals close the table: each side's points column sums to it */
     if (stats.length === 3) {
-      html += '<div class="t-row total"><span class="t-lab">Total</span>' +
-        stats.map((t) => '<b class="t-val"></b>' +
-          '<b class="t-pts tot' + (res.winners.includes(t.name) ? ' win' : '') + '">' + t.total + '</b>').join('') + '</div>';
+      html += '<tr class="total"><th class="t-lab" scope="row">Total</th>' +
+        stats.map((t) => '<td class="t-val"></td>' +
+          '<td class="t-pts tot' + (res.winners.includes(t.name) ? ' win' : '') + '">' + t.total + '</td>').join('') + '</tr>';
     } else {
       const a = stats[0], b = stats[1];
-      html += '<div class="t-row total">' +
-        '<b class="t-pts tot' + (res.winners.includes(a.name) ? ' win' : '') + '">' + a.total + '</b>' +
-        '<b class="t-val"></b><span class="t-lab">Total</span><b class="t-val"></b>' +
-        '<b class="t-pts tot' + (res.winners.includes(b.name) ? ' win' : '') + '">' + b.total + '</b></div>';
+      html += '<tr class="total">' +
+        '<td class="t-pts tot' + (res.winners.includes(a.name) ? ' win' : '') + '">' + a.total + '</td>' +
+        '<td class="t-val"></td><th class="t-lab" scope="row">Total</th><td class="t-val"></td>' +
+        '<td class="t-pts tot' + (res.winners.includes(b.name) ? ' win' : '') + '">' + b.total + '</td></tr>';
     }
-    html += '</div></div>';
+    html += '</table></div>';
     html += '<details class="score-law"><summary>&#9432; ' + res.totalInPlay +
       ' points were in play &mdash; how scoring works</summary><p>' +
       (res.teamMode
