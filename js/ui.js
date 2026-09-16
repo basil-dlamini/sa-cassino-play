@@ -1728,6 +1728,11 @@
       /* the card remembers only its OWN start — every hop tells it exactly
         where to stand (target minus own start), so a card collected
         mid-journey joins the stack precisely where it stands (2026-09-15) */
+      /* THE missing line (found 2026-09-16): the mover was created but never
+         placed on the corridor — it flew its whole journey off-screen while
+         every later joiner was inserted properly. The discard's ghost, the
+         build's hand card, every departure: all invisible for this one gap */
+      layer.appendChild(el);
       return { el, id, bx: rect.left, by: rect.top, w: rect.width || 1, h: rect.height || 1 };
     };
     let carrier = [makeGhost(parts[0].id, parts[0].rect)];
