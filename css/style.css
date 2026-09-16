@@ -598,6 +598,15 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
 .build-box.scaffold { border-style: dashed; border-color: var(--ivory); }
 /* an opponent's build you folded into — the capture is owed */
 .build-box.capt-lock { border-color: #ff9d5c; box-shadow: 0 0 0 1px rgba(255,157,92,.5); }
+/* the lot waits for its stack (owner 2026-09-17): a founding build's box
+   keeps the empty look while the cards are still in the air — the counter
+   appears only as the stack lands, never before */
+.build-box.arriving {
+  border-style: dashed !important;
+  border-color: rgba(244,239,226,.3) !important;
+  background: rgba(0,0,0,.16) !important;
+  box-shadow: none !important;
+}
 .btn.dimmed { opacity: .55; }
 #table-cards .grid-cell.can-drop { cursor: pointer; border-color: rgba(244,239,226,.5); }
 #table-cards .grid-cell.can-drop:hover {
@@ -805,7 +814,8 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
   overflow-wrap: break-word;
 }
 .warn-zone .panel-hint { font-size: 11.5px; padding: 0; }
-.warn-zone:empty { visibility: hidden; }
+/* the blue panels stand on with standing text (owner 2026-09-17) — they are
+   never left empty, so the old empty-hides-it rule is retired */
 
 /* the discard grid: 4 columns, exactly card-sized cells, centred. The 5px
    gap buys card width. It never shrinks — a squeezed wrap once let the

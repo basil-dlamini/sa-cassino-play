@@ -1164,7 +1164,9 @@
     if (!acts || !warn) return;
     acts.innerHTML = '';
     warn.innerHTML = '';
-    if (!g || g.phase === 'gameover') return;
+    /* the blue panel NEVER goes dark (owner 2026-09-17): it stands on with
+       standing text and only the words ever change */
+    if (!g || g.phase === 'gameover') { warn.textContent = 'Game over.'; return; }
     if (g.phase === 'shiya') {
       warn.textContent = g.players[g.shiyaPending.caller].name + ' — Shiya window…';
       return;
@@ -1173,9 +1175,10 @@
       /* his turn, his business: NOTHING of the opponent's reflects in my
          ribbon — it lights up only when the turn is mine (owner's ruling) */
       if (tutorialMode && coachMsg) warn.appendChild(warnLine('coach', coachMsg));
+      else warn.textContent = 'Sipho is thinking…';
       return;
     }
-    if (!turnArmed) return;   // the turn is not live yet — no controls appear
+    if (!turnArmed) { warn.textContent = 'Your move.'; return; }   // the turn is not live yet — no controls appear
     /* the live confirmation: reminder + title in the bar, teaching in the zone */
     if (pendingConfirm && pendingConfirm.matches.length) {
       const m = pendingConfirm.matches;
@@ -1194,11 +1197,13 @@
           acts.appendChild(mkBtn(actionTitle(a), (i === 0 ? 'primary' : 'default') + ' small', () => confirmAction(i))));
       }
       acts.appendChild(mkBtn('Cancel', 'secondary small', cancelConfirm));
+      if (!warn.childNodes.length) warn.textContent = actionTitle(m[0]);
       return;
     }
     acts.appendChild(mkEndTurnBtn());
     const note = ruleNoteNow();
     if (note) warn.appendChild(warnLine('rule-note', note));
+    else warn.textContent = 'Your move.';
     if (tutorialMode && coachMsg) warn.appendChild(warnLine('coach', coachMsg));
     if (tutorialMode) appendTutorialHints(warn);
   }
@@ -1522,7 +1527,12 @@
     });
     g.builds.forEach((b, i) => { if (b.cards.length) buildFaces[i] = b.cards[b.cards.length - 1]; });
     g.players.forEach((p, s) => { pileTops[s] = p.pile.length ? p.pile[p.pile.length - 1] : null; });
-    return { cards, piles, builds, buildFaces, pileTops, buildRendered, pileTopRendered, table: g.table.slice() };
+    /* what each seat's chrome said BEFORE the move — a stand-in card must
+       wear the same stack edge, badge and lock the seat was wearing, or the
+       flight reads as the counter switching off (owner 2026-09-17) */
+    const pileLens = g.players.map((p) => p.pile.length);
+    const buildMeta = g.builds.map((b) => ({ value: b.value, count: b.cards.length, augmented: !!b.augmented }));
+    return { cards, piles, builds, buildFaces, pileTops, buildRendered, pileTopRendered, pileLens, buildMeta, table: g.table.slice() };
   }
   /* returns the landing delay for the played card (0 when nothing flies) */
   /* returns the TOTAL animation time — the table waits for all of it */
@@ -1589,18 +1599,19 @@
         /* one card or one whole stack (owner's law): the target joins under
            the played card, then both go to the pile together */
         const to = pileRect(actor);
-        let target = null, tRect = null;
+        let target = null, tRect = null, deco = null;
         if (a.scaffoldCap || (a.buildIds || []).length) {
           const idx = a.scaffoldCap ? a.buildIds[0] : a.buildIds[0];
           target = prev.buildFaces[idx];
           tRect = prev.builds[idx] || prev.cards[target];
+          deco = prev.buildMeta[idx];   /* the pinned stack keeps its badge and edge */
         } else if ((a.loose || []).length) {
           target = a.loose[0];
           tRect = prev.cards[target];
         }
         if (target && tRect && to) {
           parts.push({ id: a.card, rect: origin(a.card, to) });
-          parts.push({ id: target, rect: tRect });
+          parts.push({ id: target, rect: tRect, deco });
           dest = to;
         }
         break;
@@ -1627,7 +1638,7 @@
         const to = buildRectByValue(a.value);
         if (face && faceRect) {
           parts.push({ id: a.card, rect: origin(a.card, faceRect) });
-          parts.push({ id: face, rect: faceRect });
+          parts.push({ id: face, rect: faceRect, deco: prev.buildMeta[targetIdx] });
           dest = to;
         } else {
           parts.push({ id: a.card, rect: origin(a.card, to) });
@@ -1647,9 +1658,14 @@
         break;
       }
       case 'scaffold': {
-        const to = buildRectByValue(a.value);
+        /* the base HOLDS ITS GROUND (owner 2026-09-17): the combination
+           stacks up first — lowest onto higher — then the whole stack
+           travels to where the base stands and folds onto it. The
+           scaffold's lot IS the base's place; the base never relocates */
         const ids = (a.cards || []).concat([dug(a.victim)]);
-        collectInto(null, ids, to);
+        const baseRect = (a.base && (prev.cards[a.base] ||
+          (a.buildIdx != null ? prev.builds[a.buildIdx] : null))) || null;
+        collectInto(null, ids, baseRect || buildRectByValue(a.value), a.base || undefined);
         break;
       }
       case 'basetop': {
@@ -1687,10 +1703,25 @@
       if (cur) cur.style.visibility = 'hidden';
     });
     const pins = new Map();
+    /* a stand-in wears what the seat wore (owner 2026-09-17): stack edge,
+       value badge, lock — so the counter never switches off mid-flight */
+    const decorate = (el, deco) => {
+      if (!deco) return;
+      if (deco.count) el.style.boxShadow = stackShadow(deco.count);
+      if (deco.value != null) {
+        const badge = document.createElement('span');
+        badge.className = 'build-val';
+        badge.textContent = deco.value;
+        el.appendChild(badge);
+        if (deco.augmented) el.appendChild(Object.assign(document.createElement('span'),
+          { className: 'build-lock', textContent: '🔒' }));
+      }
+    };
     for (let i = 1; i < parts.length; i++) {
       const p = parts[i];
       const pin = cardEl(p.id);
       pin.style.visibility = 'visible';   /* a pin SHOWS the waiting card — the in-flight rule must not hide it */
+      decorate(pin, p.deco);
       Object.assign(pin.style, {
         position: 'fixed', margin: 0, zIndex: 55,
         left: p.rect.left + 'px', top: p.rect.top + 'px',
@@ -1704,9 +1735,10 @@
        arrivals is held by its previous top — unconditionally, from staging
        to reveal, so a pile never blanks mid-capture */
     const holders = [];
-    const makeHolder = (rect, oldId, z) => {
+    const makeHolder = (rect, oldId, z, deco) => {
       const pin = cardEl(oldId);
       pin.style.visibility = 'visible';
+      decorate(pin, deco);
       Object.assign(pin.style, {
         position: 'fixed', margin: 0, zIndex: z,
         left: rect.left + 'px', top: rect.top + 'px',
@@ -1720,10 +1752,12 @@
       const oldId = prev.pileTopRendered[seat];
       const top = box && box.querySelector('.pile-top');
       if (!box || !oldId || !top) return;
-      makeHolder(top.getBoundingClientRect(), oldId, 58);
+      /* the slant never collapses (owner 2026-09-17): the stand-in wears
+         the pile's edge, so a capture only ever thickens it at landing */
+      makeHolder(top.getBoundingClientRect(), oldId, 58, { count: prev.pileLens[seat] });
     };
     const holdDest = () => {
-      let boxSel = null, oldId = null;
+      let boxSel = null, oldId = null, deco = null;
       const buildSelByValue = (v) => {
         const b = g.builds.find((x) => x.value === v);
         return b ? '.build-box.has-build[data-idx="' + g.builds.indexOf(b) + '"]' : null;
@@ -1732,21 +1766,38 @@
           a.type === 'digfold' || a.type === 'edig' || a.type === 'caugment' || a.type === 'efold') {
         boxSel = bIdx != null ? '.build-box.has-build[data-idx="' + bIdx + '"]' : buildSelByValue(a.value);
         oldId = prev.buildRendered[a.buildIdx];
+        deco = prev.buildMeta[a.buildIdx];
       } else if (a.type === 'preg' && a.mergeInto != null) {
         /* a merge folds into the own-side live build — its seat is held */
         boxSel = buildSelByValue(a.value);
         oldId = prev.buildRendered[a.mergeInto];
+        deco = prev.buildMeta[a.mergeInto];
       }
       if (!boxSel || !oldId) return;
       const box = document.querySelector(boxSel);
       if (!box) return;
       const now = box.querySelector('.card[data-id]');
       if (!now || !flyingIds.has(now.dataset.id)) return;   // occupant visible — hold nothing
-      makeHolder(now.getBoundingClientRect(), oldId, 60);
+      makeHolder(now.getBoundingClientRect(), oldId, 60, deco);
     };
     if (a.type === 'capture') holdPile(actor);
     else if (a.type === 'endturn' && g.phase === 'gameover' && g.lastCapturer != null) holdPile(g.lastCapturer);
     else holdDest();
+    /* a founding stack's lot keeps its EMPTY look until the cards land
+       (owner 2026-09-17) — the counter appears only when the build arrives,
+       never before */
+    const arriving = [];
+    if (a.type === 'build' || a.type === 'basetop') {
+      const V = (a.type === 'basetop') ? C.rank(a.card) : a.value;
+      const b = g.builds.find((x) => x.value === V && x.owner === actor && !x.scaffold);
+      if (b) {
+        const box = document.querySelector('.build-box.has-build[data-idx="' + g.builds.indexOf(b) + '"]');
+        if (box) { box.classList.add('arriving'); arriving.push(box); }
+      }
+    } else if (a.type === 'scaffold') {
+      const box = document.querySelector('.build-box.scaffold');
+      if (box) { box.classList.add('arriving'); arriving.push(box); }
+    }
 
     /* the carrier: a perfect stack of ghosts — joiners slot BENEATH, so the
        mover rides on top (owner's rule) */
@@ -1790,6 +1841,7 @@
       settle.done = true;
       carrier.forEach((gh) => gh.el.remove());
       holders.forEach((h) => h.remove());
+      arriving.forEach((el) => el.classList.remove('arriving'));   /* the lot lights up as the stack lands */
       for (const p of parts) {
         flyingIds.delete(p.id);
         const cur = document.querySelector('#screen-game .card[data-id="' + p.id + '"]:not(.flying)');
@@ -1810,12 +1862,18 @@
           if (carrier[0].el.parentNode === layer) layer.insertBefore(gh.el, carrier[0].el);
           else layer.appendChild(gh.el);
           carrier.unshift(gh);
-          /* the travelling stack is always SORTED (owner 2026-09-16):
-             highest at the bottom, lowest riding on top — when the 7
-             collects the 2, the 2 sits on the 7. The DOM order is the
-             paint order, so the ghosts re-stack by rank at rest */
-          carrier.slice().sort((x, y) => C.rank(y.id) - C.rank(x.id))
-            .forEach((cgh) => layer.appendChild(cgh.el));
+          /* the travelling stack of a COLLECTION is always SORTED (owner
+             2026-09-16): highest at the bottom, lowest riding on top — when
+             the 7 collects the 2, the 2 sits on the 7. The DOM order is the
+             paint order, so the ghosts re-stack by rank at rest.
+             A CAPTURE keeps the other law (owner 2026-09-17): the played
+             card rides ON TOP of what it takes, whatever the ranks — the
+             sort would bury a 10 under a build's low face card */
+          if (['build', 'scaffold', 'augment', 'dig', 'digfold', 'edig',
+               'caugment', 'efold', 'basetop'].includes(a.type)) {
+            carrier.slice().sort((x, y) => C.rank(y.id) - C.rank(x.id))
+              .forEach((cgh) => layer.appendChild(cgh.el));
+          }
           i++;
           setTimeout(nextHop, pause);
         });
