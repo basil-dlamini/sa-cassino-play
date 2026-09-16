@@ -2332,6 +2332,16 @@
       saveSession();
       newGame({ demo: m[1] === 'demo' });
     }
+
+    /* the version marker (owner 2026-09-16): read from the LOADED assets
+       themselves — a stale page shows a stale number, and we never again
+       guess which build a phone is running */
+    const vsrc = (document.querySelector('script[src*="js/ui.js?v="]') || {}).src || '';
+    const vm = vsrc.match(/v=(\d+)/);
+    const badge = document.createElement('div');
+    badge.id = 'ver-badge';
+    badge.textContent = 'v' + (vm ? vm[1] : '?');
+    document.body.appendChild(badge);
   }
 
   root.UI = { init, toast };
