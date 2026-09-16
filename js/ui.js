@@ -1536,9 +1536,9 @@
     };
     const pileRect = (seat) => rectOf('.pile-box[data-seat="' + seat + '"]');
     /* your cards lift from your hand. An AI's hand is never rendered — their
-       cards SLIDE IN FROM THE TOP: out of their banner at the middle top of
-       the screen, down into the play area; tables without a single banner
-       use the top-centre itself */
+       cards ENTER FROM OUTSIDE the top of the screen (owner 2026-09-16):
+       born fully above the edge — over the banner at the middle top — then
+       seen sliding down into the play area */
     const origin = (id, to) => {
       if (prev.cards[id]) return prev.cards[id];
       const w = (to && to.width) || 60, h = (to && to.height) || 84;
@@ -1549,7 +1549,7 @@
       }
       const sg = $('screen-game').getBoundingClientRect();
       if (cx == null) { cx = sg.left + sg.width / 2; top = sg.top; }
-      return { left: cx - w / 2, top: top, width: w, height: h };
+      return { left: cx - w / 2, top: top - h, width: w, height: h };   /* fully above the edge — it enters, it does not appear */
     };
     const bIdx = (a.buildIdx != null && g.builds[a.buildIdx]) ? a.buildIdx : null;
 
@@ -1656,6 +1656,15 @@
     /* every card hides from the renders while its journey plays — the table
        shows pins where each waiting card lay */
     parts.forEach((p) => flyingIds.add(p.id));
+    /* and hidden NOW: the table WAITS during the chain, so no redraw will
+       ever apply the rule — without this act the played card renders at its
+       destination in the post-move redraw and the flight reads as a teleport
+       (the owner's report 2026-09-16). The card exists only as its flying
+       ghost until it lands */
+    parts.forEach((p) => {
+      const cur = document.querySelector('#screen-game .card[data-id="' + p.id + '"]:not(.flying)');
+      if (cur) cur.style.visibility = 'hidden';
+    });
     const pins = new Map();
     for (let i = 1; i < parts.length; i++) {
       const p = parts[i];
