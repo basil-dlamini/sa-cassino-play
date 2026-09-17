@@ -1643,18 +1643,26 @@
       case 'preg': {
         /* a true chain (owner 2026-09-16): the hand card flies ONTO the
            target build where it stands, they combine, and the whole stack
-           travels to the pregger's area — no teleporting builds. A preg can
-           also fold in a SILENT base (absorbBases) — the base pins where it
-           lies and the stack collects it last (owner 2026-09-17) */
-        const targetIdx = (a.mergeInto != null) ? a.mergeInto : a.buildIdx;
+           travels to the pregger's area — no teleporting builds. A MERGE
+           landing obeys the same law (owner 2026-09-17): the stop is the
+           PREGGED build, never the destination — the pregged stack is part
+           of the journey, it does not teleport into the survivor. The sort
+           lands at the combine beat (owner's ruling 2026-09-17): cards
+           combine, THEN sort lowest-on-top, THEN fly as one stack. A preg
+           can also fold in a SILENT base (absorbBases — a rise only, never
+           a merge): the base pins where it lies and the stack collects it
+           last */
+        const targetIdx = a.buildIdx;
         const face = prev.buildFaces[targetIdx];
         const faceRect = prev.builds[targetIdx] || (face ? prev.cards[face] : null);
         const to = buildRectByValue(a.value);
         if (face && faceRect) {
           parts.push({ id: a.card, rect: origin(a.card, faceRect) });
           parts.push({ id: face, rect: faceRect, deco: prev.buildMeta[targetIdx] });
-          for (const b of prev.table) {
-            if (C.rank(b) === a.value && prev.cards[b]) parts.push({ id: b, rect: prev.cards[b] });
+          if (a.mergeInto == null) {
+            for (const b of prev.table) {
+              if (C.rank(b) === a.value && prev.cards[b]) parts.push({ id: b, rect: prev.cards[b] });
+            }
           }
           dest = to;
         } else {
@@ -1936,11 +1944,13 @@
           /* the travelling stack of a COLLECTION is always SORTED (owner
              2026-09-16): highest at the bottom, lowest riding on top — when
              the 7 collects the 2, the 2 sits on the 7. The DOM order is the
-             paint order, so the ghosts re-stack by rank at rest.
+             paint order, so the ghosts re-stack by rank at rest. A PREG
+             joins this law (owner 2026-09-17): the sort lands AT the combine
+             beat — cards combine, sort, then fly as one stack.
              A CAPTURE keeps the other law (owner 2026-09-17): the played
              card rides ON TOP of what it takes, whatever the ranks — the
              sort would bury a 10 under a build's low face card */
-          if (['build', 'scaffold', 'augment', 'dig', 'digfold', 'edig',
+          if (['build', 'scaffold', 'augment', 'dig', 'preg', 'digfold', 'edig',
                'caugment', 'efold', 'basetop'].includes(a.type)) {
             carrier.slice().sort((x, y) => C.rank(y.id) - C.rank(x.id))
               .forEach((cgh) => layer.appendChild(cgh.el));
