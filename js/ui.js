@@ -1798,13 +1798,16 @@
         oldId = prev.buildRendered[a.buildIdx];
         deco = prev.buildMeta[a.buildIdx];
       } else if (a.type === 'preg') {
-        /* EVERY preg's destination is held (owner 2026-09-17): the re-valued
-           box keeps its old face, badge and edge from take-off to landing —
-           the counter never goes dark, the number swaps at the landing beat */
-        const targetIdx = (a.mergeInto != null) ? a.mergeInto : a.buildIdx;
+        /* the destination keeps a face ONLY when it HAD one: a MERGE folds
+           into an existing build, so the survivor's box keeps its old face,
+           badge and edge from take-off to landing. A preg that changes hands
+           lands in a FOUNDING slot — no stand-in, or the pregged build's old
+           face appears in the pregger's area before the cards do (owner
+           2026-09-17: his Ace must never stand in Sipho's slot early) */
+        if (a.mergeInto == null) return;
         boxSel = buildSelByValue(a.value);
-        oldId = prev.buildRendered[targetIdx];
-        deco = prev.buildMeta[targetIdx];
+        oldId = prev.buildRendered[a.mergeInto];
+        deco = prev.buildMeta[a.mergeInto];
       }
       if (!boxSel || !oldId) return;
       const box = document.querySelector(boxSel);
@@ -1853,8 +1856,11 @@
       gateStrip(bIdx != null ? '.build-box.has-build[data-idx="' + bIdx + '"]' : buildBoxSelByValue(a.value),
         prev.buildCards[a.buildIdx]);
     else if (a.type === 'preg')
+      /* a merge reads the survivor's previous numbers until landing; a
+         change of hands is a FOUNDING — the strip waits, hidden, with the
+         cards (owner 2026-09-17) */
       gateStrip(buildBoxSelByValue(a.value),
-        prev.buildCards[(a.mergeInto != null) ? a.mergeInto : a.buildIdx]);
+        a.mergeInto != null ? prev.buildCards[a.mergeInto] : []);
     /* founding slots (build, basetop, scaffold) are covered by the arriving
        gate — their strips surface with the box at landing */
     if (a.victim != null && a.type !== 'capture') gateStrip(pileBoxSel(a.victim), prev.pileCards[a.victim]);
@@ -1862,6 +1868,9 @@
        (owner 2026-09-17) — the counter appears only when the build arrives,
        never before */
     const arriving = [];
+    /* cards hidden OUTSIDE the flight cast — the landing gate restores them
+       with everything else at the settle beat */
+    const hiddenExtras = [];
     if (a.type === 'build' || a.type === 'basetop') {
       const V = (a.type === 'basetop') ? C.rank(a.card) : a.value;
       const b = g.builds.find((x) => x.value === V && x.owner === actor && !x.scaffold);
@@ -1872,6 +1881,22 @@
     } else if (a.type === 'scaffold') {
       const box = document.querySelector('.build-box.scaffold');
       if (box) { box.classList.add('arriving'); arriving.push(box); }
+    } else if (a.type === 'preg' && a.mergeInto == null) {
+      /* a change-of-hands preg FOUNDS its landing slot (owner 2026-09-17):
+         the empty founding look holds until the stack arrives — no face, no
+         strip, nothing early. The risen stack's rendered face waits too,
+         even when it is a card the flight never carries (a buried card the
+         re-sort surfaced) */
+      const bsel = buildBoxSelByValue(a.value);
+      const box = bsel && document.querySelector(bsel);
+      if (box) {
+        box.classList.add('arriving'); arriving.push(box);
+        const c = box.querySelector('.card[data-id]');
+        if (c && c.style.visibility !== 'hidden') {
+          c.style.visibility = 'hidden';
+          hiddenExtras.push(c);
+        }
+      }
     }
 
     /* the carrier: a perfect stack of ghosts — joiners slot BENEATH, so the
@@ -1917,6 +1942,7 @@
       carrier.forEach((gh) => gh.el.remove());
       holders.forEach((h) => h.remove());
       arriving.forEach((el) => el.classList.remove('arriving'));   /* the lot lights up as the stack lands */
+      hiddenExtras.forEach((c) => { c.style.visibility = ''; });   /* the gate's own hidden cards land with it */
       pendingStrips.forEach((s) => {   /* the count lands with the cards */
         if (s.text != null) s.el.textContent = s.text;
         else if (s.show) s.el.style.display = '';
