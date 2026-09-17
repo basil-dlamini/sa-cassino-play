@@ -1539,8 +1539,10 @@
     return { cards, piles, builds, buildFaces, pileTops, buildRendered, pileTopRendered, pileLens, buildMeta, pileCards, buildCards, table: g.table.slice() };
   }
   /* returns the landing delay for the played card (0 when nothing flies) */
-  /* returns the TOTAL animation time — the table waits for all of it */
-  function playMotion(prev, a, actor) {
+  /* returns the TOTAL animation time — the table waits for all of it.
+     onCatch, when given, fires at the FIRST collection — for a capture,
+     the beat the played card lands on what it takes */
+  function playMotion(prev, a, actor, onCatch) {
     const dur = motionDur();
     const pause = 70;   /* a breath between hops so each collection reads */
     const rectOf = (sel) => { const el = document.querySelector(sel); return el ? el.getBoundingClientRect() : null; };
@@ -1981,6 +1983,10 @@
             carrier.slice().sort((x, y) => C.rank(y.id) - C.rank(x.id))
               .forEach((cgh) => layer.appendChild(cgh.el));
           }
+          /* the capture speaks at the CATCH (owner 2026-09-17): the instant
+             the capturing card lands on the card or stack it takes — in the
+             same task as the collect itself, not later at the pile */
+          if (i === 1 && onCatch) onCatch();
           i++;
           setTimeout(nextHop, pause);
         });
@@ -2028,15 +2034,21 @@
     /* the cards tell their journey — and the table's own voice lands WITH
        the card (owner 2026-09-15): your moves at full presence, the AI's a
        touch quieter. A capture ALWAYS speaks as a capture (the owner's
-       recording) — the sweep sound belongs to the end-of-game sweep alone */
-    const landAt = playMotion(prev, a, actor);
+       recording) — the sweep sound belongs to the end-of-game sweep alone.
+       The capture's voice is the CATCH itself (owner 2026-09-17): it kicks
+       in the instant the capturing card lands on the card or cards being
+       captured — the chain hands it to playMotion, which fires it in the
+       same task as the collect */
     const q = (opts && opts.human) ? 1 : 0.45;
+    let captureSpoken = false;   /* the catch beat owns the capture's voice — never twice */
+    const captureBeat = () => { if (!captureSpoken) { captureSpoken = true; Snd.capture(q); } };
     const fire = () => {
-      if (a.type === 'capture') Snd.capture(q);
+      if (a.type === 'capture') captureBeat();
       else if (a.type === 'build' || a.type === 'augment' || a.type === 'preg') Snd.build(q);
       else if (a.type === 'dig' || a.type === 'topdig') Snd.steal(q);
       else if (a.type === 'discard') Snd.drift(q);
     };
+    const landAt = playMotion(prev, a, actor, a.type === 'capture' ? captureBeat : null);
     if (landAt > 0) {
       /* the whole chain plays out; the table — next move and input alike —
          waits for the cards to settle (owner's ruling 2026-09-15) */
