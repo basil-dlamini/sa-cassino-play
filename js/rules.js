@@ -257,7 +257,10 @@
 
     /* scaffold lock: the stack stands in the discard area owing resolution.
        Capture it with the held value, or graduate it by topping — a top
-       founds a registered build, so only while owning none */
+       founds a registered build, so only while owning none. EVERY copy of
+       the value carries the top (the every-copy law): the player taps the
+       actual card, so any held 9 must top exactly like the first (the
+       2026-09-18 report — the top hid behind one lucky card) */
     if (!g.turnUsed && scaffold) {
       const si = idxOf(scaffold);
       const heldV = P.hand.filter((h) => C.rank(h) === scaffold.value);
@@ -266,8 +269,10 @@
         if (cardUseLegal(g, me, card, cap)) acts.push(cap);
       }
       if (heldV.length >= 2 && buildsOwned(g, me) === 0) {
-        const top = { type: 'augment', buildIdx: si, card: heldV[0], loose: [], method: 'top' };
-        if (cardUseLegal(g, me, heldV[0], top)) acts.push(top);
+        for (const card of heldV) {
+          const top = { type: 'augment', buildIdx: si, card, loose: [], method: 'top' };
+          if (cardUseLegal(g, me, card, top)) acts.push(top);
+        }
       }
     }
 

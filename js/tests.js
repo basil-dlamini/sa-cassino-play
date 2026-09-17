@@ -1124,6 +1124,25 @@
     eq(g.builds[0].owner, 0, 'mine to capture later');
   });
 
+  test('EVERY COPY tops the scaffold (owner\'s report 2026-09-18): the 8+1 of 9 with two 9s held — tapping EITHER 9 must offer the top', () => {
+    const g = mkState(2, { table: ['H8', 'S1'] });
+    g.players[0].hand = ['H9', 'D2', 'S9'];   // deal order: the 9♥ FIRST — the hidden pin
+    g.players[1].hand = ['H5'];
+    const sc = R.legalActions(g).find((a) => a.type === 'scaffold' && a.value === 9);
+    R.applyAction(g, sc);
+    const acts = R.legalActions(g);
+    for (const nine of ['H9', 'S9']) {
+      assert(acts.some((a) => a.type === 'augment' && a.method === 'top' && a.card === nine),
+        'the top must ride on ' + nine + ' too, not just the first card in hand order');
+      assert(acts.some((a) => a.scaffoldCap && a.card === nine), 'and so must the capture');
+    }
+    // topping with the SECOND 9 graduates exactly like the first
+    R.applyAction(g, acts.find((a) => a.method === 'top' && a.card === 'S9'));
+    eq(g.builds[0].scaffold, false, 'graduated');
+    eq(g.builds[0].owner, 0, 'mine to capture later');
+    eq(g.players[0].hand.includes('H9'), true, 'the spare stayed in hand');
+  });
+
   test('SCENARIO B (revised): his pile-top 8 lands on the loose base 8 — a two-card build', () => {
     const g = mkState(2, { table: ['S8', 'H4'] });
     g.players[0].hand = ['D8'];
