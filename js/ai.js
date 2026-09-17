@@ -217,6 +217,26 @@
       return { type: 'skip' };
     }
 
+    /* THE NEGLECT CLAIM (owner's law 2026-09-18): the previous player left a
+       legal augment unmade — I may execute it in his name, free, before any
+       move of my own. A claim never changes the build's value, so it is a
+       punish exactly when I can capture the fattened build THIS turn (I hold
+       its value and no two-build force bars the capture). The chain then
+       re-enters here claim by claim; when the claims run dry my normal
+       ranking takes the fat build. No capture available — the neglect stands:
+       playing on closes the window, by the owner's ruling. */
+    const claims = acts.filter((a) => a.claim);
+    if (claims.length) {
+      const me0 = g.turn;
+      for (const c of claims) {
+        const b = (c.type === 'preg') ? g.builds[c.mergeInto] : g.builds[c.buildIdx];
+        if (!b) continue;
+        const canTake = g.players[me0].hand.some((h) => C.rank(h) === b.value) &&
+          R.buildsOwned(g, me0) < 2;
+        if (canTake) return c;
+      }
+    }
+
     const me = g.turn;
     let w = PERSONALITIES[g.players[me].personality] || PERSONALITIES.naledi;
     const info = assess(g, me);

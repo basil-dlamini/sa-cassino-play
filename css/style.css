@@ -361,6 +361,16 @@ small { opacity: .75; }
 }
 .confirm-row { display: flex; gap: 7px; align-items: center; }
 
+/* the neglect claim (owner's law 2026-09-18): a quiet amber entry among the
+   choices — never an alert, it waits to be tapped */
+.btn.claim-btn {
+  background: rgba(176, 122, 28, .32);
+  border-color: rgba(240, 200, 120, .55);
+}
+.btn.claim-btn:hover { background: rgba(196, 144, 44, .45); }
+#bar-acts.multi { flex-wrap: wrap; justify-content: flex-end; }
+#bar-acts .btn.claim-btn { color: #f7e3b2; }
+
 /* --- my areas (right) + my bar + overlapping hand --- */
 #my-areas {
   display: flex; justify-content: flex-end; align-items: flex-end; gap: 8px;

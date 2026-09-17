@@ -119,6 +119,8 @@
       resolved: false,       // the capture-or-top owed for a cardless opening
       capturedThisTurn: false, // a capture closes the taking — End Turn only
       correctable: null,       // a first-move discard still live: {seat, card, unmark}
+      pendingClaimDiscard: null, // the discard that stood, as the claim anchor
+      claim: null,             // neglect window: {neglecter, discard} while open
       stock: [],
       table: [],
       builds: [],            // live builds: {value, cards, owner, augmented}
@@ -320,7 +322,8 @@
       /* ---- two-build force: only captures taking at least one own build ---- */
       if (buildsOwned(g, me) >= 2) {
         return acts.filter((a) => a.buildIds.some((idx) => g.builds[idx].owner === me))
-          .concat(cardlessMoves(g, me, idxOf).filter((m) => m.type === 'topdig'));
+          .concat(cardlessMoves(g, me, idxOf).filter((m) => m.type === 'topdig'))
+          .concat(g.claim ? claimMoves(g, g.claim.neglecter, g.claim.discard) : []);
       }
 
       /* ---- discard ---- */
@@ -492,6 +495,13 @@
     {
       const cm = cardlessMoves(g, me, idxOf);
       acts.push(...(buildsOwned(g, me) >= 2 ? cm.filter((m) => m.type === 'topdig') : cm));
+    }
+
+    /* ---- the neglect claim window (owner's law 2026-09-18): the previous
+       player's neglected augments, executable in his name, free of debt —
+       offered first, closed forever by any move of the claimer's own ---- */
+    if (g.claim && g.claim.neglecter != null) {
+      acts.push(...claimMoves(g, g.claim.neglecter, g.claim.discard));
     }
 
     /* ---- end turn gate: hand card spent, no scaffold live, no enemy-fold
@@ -695,6 +705,161 @@
     return false;
   }
 
+  /* ================= THE NEGLECT CLAIM (owner's law 2026-09-18) =================
+     Augmenting a build is OBLIGATED. Founding builds, capturing, discarding —
+     free choices, never claimable. But a player who ends a turn while a legal
+     augment of a build on their own side was available has NEGLECTED it, and
+     the next player (an enemy — the claim punishes the neglecter's side) may
+     execute that move in the neglecter's name:
+       - the hand-card augments the turn's DISCARD could have made (combine,
+         dig, dig-fold, three-source) — anchored on the card left loose;
+       - the merge-preg the discard could have made (an enemy virgin build
+         folding into the neglecter's own live build);
+       - the CARDLESS augments available when the turn ended: table folds,
+         pile-top digs and mixed folds (the chain digs uncovered tops).
+     Public cards only — the discard, the table, the pile tops. Never a card
+     hidden in the neglecter's hand (one hand card per turn already spent, and
+     the claimer may not know hidden cards). The claim creates no debt and no
+     lock for anyone: the cards move exactly as the neglecter's move would
+     have moved them, ownership unchanged. Claims are free — the claimer's
+     own hand card and turn are untouched — but they must come FIRST: the
+     first move of the claimer's own closes the window for good. */
+  function claimMoves(g, E, discard) {
+    if (E == null || g.phase === 'gameover') return [];
+    const out = [];
+    /* the anchor card: the standing discard, still loose where it lies */
+    const c = (discard != null && g.table.indexOf(discard) >= 0) ? discard : null;
+    const r = c ? C.rank(c) : 0;
+    /* the neglecter could never fold his own live discard as a table card —
+       the card-down rule locked cardless moves until it was used */
+    const others = c ? g.table.filter((t) => t !== c) : g.table;
+    const top = (seat) => {
+      const p = g.players[seat].pile;
+      return p.length ? p[p.length - 1] : null;
+    };
+    for (const b of g.builds) {
+      if (b.scaffold || !sameSide(g, b.owner, E)) continue;   // own-side builds only
+      const bi = g.builds.indexOf(b);
+      /* hand-anchored: the discard as the turn's hand card */
+      if (c && r < b.value) {
+        for (const sub of allSubsets(others, b.value - r, 6)) {
+          out.push({ type: 'augment', buildIdx: bi, card: c, loose: sub, method: 'combine', claim: true });
+        }
+        for (let seat = 0; seat < g.numPlayers; seat++) {
+          if (sameSide(g, seat, E)) continue;
+          const pt = top(seat);
+          if (!pt) continue;
+          const rest = b.value - r - C.rank(pt);
+          if (rest === 0) {
+            out.push({ type: 'augment', buildIdx: bi, card: c, loose: [], victim: seat, method: 'combine', claim: true });
+          } else if (rest > 0) {
+            for (const sub of allSubsets(others, rest, 6)) {
+              out.push({ type: 'augment', buildIdx: bi, card: c, loose: sub, victim: seat, method: 'combine', claim: true });
+            }
+          }
+        }
+      }
+      if (c && 2 * r === b.value) {
+        for (let seat = 0; seat < g.numPlayers; seat++) {
+          if (sameSide(g, seat, E)) continue;
+          const pt = top(seat);
+          if (pt && C.rank(pt) === r) {
+            out.push({ type: 'augment', buildIdx: bi, card: c, victim: seat, method: 'dig', claim: true });
+          }
+        }
+      }
+      /* cardless: table folds, pile-top digs, mixed folds — from the neglecter's seat */
+      for (const sub of allSubsets(others, b.value, 6)) {
+        out.push({ type: 'caugment', buildIdx: bi, loose: sub, claim: true });
+      }
+      for (let seat = 0; seat < g.numPlayers; seat++) {
+        if (sameSide(g, seat, E)) continue;
+        const pt = top(seat);
+        if (!pt) continue;
+        if (C.rank(pt) === b.value) out.push({ type: 'topdig', buildIdx: bi, victim: seat, claim: true });
+        const rest = b.value - C.rank(pt);
+        if (rest > 0) {
+          for (const sub of allSubsets(others, rest, 6)) {
+            out.push({ type: 'digfold', buildIdx: bi, victim: seat, loose: sub, claim: true });
+          }
+        }
+      }
+    }
+    /* the refused merge-preg: the discard onto an enemy virgin build, folding
+       into the neglecter's own live build of the landing value */
+    if (c) {
+      for (const e of g.builds) {
+        if (e.scaffold || e.augmented || sameSide(g, e.owner, E)) continue;
+        const V = e.value + r;
+        if (V > 10) continue;
+        const liveV = g.builds.find((x) => x !== e && !x.scaffold && x.value === V && sameSide(g, x.owner, E));
+        if (liveV) {
+          out.push({ type: 'preg', buildIdx: g.builds.indexOf(e), card: c, value: V, mergeInto: g.builds.indexOf(liveV), claim: true });
+        }
+      }
+    }
+    return out.slice(0, 10);   /* a bounded, honest menu — richest first by construction order */
+  }
+
+  /* Executing a claimed move: the cards travel exactly as the neglecter's own
+     move would have carried them — same stacking, same pile-order laws — but
+     nothing is owed. No hand card is spent, no debt, no lock: the claimer's
+     turn stands untouched, ready for his own moves after the window. */
+  function applyClaim(g, a) {
+    const E = g.claim ? g.claim.neglecter : null;
+    const claimer = g.players[g.turn];
+    const ename = E != null ? names(g, E) : 'the opponent';
+    const b = a.buildIdx != null ? g.builds[a.buildIdx] : null;
+    if (a.type === 'augment') {
+      removeFromTable(g, [a.card].concat(a.loose || []));
+      const set = [a.card].concat(a.loose || []);
+      let dugFrom = '';
+      if (a.victim != null) {
+        const dugId = g.players[a.victim].pile.pop();
+        set.push(dugId);
+        dugFrom = ' and digs ' + C.label(dugId) + ' from ' + names(g, a.victim) + '\u2019s pile';
+      }
+      b.cards.push(...sortDesc(set));
+      b.augmented = true;
+      addLog(g, a.victim != null ? 'steal' : 'build',
+        act(claimer, 'claims', 'claim') + ' ' + ename + '\u2019s neglected move — folds ' + C.label(a.card) +
+        ((a.loose || []).length ? ' + ' + fmt(sortDesc(a.loose)) : '') + dugFrom + ' into the ' + b.value + '-build.');
+    } else if (a.type === 'preg') {
+      const live = g.builds[a.mergeInto];
+      removeFromTable(g, [a.card]);
+      live.cards.push(...sortDesc([a.card].concat(b.cards)));
+      live.augmented = true;
+      g.builds.splice(a.buildIdx, 1);
+      addLog(g, 'build',
+        act(claimer, 'claims', 'claim') + ' ' + ename + '\u2019s neglected move — pregs the ' + b.value + '-build into ' +
+        names(g, live.owner) + '\u2019s ' + a.value + '-build.');
+    } else if (a.type === 'caugment') {
+      removeFromTable(g, a.loose);
+      b.cards.push(...sortDesc(a.loose));
+      b.augmented = true;
+      addLog(g, 'build',
+        act(claimer, 'claims', 'claim') + ' ' + ename + '\u2019s neglected move — folds ' + fmt(sortDesc(a.loose)) + ' into the ' + b.value + '-build.');
+    } else if (a.type === 'topdig') {
+      const dugId = g.players[a.victim].pile.pop();
+      b.cards.push(dugId);
+      b.augmented = true;
+      addLog(g, 'steal',
+        act(claimer, 'claims', 'claim') + ' ' + ename + '\u2019s neglected move — digs ' + C.label(dugId) + ' from ' +
+        names(g, a.victim) + '\u2019s pile into the ' + b.value + '-build.');
+    } else if (a.type === 'digfold') {
+      const dugId = g.players[a.victim].pile.pop();
+      removeFromTable(g, a.loose);
+      b.cards.push(...sortDesc([dugId].concat(a.loose)));
+      b.augmented = true;
+      addLog(g, 'steal',
+        act(claimer, 'claims', 'claim') + ' ' + ename + '\u2019s neglected move — digs ' + C.label(dugId) + ' from ' +
+        names(g, a.victim) + '\u2019s pile with ' + fmt(sortDesc(a.loose)) + ' into the ' + b.value + '-build.');
+    } else {
+      throw new Error('unknown claim');
+    }
+    /* the window stays open — legalActions recomputes the chain on the new board */
+  }
+
   /* ---------- applying actions ---------- */
   function takeFromHand(p, card) {
     const i = p.hand.indexOf(card);
@@ -715,6 +880,11 @@
     if (!legal) throw new Error('illegal action: ' + JSON.stringify(a));
     g.actionCount++;
     const me = g.players[g.turn];
+    const stoodDiscard = g.correctable;   /* read before the window closes below */
+
+    /* THE NEGLECT CLAIM window (owner's law 2026-09-18): claims come first,
+       and the first move of the player's own closes the window for good */
+    if (g.claim && !a.claim) g.claim = null;
 
     /* the Card down rule made real: using the live discarded card pulls it off
        the table as if it had never left the hand — the discard it replaces
@@ -742,9 +912,13 @@
     if (a.type === 'shiya') { applyShiya(g); return; }
 
     if (a.type === 'endturn') {
+      /* the discard that stands (if any) becomes the claim window's anchor */
+      g.pendingClaimDiscard = (stoodDiscard && stoodDiscard.seat === me.id) ? stoodDiscard.card : null;
       advance(g);
       return;
     }
+
+    if (a.claim) { applyClaim(g, a); return; }   // free of debt, free of the hand card
 
     if (a.type === 'topdig') {
       const b = g.builds[a.buildIdx];
@@ -1086,12 +1260,23 @@
       if (g.stock.length > 0) dealWave(g);
       else { endGame(g); return; }
     }
+    const E = g.turn;                        // the player whose turn just ended
+    const discard = g.pendingClaimDiscard || null;
+    g.pendingClaimDiscard = null;
     g.turn = (g.turn + 1) % g.numPlayers;
     g.turnUsed = false;          // fresh turn: the one hand card is unspent
     g.openedCardless = false;    // and no cardless debt carries over
     g.resolved = false;
     g.capturedThisTurn = false;
     g.correctable = null;        // the discard stood — its window is closed
+    /* THE NEGLECT CLAIM window (owner's law 2026-09-18): the next player may
+       execute the neglecter's skipped augments — but only an enemy polices;
+       a partner would simply feed the shared build as his own move */
+    g.claim = null;
+    if (g.phase !== 'gameover' && !sameSide(g, E, g.turn) &&
+        claimMoves(g, E, discard).length) {
+      g.claim = { neglecter: E, discard: discard };
+    }
   }
 
   function endGame(g) {
@@ -1180,7 +1365,7 @@
   const Rules = {
     DEAL, createGame, legalActions, applyAction, scoreGame, isTeammate, sameSide, teammate,
     teamsOf, pileStats, canSum, allSubsets, sameAction, mulberry32,
-    maxSlots, buildsOwned, resolutionExists
+    maxSlots, buildsOwned, resolutionExists, claimMoves
   };
   root.Rules = Rules;
   if (typeof module !== 'undefined' && module.exports) module.exports = Rules;

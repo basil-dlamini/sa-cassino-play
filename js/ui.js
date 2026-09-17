@@ -720,8 +720,17 @@
 
   /* ---------------- select-then-confirm action model ---------------- */
   /* Short popup titles — the affirmation of the intended move, suits always
-     shown. Dig, preg and combine-augment all read "Build (sum)". */
+     shown. Dig, preg and combine-augment all read "Build (sum)". A claimed
+     move carries its claim on its face — you always know whose move it was. */
   function actionTitle(a) {
+    if (a.claim) {
+      const v = a.type === 'preg' ? a.value : (g.builds[a.buildIdx] || {}).value;
+      if (a.type === 'preg') return 'Claim: preg to ' + v;
+      if (a.type === 'topdig' || a.type === 'digfold') return 'Claim: dig into the ' + v + '-build';
+      if (a.type === 'caugment') return 'Claim: fold into the ' + v + '-build';
+      if (a.victim != null) return 'Claim: dig into the ' + v + '-build';
+      return 'Claim: fold ' + C.label(a.card) + ' into the ' + v + '-build';
+    }
     switch (a.type) {
       case 'capture': return 'Capture ' + C.label(a.card);
       case 'build':   return 'Build ' + a.value;
@@ -1228,9 +1237,25 @@
       if (!warn.childNodes.length) warn.textContent = actionTitle(m[0]);
       return;
     }
+    /* the neglect claim (owner's law 2026-09-18): his skipped augments sit
+       quietly among the choices — no alert, no popup until tapped. Playing
+       any move of your own closes the window for good */
+    const claims = humanActions.filter((a) => a.claim);
+    if (claims.length) {
+      const opp = g.players.find((p) => !R.sameSide(g, p.id, HUMAN));
+      const btn = mkBtn('Claim (' + claims.length + ')', 'small claim-btn', () => {
+        pendingConfirm = {
+          matches: claims,
+          reminder: (opp ? opp.name : 'The opponent') + ' left a move unmade — claim it, or play on and it stands.'
+        };
+        render();
+      });
+      acts.appendChild(btn);
+    }
     acts.appendChild(mkEndTurnBtn());
     const note = ruleNoteNow();
     if (note) warn.appendChild(warnLine('rule-note', note));
+    else if (claims.length) warn.textContent = 'A neglected move can be claimed.';
     else warn.textContent = 'Your move.';
     if (tutorialMode && coachMsg) warn.appendChild(warnLine('coach', coachMsg));
     if (tutorialMode) appendTutorialHints(warn);
@@ -1277,6 +1302,19 @@
       return;
     }
     if (isHumanTurn()) {
+      /* the neglect claim (owner's law 2026-09-18) — quiet, among the choices */
+      const claims = humanActions.filter((a) => a.claim);
+      if (claims.length) {
+        const opp = g.players.find((p) => !R.sameSide(g, p.id, HUMAN));
+        const cbtn = mkBtn('Claim a neglected move (' + claims.length + ')', 'claim-btn', () => {
+          pendingConfirm = {
+            matches: claims,
+            reminder: (opp ? opp.name : 'The opponent') + ' left a move unmade — claim it, or play on and it stands.'
+          };
+          render();
+        });
+        panel.appendChild(cbtn);
+      }
       /* End Turn lives here: ready once the gate is satisfied */
       panel.appendChild(mkEndTurnBtn());
       const note = ruleNoteNow();
@@ -1470,6 +1508,13 @@
   function aiNote(a) {
     const who = g.players[g.turn].name;
     const bVal = (a.buildIdx != null && g.builds[a.buildIdx]) ? g.builds[a.buildIdx].value : a.value;
+    if (a.claim) {
+      /* the neglect claim (owner's law 2026-09-18): his own words — he took
+         the move you left unmade */
+      if (a.type === 'preg') return who + ': claimed your neglected preg — merged into the ' + a.value + '-build.';
+      if (a.victim != null || a.victims) return who + ': claimed your neglected dig into the ' + bVal + '-build.';
+      return who + ': claimed your neglected fold into the ' + bVal + '-build.';
+    }
     switch (a.type) {
       case 'capture':   return who + ': captured with ' + C.label(a.card) + '.';
       case 'build':
@@ -2110,7 +2155,8 @@
     const fire = () => {
       if (a.type === 'capture') { captureBeat(); return; }
       if (dugIds.size && !stealSpoken.size) Snd.steal(q);   /* fallback — the flight never showed the dig */
-      if (a.type === 'build' || a.type === 'augment' || a.type === 'preg') Snd.build(q);
+      if (a.type === 'build' || a.type === 'augment' || a.type === 'preg' ||
+          (a.claim && (a.type === 'caugment' || a.type === 'digfold' || a.type === 'topdig'))) Snd.build(q);
       else if (a.type === 'discard') Snd.drift(q);
     };
     const catchCb = dugIds.size ? stealBeat : (a.type === 'capture' ? captureBeat : null);

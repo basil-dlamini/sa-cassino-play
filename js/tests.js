@@ -1455,6 +1455,179 @@
 
   /* ================= Shiya still works ================= */
 
+  /* ================= THE NEGLECT CLAIM (owner's law 2026-09-18) =================
+     Augmenting a build is obligated. A player who ends a turn while a legal
+     augment of an own-side build went unmade has neglected it: the next
+     player (an enemy) may execute that move in the neglecter's name — public
+     cards only, no debt, no lock, claims first, first own move closes the
+     window forever. Foundings are never obligated (the owner's ruling). */
+
+  test('NEGLECT: the refused combine — the standing discard anchors the claim', () => {
+    const g = mkState(2, { table: ['H3'], wave: 2 });
+    g.builds = [{ value: 7, cards: ['S3', 'H4'], owner: 0, augmented: false }];
+    g.players[0].hand = ['C4', 'D10'];
+    g.players[1].hand = ['S7'];
+    R.applyAction(g, { type: 'discard', card: 'C4' });   // the 4 could have folded 4+3 into the 7
+    R.applyAction(g, { type: 'endturn' });
+    assert(g.claim && g.claim.neglecter === 0, 'the window opened on the neglecter');
+    const cl = R.legalActions(g).filter((a) => a.claim && a.type === 'augment' && a.loose.join() === 'H3');
+    assert(cl.length === 1, 'the refused combine is claimable');
+    R.applyAction(g, cl[0]);
+    eq(g.builds[0].cards.join(), 'S3,H4,C4,H3', 'the discard + the loose 3 folded in, sorted on top');
+    eq(g.table.length, 0, 'nothing loose remains');
+    eq(g.turn, 1, 'the claim spent nobody\'s turn');
+    eq(g.turnUsed, false, 'and nobody\'s hand card');
+    eq(R.legalActions(g).filter((a) => a.claim).length, 0, 'the window offers nothing more');
+  });
+
+  test('NEGLECT: the refused dig — the claimer digs his OWN pile, then captures', () => {
+    const g = mkState(2, { table: [], wave: 2 });
+    g.builds = [{ value: 10, cards: ['S6', 'H4'], owner: 0, augmented: false }];
+    g.players[0].hand = ['C5'];
+    g.players[1].hand = ['S10'];
+    g.players[1].pile = ['H2', 'D5'];       // his top: 5♦
+    R.applyAction(g, { type: 'discard', card: 'C5' });   // the 5+5 dig was legal — refused
+    R.applyAction(g, { type: 'endturn' });
+    const cl = R.legalActions(g).filter((a) => a.claim && a.victim === 1);
+    assert(cl.length >= 1, 'the dig of his own pile is claimable');
+    R.applyAction(g, cl[0]);
+    eq(g.players[1].pile.join(), 'H2', 'his dug 5 left his pile');
+    eq(g.builds[0].cards.length, 4, 'the pair folded into the 10-build');
+    assert(!g.builds[0].captLock, 'the claim created no capture debt');
+    // the punish lands: he takes the fattened build with his own 10
+    const cap = R.legalActions(g).find((a) => a.type === 'capture' && (a.buildIds || []).length);
+    assert(cap, 'the fat build is his to capture');
+    R.applyAction(g, cap);
+    eq(g.players[1].pile.join(), 'H2,S6,H4,C5,D5,S10', 'everything walked into his pile');
+  });
+
+  test('NEGLECT: foundings are never claimable (establishing a build is not obligated)', () => {
+    const g = mkState(2, { table: ['H4'], wave: 2 });
+    g.players[0].hand = ['C6', 'D10'];
+    g.players[1].hand = ['S10'];
+    R.applyAction(g, { type: 'discard', card: 'C6' });   // 6+4 could have FOUNDED a 10
+    R.applyAction(g, { type: 'endturn' });
+    eq(g.claim, null, 'no own-side build was starved — no window at all');
+  });
+
+  test('NEGLECT: the chain — the owner\'s 5-2-3 pile dug with the 8 and the 7', () => {
+    const g = mkState(2, { table: ['S8', 'C7'], wave: 2 });
+    g.builds = [{ value: 10, cards: ['S6', 'H4'], owner: 0, augmented: false }];
+    g.players[0].hand = ['C5'];
+    g.players[1].hand = ['S10'];
+    g.players[1].pile = ['H3', 'H2', 'D5'];  // top down: 5♦, 2♥, 3♥
+    R.applyAction(g, { type: 'discard', card: 'C5' });   // the table becomes 5, 8, 7
+    R.applyAction(g, { type: 'endturn' });
+    let cl = R.legalActions(g).filter((a) => a.claim && a.victim === 1);
+    assert(cl.length, 'the hand-5 dig is claimable');
+    R.applyAction(g, cl[0]);
+    eq(g.players[1].pile.join(), 'H3,H2', 'the 5♦ left his pile');
+    cl = R.legalActions(g).filter((a) => a.claim && a.type === 'digfold' && a.victim === 1);
+    assert(cl.length && cl[0].loose.join() === 'S8', 'the uncovered 2 is claimable with the table 8');
+    R.applyAction(g, cl[0]);
+    cl = R.legalActions(g).filter((a) => a.claim && a.type === 'digfold' && a.victim === 1);
+    assert(cl.length && cl[0].loose.join() === 'C7', 'the uncovered 3 is claimable with the table 7');
+    R.applyAction(g, cl[0]);
+    eq(g.players[1].pile.join(), '', 'the chain emptied his pile');
+    eq(g.builds[0].cards.length, 8, 'the founding pair plus three dug pairs folded in');
+    eq(R.legalActions(g).filter((a) => a.claim).length, 0, 'the chain ends when nothing claimable remains');
+  });
+
+  test('NEGLECT: the window closes forever on the claimer\'s first own move', () => {
+    const g = mkState(2, { table: ['H3'], wave: 2 });
+    g.builds = [{ value: 7, cards: ['S3', 'H4'], owner: 0, augmented: false }];
+    g.players[0].hand = ['C4'];
+    g.players[1].hand = ['S2'];
+    R.applyAction(g, { type: 'discard', card: 'C4' });
+    R.applyAction(g, { type: 'endturn' });
+    assert(g.claim, 'window open');
+    R.applyAction(g, { type: 'discard', card: 'S2' });   // playing on instead of claiming
+    eq(g.claim, null, 'the first own move shut the window');
+    eq(R.legalActions(g).filter((a) => a.claim).length, 0, 'and the claim never returns');
+  });
+
+  test('NEGLECT: the refused merge-preg — the claim folds his build into yours', () => {
+    const g = mkState(2, { table: [], wave: 2 });
+    g.builds = [
+      { value: 10, cards: ['S6', 'H4'], owner: 0, augmented: false },
+      { value: 7, cards: ['C3', 'D4'], owner: 1, augmented: false }    // his virgin 7
+    ];
+    g.players[0].hand = ['H3'];
+    g.players[1].hand = ['S10'];
+    R.applyAction(g, { type: 'discard', card: 'H3' });   // 3+7=10 — the merge was legal, refused
+    R.applyAction(g, { type: 'endturn' });
+    const cl = R.legalActions(g).filter((a) => a.claim && a.type === 'preg');
+    assert(cl.length === 1 && cl[0].mergeInto === 0, 'the refused merge-preg is claimable');
+    R.applyAction(g, cl[0]);
+    eq(g.builds.length, 1, 'the 7-build folded away');
+    eq(g.builds[0].value, 10, 'the survivor is the 10');
+    eq(g.builds[0].cards.length, 5, '7-cards + your discarded 3 all inside');
+    assert(g.builds[0].augmented, 'the merge locked the survivor (honest state, no debt)');
+    const cap = R.legalActions(g).find((a) => a.type === 'capture' && (a.buildIds || []).length);
+    assert(cap, 'he captures the merged build with his 10');
+  });
+
+  test('NEGLECT: no claim may ever touch a card hidden in the hand', () => {
+    const g = mkState(2, { table: [], wave: 2 });
+    g.builds = [{ value: 10, cards: ['S6', 'H4'], owner: 0, augmented: false }];
+    g.players[0].hand = ['C5', 'D5'];
+    g.players[1].hand = ['S10'];
+    g.players[1].pile = ['H2', 'S5', 'D5'];  // two 5s stacked
+    R.applyAction(g, { type: 'discard', card: 'C5' });
+    R.applyAction(g, { type: 'endturn' });
+    const cl = R.legalActions(g).filter((a) => a.claim && a.victim === 1);
+    assert(cl.length, 'the first dig is claimable');
+    R.applyAction(g, cl[0]);
+    eq(R.legalActions(g).filter((a) => a.claim).length, 0, 'the second 5 in the hand is unreachable');
+    eq(g.players[0].hand.join(), 'D5', 'the hidden card stays hidden in hand');
+  });
+
+  test('NEGLECT: a capture turn that skipped a cardless dig still opens the window', () => {
+    const g = mkState(2, { table: ['H7'], wave: 2 });
+    g.builds = [{ value: 10, cards: ['S6', 'H4'], owner: 0, augmented: false }];
+    g.players[0].hand = ['C7'];
+    g.players[1].hand = ['S2'];
+    g.players[1].pile = ['H3', 'S10'];       // his top: the 10
+    R.applyAction(g, { type: 'capture', card: 'C7', loose: ['H7'], buildIds: [] });
+    R.applyAction(g, { type: 'endturn' });
+    assert(g.claim, 'the capture closed the turn but the neglected top-dig stands');
+    const cl = R.legalActions(g).filter((a) => a.claim && a.type === 'topdig');
+    assert(cl.length === 1, 'the 10 off his pile is claimable');
+    R.applyAction(g, cl[0]);
+    eq(g.builds[0].cards.join(), 'S6,H4,S10', 'the 10 joined the build');
+    eq(g.players[1].pile.join(), 'H3', 'and left his pile');
+  });
+
+  test('NEGLECT: four hands — the chain digs MULTIPLE opponents (owner\'s ruling)', () => {
+    const g = mkState(4, { table: ['S8', 'C7'], wave: 1 });
+    g.builds = [{ value: 10, cards: ['S6', 'H4'], owner: 0, augmented: false }];
+    g.players[0].hand = ['C5'];
+    g.players[1].hand = ['S2'];
+    g.players[2].hand = ['D2'];
+    g.players[3].hand = ['H2'];
+    g.players[1].pile = ['H3', 'D5'];       // seat 1 top: 5♦, then 3♥
+    g.players[3].pile = ['C3', 'H2'];       // seat 3 top: 2♥
+    R.applyAction(g, { type: 'discard', card: 'C5' });
+    R.applyAction(g, { type: 'endturn' });
+    eq(g.turn, 1, 'seat 1 follows — an enemy of the neglecter');
+    // claim 1: the discard 5 + seat 1's own pile-top 5
+    let cl = R.legalActions(g).filter((a) => a.claim && a.victim === 1 && (a.loose || []).length === 0);
+    assert(cl.length, 'the dig of his own pile is claimable');
+    R.applyAction(g, cl[0]);
+    // claim 2: seat 3's top 2 with the table 8 — a DIFFERENT opponent's pile
+    cl = R.legalActions(g).filter((a) => a.claim && a.type === 'digfold' && a.victim === 3);
+    assert(cl.length && cl[0].loose.join() === 'S8', 'the second opponent\'s pile joins the chain');
+    R.applyAction(g, cl[0]);
+    // claim 3: back to seat 1's uncovered 3, with the table 7
+    cl = R.legalActions(g).filter((a) => a.claim && a.type === 'digfold' && a.victim === 1);
+    assert(cl.length && cl[0].loose.join() === 'C7', 'the chain returns to the first pile');
+    R.applyAction(g, cl[0]);
+    eq(g.players[1].pile.join(), '', 'seat 1\'s pile emptied');
+    eq(g.players[3].pile.join(), 'C3', 'seat 3\'s top walked too');
+    eq(g.builds[0].cards.length, 8, 'three pairs dug into the 10-build');
+    eq(g.turn, 1, 'seat 1\'s own turn still waits, hand unspent');
+  });
+
   /* ================= fuzz ================= */
   test('fuzz: hundreds of full games honour every invariant on every move', () => {
     const configs = [
@@ -1462,7 +1635,7 @@
       { numPlayers: 3, games: 60 },
       { numPlayers: 4, games: 110 }
     ];
-    let totalGames = 0, totalMoves = 0, buildsSeen = 0, topsSeen = 0, digsSeen = 0, topdigsSeen = 0, scaffoldsSeen = 0, foldsSeen = 0, pregsSeen = 0, shiyasSeen = 0, forcesSeen = 0;
+    let totalGames = 0, totalMoves = 0, buildsSeen = 0, topsSeen = 0, digsSeen = 0, topdigsSeen = 0, scaffoldsSeen = 0, foldsSeen = 0, pregsSeen = 0, shiyasSeen = 0, forcesSeen = 0, claimsSeen = 0;
     for (const cfg of configs) {
       for (let seed = 1; seed <= cfg.games; seed++) {
         const players = [];
@@ -1496,6 +1669,19 @@
           }
           if (g.phase === 'play') {
             for (const a of acts) {
+              if (a.claim) {
+                /* THE NEGLECT CLAIM: the move belongs to the neglecter — the
+                   perspective invariants below describe moves of one's own */
+                const E = g.claim.neglecter;
+                const cb = a.type === 'preg' ? g.builds[a.mergeInto] : g.builds[a.buildIdx];
+                assert(cb && R.sameSide(g, cb.owner, E), 'claim into a build off the neglecter\'s side');
+                if (a.victim != null) assert(!R.sameSide(g, a.victim, E), 'claim digging the neglecter\'s own side');
+                if (a.card != null) assert(g.table.indexOf(a.card) >= 0, 'claim anchored on a card not on the table');
+                if (a.type === 'preg') {
+                  assert(!R.sameSide(g, g.builds[a.buildIdx].owner, E), 'claim preg on a non-enemy build');
+                }
+                continue;
+              }
               if (a.type === 'discard') {
                 assert(!vals.includes(C.rank(a.card)), 'discard of a live build value offered');
               }
@@ -1605,6 +1791,7 @@
             assert(!(g.builds.some((b) => b.scaffold) && g.turnUsed), 'scaffold outlived the hand card');
             // three-source combines: hand card + pile top + table set = the build's value
             for (const a of acts) {
+              if (a.claim) continue;   // the claim's own invariants live above
               if (a.type === 'augment' && a.method === 'combine' && a.victim != null && a.loose.length) {
                 const pt = g.players[a.victim].pile[g.players[a.victim].pile.length - 1];
                 eq(C.rank(a.card) + C.rank(pt) + a.loose.reduce((n, id) => n + C.rank(id), 0),
@@ -1679,6 +1866,7 @@
           if (pick.type === 'scaffold') scaffoldsSeen++;
           if (pick.type === 'caugment') foldsSeen++;
           if (pick.type === 'preg') pregsSeen++;
+          if (pick.claim) claimsSeen++;
           R.applyAction(g, pick);
 
           totalMoves++; steps++;
@@ -1701,7 +1889,7 @@
         totalGames++;
       }
     }
-    window.__FUZZ_STATS__ = { totalGames, totalMoves, buildsSeen, topsSeen, digsSeen, topdigsSeen, pregsSeen, shiyasSeen, forcesSeen };
+    window.__FUZZ_STATS__ = { totalGames, totalMoves, buildsSeen, topsSeen, digsSeen, topdigsSeen, pregsSeen, shiyasSeen, forcesSeen, claimsSeen };
     assert(buildsSeen > 200, 'fuzz barely touched builds');
     assert(digsSeen >= 1, 'dig never exercised');
     assert(pregsSeen >= 1, 'preg never exercised');
@@ -1722,7 +1910,7 @@
           window.__FUZZ_STATS__.buildsSeen + ' build-checks, ' + window.__FUZZ_STATS__.digsSeen + ' digs, ' +
           window.__FUZZ_STATS__.topdigsSeen + ' pile-top digs, ' +
           window.__FUZZ_STATS__.pregsSeen + ' pregs, ' + window.__FUZZ_STATS__.shiyasSeen + ' shiyas, ' +
-          window.__FUZZ_STATS__.forcesSeen + ' two-build forces'
+          window.__FUZZ_STATS__.forcesSeen + ' two-build forces, ' + window.__FUZZ_STATS__.claimsSeen + ' neglect claims'
         : '') +
       '</div>' +
       results.map((r) =>
