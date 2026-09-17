@@ -607,6 +607,8 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
   background: rgba(0,0,0,.16) !important;
   box-shadow: none !important;
 }
+/* a founding slot's numbers wait with its cards (owner 2026-09-18) */
+.build-box.arriving .pile-stats { display: none; }
 .btn.dimmed { opacity: .55; }
 #table-cards .grid-cell.can-drop { cursor: pointer; border-color: rgba(244,239,226,.5); }
 #table-cards .grid-cell.can-drop:hover {

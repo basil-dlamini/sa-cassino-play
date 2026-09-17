@@ -1532,7 +1532,11 @@
        flight reads as the counter switching off (owner 2026-09-17) */
     const pileLens = g.players.map((p) => p.pile.length);
     const buildMeta = g.builds.map((b) => ({ value: b.value, count: b.cards.length, augmented: !!b.augmented }));
-    return { cards, piles, builds, buildFaces, pileTops, buildRendered, pileTopRendered, pileLens, buildMeta, table: g.table.slice() };
+    /* whole contents too — the numbers strip's previous reading is rebuilt
+       from them while a flight is live (owner 2026-09-18) */
+    const pileCards = g.players.map((p) => p.pile.slice());
+    const buildCards = g.builds.map((b) => b.cards.slice());
+    return { cards, piles, builds, buildFaces, pileTops, buildRendered, pileTopRendered, pileLens, buildMeta, pileCards, buildCards, table: g.table.slice() };
   }
   /* returns the landing delay for the played card (0 when nothing flies) */
   /* returns the TOTAL animation time — the table waits for all of it */
@@ -1804,6 +1808,48 @@
     if (a.type === 'capture') holdPile(actor);
     else if (a.type === 'endturn' && g.phase === 'gameover' && g.lastCapturer != null) holdPile(g.lastCapturer);
     else holdDest();
+    /* the numbers strip obeys the same law as the cards (owner 2026-09-18):
+       the count WAITS for the cards — during the flight the destination's
+       strip reads the seat's PREVIOUS numbers, and the fresh count is
+       written at the landing beat. A seat that was empty before keeps its
+       strip hidden until the cards arrive. Departing seats (a dig victim's
+       pile) keep their old reading until their card has flown */
+    const pendingStrips = [];
+    const stripText = (cards2) => {
+      const st = R.pileStats(cards2);
+      return st.cards + ' cards · ' + st.spades + ' ♠ · ' + st.points + ' pts';
+    };
+    const gateStrip = (boxSel, prevCards) => {
+      if (!boxSel) return;
+      const box = document.querySelector(boxSel);
+      const strip = box && box.querySelector('.pile-stats');
+      if (!strip) return;
+      if (!prevCards || !prevCards.length) {
+        strip.style.display = 'none';
+        pendingStrips.push({ el: strip, show: true });
+      } else {
+        pendingStrips.push({ el: strip, text: strip.textContent });
+        strip.textContent = stripText(prevCards);
+      }
+    };
+    const buildBoxSelByValue = (v) => {
+      const b = g.builds.find((x) => x.value === v);
+      return b ? '.build-box.has-build[data-idx="' + g.builds.indexOf(b) + '"]' : null;
+    };
+    const pileBoxSel = (seat) => '.pile-box[data-seat="' + seat + '"]';
+    if (a.type === 'capture') gateStrip(pileBoxSel(actor), prev.pileCards[actor]);
+    else if (a.type === 'endturn' && g.phase === 'gameover' && g.lastCapturer != null)
+      gateStrip(pileBoxSel(g.lastCapturer), prev.pileCards[g.lastCapturer]);
+    else if (a.type === 'augment' || a.type === 'dig' || a.type === 'topdig' ||
+             a.type === 'digfold' || a.type === 'edig' || a.type === 'caugment' || a.type === 'efold')
+      gateStrip(bIdx != null ? '.build-box.has-build[data-idx="' + bIdx + '"]' : buildBoxSelByValue(a.value),
+        prev.buildCards[a.buildIdx]);
+    else if (a.type === 'preg')
+      gateStrip(buildBoxSelByValue(a.value),
+        prev.buildCards[(a.mergeInto != null) ? a.mergeInto : a.buildIdx]);
+    /* founding slots (build, basetop, scaffold) are covered by the arriving
+       gate — their strips surface with the box at landing */
+    if (a.victim != null && a.type !== 'capture') gateStrip(pileBoxSel(a.victim), prev.pileCards[a.victim]);
     /* a founding stack's lot keeps its EMPTY look until the cards land
        (owner 2026-09-17) — the counter appears only when the build arrives,
        never before */
@@ -1863,6 +1909,10 @@
       carrier.forEach((gh) => gh.el.remove());
       holders.forEach((h) => h.remove());
       arriving.forEach((el) => el.classList.remove('arriving'));   /* the lot lights up as the stack lands */
+      pendingStrips.forEach((s) => {   /* the count lands with the cards */
+        if (s.text != null) s.el.textContent = s.text;
+        else if (s.show) s.el.style.display = '';
+      });
       for (const p of parts) {
         flyingIds.delete(p.id);
         const cur = document.querySelector('#screen-game .card[data-id="' + p.id + '"]:not(.flying)');
