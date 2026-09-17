@@ -854,3 +854,16 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
   #turn-indicator { font-size: 13.5px; }
   #game-topbar, #my-row { border-radius: 0; }
 }
+
+/* ============ TWO HANDS, WIDE — one landscape table for PCs and tablets ============ */
+/* (owner 2026-09-17) At 900px or wider the two-hand game grows past the phone
+   column: the SAME approved layout with room to breathe, and exactly ONE
+   addition — Sipho's full face-down hand standing above his banner. Narrower
+   screens, and every three/four-hand game, keep exactly what they had.
+   The felt column centres itself on the navy body (the table gains air). */
+#screen-game.p2.w2 { max-width: 1160px; }
+/* the fan's air: the zone re-gains the padding the portrait bar zeroed */
+#screen-game.p2.w2 #opp-zone { padding: 8px 12px 2px; gap: 4px; }
+/* his backs sit a touch tighter than my spread hand — a held fan, every back
+   clearly visible, thinning as he plays */
+#screen-game.p2.w2 #opp-fan .card { margin-left: calc(var(--card-w) * -0.6); }

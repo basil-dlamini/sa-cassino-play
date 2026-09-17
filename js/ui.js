@@ -89,15 +89,35 @@
     return session.numPlayers === 2 && $('screen-game').clientWidth <= 560;
   }
 
+  /* the wide two-hand table (owner 2026-09-17): ONE landscape design for every
+     PC and tablet at 900px or wider — the SAME approved layout with room to
+     breathe, plus Sipho's full face-down hand above his banner. Narrower
+     screens and every three/four-hand game keep exactly what they had.
+     Measured on the VIEWPORT, never on the screen element: the wide class is
+     what widens the screen, so its own width can never be the test. */
+  function p2Wide() {
+    return session.numPlayers === 2 && window.innerWidth >= 900;
+  }
+  let p2WideOn = false;
+
   function fitCards() {
     const n = R.DEAL[session.numPlayers].per;
     const col = $('screen-game');
     const availW = col.clientWidth - 24;
     if (session.numPlayers === 2) {
+      /* crossing the 900px floor dresses/undresses the wide table (his fan) —
+         judged on the viewport: the class itself widens the screen element */
+      const wide = window.innerWidth >= 900;
+      if (wide !== p2WideOn) {
+        p2WideOn = wide;
+        col.classList.toggle('w2', wide);
+        if (g && !dealSeq) renderOppZone();
+      }
       const wDeep = Math.floor((col.clientWidth - 16) / (1 + 9 * 0.25));
       const gaps = p2FiveCols() ? 4 * 5 : 3 * 5;
       const wGrid = Math.floor((col.clientWidth - 16 - gaps) / (p2FiveCols() ? 5 : 4));
-      const wH = Math.floor((col.clientHeight - 175) / (5 * 1.4));
+      /* wide: his face-down fan costs one more card row above his banner */
+      const wH = Math.floor((col.clientHeight - (wide ? 195 : 175)) / ((wide ? 6 : 5) * 1.4));
       const w = Math.max(52, Math.min(104, Math.min(wDeep, wGrid, wH)));
       document.documentElement.style.setProperty('--card-w', w + 'px');
       /* the fan's overlap follows the card size — but NEVER mid-ceremony:
@@ -341,8 +361,16 @@
     zone.innerHTML = '';
     zone.className = 'mode-' + g.numPlayers;
     if (g.numPlayers === 2) {
-      /* no face-down fan (owner's ruling) — Sipho is his banner, his slots and
-         his message zone; his card count follows from the turn sequence */
+      /* the wide table (owner 2026-09-17): Sipho's FULL hand stands face-down
+         above his banner — every back visible, thinning as he plays. The
+         phone keeps the banner-only screen (the standing portrait ruling).
+         The backs carry no ids: hidden information never enters the page. */
+      if (p2Wide()) {
+        const fan = document.createElement('div');
+        fan.id = 'opp-fan';
+        for (let i = 0, n = g.players[1].hand.length; i < n; i++) fan.appendChild(cardBack());
+        zone.appendChild(fan);
+      }
       zone.appendChild(nameBar(g, 1, {}));
     } else if (g.numPlayers === 3) {
       /* Anticlockwise play: seat 1 (Sipho) sits RIGHT, seat 2 (Thandi) LEFT.
@@ -1387,6 +1415,8 @@
     shiyaTick = null; shiyaOfferValue = null; clearTimeout(shiyaTimer);
     show('screen-game');
     $('screen-game').classList.toggle('p2', n === 2);   // the two-hand layout
+    $('screen-game').classList.toggle('w2', p2Wide());  // …and its wide twin at ≥900px
+    p2WideOn = p2Wide();
     fitCards();
     render();
     lastHandLen = g.players[HUMAN].hand.length;
@@ -1562,6 +1592,14 @@
        seen sliding down into the play area */
     const origin = (id, to) => {
       if (prev.cards[id]) return prev.cards[id];
+      /* the wide table shows his hand (owner 2026-09-17): a card Sipho plays
+         lifts from his standing fan. His backs carry no ids, so the fan's own
+         last back stands in as the take-off spot */
+      const back = document.querySelector('#opp-fan .card:last-child');
+      if (back) {
+        const r = back.getBoundingClientRect();
+        if (r.width) return r;
+      }
       const w = (to && to.width) || 60, h = (to && to.height) || 84;
       let cx = null, top = null;
       if (g.numPlayers === 2) {
