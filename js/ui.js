@@ -1578,11 +1578,11 @@
     const dug = (victim) => (victim != null ? prev.pileTops[victim] : null);
     const dugRect = (victim) => (victim != null ? prev.piles[victim] : null);
     const collectInto = (hand, ids, destRect, last) => {
-      const movers = (hand ? [hand] : []).concat(asc(ids));
-      /* the base card joins LAST: it is the chain's final collection point —
-         the movers land on top of it where it lies, then all travel together
-         (owner 2026-09-16) */
-      if (last) movers.push(last);
+      /* the base card(s) join LAST: the chain's final collection point —
+         the movers land on top of the base where it lies, then all travel
+         together (owner 2026-09-16) */
+      const tails = Array.isArray(last) ? last.filter(Boolean) : (last ? [last] : []);
+      const movers = (hand ? [hand] : []).concat(asc(ids), tails);
       for (const id of movers) {
         const rect = (id === hand) ? origin(hand, destRect)
           : (prev.cards[id] || dugRect(a.victim) || cardRect(id));
@@ -1619,7 +1619,15 @@
       case 'build': {
         const to = buildRectByValue(a.value);
         const ids = (a.loose || []).filter((id) => id !== a.base).concat([dug(a.victim)]);
-        collectInto(a.card, ids, to, a.base);   /* the base is collected, not teleported */
+        /* the base the law engine folds in SILENTLY (owner 2026-09-17): a
+           plain founding carries no base field — the loose table card of the
+           build's value is the base absorbBases will take. The animation
+           finds it itself: it pins where it lies, the stack climbs and folds
+           onto it, and only then does everything travel to the build area —
+           the base never leaves alone */
+        const bases = a.base ? [a.base]
+          : prev.table.filter((id) => C.rank(id) === a.value && !(a.loose || []).includes(id));
+        collectInto(a.card, ids, to, bases);
         break;
       }
       case 'augment': case 'dig': {
@@ -1630,8 +1638,10 @@
       }
       case 'preg': {
         /* a true chain (owner 2026-09-16): the hand card flies ONTO the
-           target build where it stands, they combine sorted, and the whole
-           stack travels to the pregger's area — no teleporting builds */
+           target build where it stands, they combine, and the whole stack
+           travels to the pregger's area — no teleporting builds. A preg can
+           also fold in a SILENT base (absorbBases) — the base pins where it
+           lies and the stack collects it last (owner 2026-09-17) */
         const targetIdx = (a.mergeInto != null) ? a.mergeInto : a.buildIdx;
         const face = prev.buildFaces[targetIdx];
         const faceRect = prev.builds[targetIdx] || (face ? prev.cards[face] : null);
@@ -1639,6 +1649,9 @@
         if (face && faceRect) {
           parts.push({ id: a.card, rect: origin(a.card, faceRect) });
           parts.push({ id: face, rect: faceRect, deco: prev.buildMeta[targetIdx] });
+          for (const b of prev.table) {
+            if (C.rank(b) === a.value && prev.cards[b]) parts.push({ id: b, rect: prev.cards[b] });
+          }
           dest = to;
         } else {
           parts.push({ id: a.card, rect: origin(a.card, to) });
@@ -1661,11 +1674,16 @@
         /* the base HOLDS ITS GROUND (owner 2026-09-17): the combination
            stacks up first — lowest onto higher — then the whole stack
            travels to where the base stands and folds onto it. The
-           scaffold's lot IS the base's place; the base never relocates */
+           scaffold's lot IS the base's place; the base never relocates.
+           A scaffold can also fold in a SILENT base (absorbBases takes any
+           loose table card of the value) — the animation finds it the same
+           way the law engine does */
         const ids = (a.cards || []).concat([dug(a.victim)]);
-        const baseRect = (a.base && (prev.cards[a.base] ||
+        const bases = a.base ? [a.base]
+          : prev.table.filter((id) => C.rank(id) === a.value && !(a.cards || []).includes(id));
+        const baseRect = (bases.length && (prev.cards[bases[0]] ||
           (a.buildIdx != null ? prev.builds[a.buildIdx] : null))) || null;
-        collectInto(null, ids, baseRect || buildRectByValue(a.value), a.base || undefined);
+        collectInto(null, ids, baseRect || buildRectByValue(a.value), bases);
         break;
       }
       case 'basetop': {
@@ -1767,11 +1785,14 @@
         boxSel = bIdx != null ? '.build-box.has-build[data-idx="' + bIdx + '"]' : buildSelByValue(a.value);
         oldId = prev.buildRendered[a.buildIdx];
         deco = prev.buildMeta[a.buildIdx];
-      } else if (a.type === 'preg' && a.mergeInto != null) {
-        /* a merge folds into the own-side live build — its seat is held */
+      } else if (a.type === 'preg') {
+        /* EVERY preg's destination is held (owner 2026-09-17): the re-valued
+           box keeps its old face, badge and edge from take-off to landing —
+           the counter never goes dark, the number swaps at the landing beat */
+        const targetIdx = (a.mergeInto != null) ? a.mergeInto : a.buildIdx;
         boxSel = buildSelByValue(a.value);
-        oldId = prev.buildRendered[a.mergeInto];
-        deco = prev.buildMeta[a.mergeInto];
+        oldId = prev.buildRendered[targetIdx];
+        deco = prev.buildMeta[targetIdx];
       }
       if (!boxSel || !oldId) return;
       const box = document.querySelector(boxSel);
