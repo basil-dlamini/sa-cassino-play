@@ -1540,10 +1540,11 @@
   }
   /* returns the landing delay for the played card (0 when nothing flies) */
   /* returns the TOTAL animation time — the table waits for all of it.
-     onCatch, when given, fires at EVERY collection, handed the collected
-     card's id — a capture listens for its first (the beat the played card
-     lands on what it takes); a dig listens for the dug pile-top (the beat
-     the mover scoops it from the victim's pile) */
+     onCatch, when given, is told every card event with the card's id and
+     its kind: 'takeoff' when the mover lifts (for a cardless dig, the
+     moment the card leaves the victim's pile) and 'collect' at every
+     collection — a capture listens for its first collect; a dig listens
+     for its dug card, whichever event carries it */
   function playMotion(prev, a, actor, onCatch) {
     const dur = motionDur();
     const pause = 70;   /* a breath between hops so each collection reads */
@@ -1991,7 +1992,7 @@
              never later at the journey's end. Every collection is announced
              with the collected card's id; the listener decides which beat
              is the one that speaks */
-          if (onCatch) onCatch(p.id);
+          if (onCatch) onCatch(p.id, 'collect');
           i++;
           setTimeout(nextHop, pause);
         });
@@ -2006,6 +2007,10 @@
        browser its "before" (a hidden or busy tab stalls rAF forever — the
        journey must still run; the janitor below finishes it regardless) */
     void carrier[0].el.offsetWidth;
+    /* a cardless dig's mover IS the dug card (owner 2026-09-17): it is dug
+       the instant it lifts from the victim's pile — announce the take-off
+       with the chain's first step */
+    if (onCatch) onCatch(parts[0].id, 'takeoff');
     setTimeout(nextHop, 30);
     /* safety — and the guaranteed janitor: no card may stay hidden and no
        ghost may linger, whatever happens to frames or timers */
@@ -2043,22 +2048,34 @@
        The capture's voice is the CATCH itself (owner 2026-09-17): it kicks
        in the instant the capturing card lands on the card or cards being
        captured — the chain hands it to playMotion, which fires it in the
-       same task as the collect. The dig's voice is the SCOOP (owner
-       2026-09-17): the instant the digging card lands on the pile-top it
-       takes — wherever that beat falls in the chain's collections */
+       same task as the collect.
+       EVERY dug card speaks (owner 2026-09-17): any move that pulls a card
+       from a captured pile — a dig, a dig-fold combine, a founding, a
+       scaffold, a fold, an enemy dig — sounds the steal the instant that
+       card is dug: the mover at its take-off from the pile, a scooped card
+       at its collection. The move's other voice, when it has one, still
+       lands at the end of the journey as before */
     const q = (opts && opts.human) ? 1 : 0.45;
-    let captureSpoken = false, stealSpoken = false;   /* a catch beat owns its voice — never twice */
-    const captureBeat = () => { if (!captureSpoken) { captureSpoken = true; Snd.capture(q); } };
-    const dugId = (a.type === 'dig' && a.victim != null) ? prev.pileTops[a.victim] : null;
-    const stealBeat = (id) => { if (!stealSpoken && id === dugId) { stealSpoken = true; Snd.steal(q); } };
+    let captureSpoken = false;   /* the catch beat owns the capture's voice — never twice */
+    const captureBeat = (id, kind) => {
+      if (kind !== 'takeoff' && !captureSpoken) { captureSpoken = true; Snd.capture(q); }
+    };
+    const dugIds = new Set();
+    if (a.type !== 'capture') {
+      if (a.victim != null && prev.pileTops[a.victim]) dugIds.add(prev.pileTops[a.victim]);
+      for (const s of (a.victims || [])) if (prev.pileTops[s]) dugIds.add(prev.pileTops[s]);
+    }
+    const stealSpoken = new Set();
+    const stealBeat = (id) => {
+      if (dugIds.has(id) && !stealSpoken.has(id)) { stealSpoken.add(id); Snd.steal(q); }
+    };
     const fire = () => {
-      if (a.type === 'capture') captureBeat();
-      else if (a.type === 'dig') stealBeat(dugId);   /* fallback only — normally spoken at the scoop */
-      else if (a.type === 'topdig') Snd.steal(q);    /* cardless: the dug card's own landing speaks */
-      else if (a.type === 'build' || a.type === 'augment' || a.type === 'preg') Snd.build(q);
+      if (a.type === 'capture') { captureBeat(); return; }
+      if (dugIds.size && !stealSpoken.size) Snd.steal(q);   /* fallback — the flight never showed the dig */
+      if (a.type === 'build' || a.type === 'augment' || a.type === 'preg') Snd.build(q);
       else if (a.type === 'discard') Snd.drift(q);
     };
-    const catchCb = a.type === 'capture' ? captureBeat : (a.type === 'dig' ? stealBeat : null);
+    const catchCb = dugIds.size ? stealBeat : (a.type === 'capture' ? captureBeat : null);
     const landAt = playMotion(prev, a, actor, catchCb);
     if (landAt > 0) {
       /* the whole chain plays out; the table — next move and input alike —
