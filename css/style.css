@@ -546,6 +546,22 @@ small { opacity: .75; }
   gap: 6px; padding: 4px 0 8px; border-bottom: 1px solid rgba(244,239,226,.18);
 }
 .vs-side { text-align: center; min-width: 0; }
+/* COLOUR-CODED RESULTS (owner 2026-09-18): my side blue, his crimson — the
+   head badges and the table's columns carry their side, on every screen */
+.vs-side.vs-me {
+  background: linear-gradient(180deg, rgba(42,84,176,.38), rgba(16,26,58,.38));
+  border: 1px solid rgba(58,102,196,.55);
+  border-radius: 10px; padding: 5px 8px;
+}
+.vs-side.vs-opp {
+  background: linear-gradient(180deg, rgba(156,37,41,.34), rgba(87,14,18,.38));
+  border: 1px solid rgba(176,42,47,.55);
+  border-radius: 10px; padding: 5px 8px;
+}
+.vs-table td.col-me { background: rgba(16,26,58,.26); }
+.vs-table td.col-opp { background: rgba(87,14,18,.22); }
+.vs-table tr.total td.col-me { background: rgba(16,26,58,.42); }
+.vs-table tr.total td.col-opp { background: rgba(87,14,18,.36); }
 .vs-side:not(.winner) { opacity: .78; }
 .vs-name {
   display: block; font-size: .88rem; font-weight: 700;

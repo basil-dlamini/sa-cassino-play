@@ -2357,16 +2357,19 @@
     const lab = (t) => t.members.includes(HUMAN)
       ? 'You' + (t.members.length > 1 ? ' &amp; partner' : '')
       : escapeHtml(t.name);
+    /* COLOUR-CODED RESULTS (owner 2026-09-18): my side blue, the enemy side
+      crimson — the head badges and the table's columns carry their side */
+    const sideCls = (t) => ' vs-' + (t.members.includes(HUMAN) ? 'me' : 'opp');
     html += '<div class="versus' + (stats.length === 3 ? ' three' : '') + '">';
     html += '<div class="vs-head">' + (stats.length === 3 ? '<i></i>' : '') +
-      stats.map((t) => '<div class="vs-side' + (res.winners.includes(t.name) ? ' winner' : '') + '">' +
+      stats.map((t) => '<div class="vs-side' + sideCls(t) + (res.winners.includes(t.name) ? ' winner' : '') + '">' +
         '<span class="vs-name">' + lab(t) + '</span><span class="vs-total">' + t.total + '</span></div>')
         .join(stats.length === 2 ? '<span class="vs-mid">vs</span>' : '') + '</div>';
     /* bare numbers only (owner 2026-09-15): no ×, no suit icons, no 'pts'
        suffix — and the Spy 2 / Big 10 indicators read 1 or 0.
        Row order (owner 2026-09-15): Big 10, Spy 2, ONE ROW PER ACE from the
        final pile, then Spades, then Cards; Sweep and Total close */
-    const P = (t, pts) => '<td class="t-pts' + (pts ? ' win' : '') + '">' + (pts || '') + '</td>';
+    const P = (t, pts, side) => '<td class="t-pts' + (side ? ' ' + side : '') + (pts ? ' win' : '') + '">' + (pts || '') + '</td>';
     const pileOf = (t) => t.members.flatMap((m) => g.players[m].pile);
     const rows = [
       { name: '10&diams; Big 10', val: (t) => t.d10 ? '1' : '0', pts: (t) => t.d10 * 2 },
@@ -2403,9 +2406,9 @@
           stats.map((t) => '<td class="t-val">' + r.val(t) + '</td>' + P(t, r.pts(t))).join('') + '</tr>';
       } else {
         const a = stats[0], b = stats[1];
-        html += '<tr>' + P(a, r.pts(a)) +
-          '<td class="t-val">' + r.val(a) + '</td><th class="t-lab" scope="row">' + r.name + '</th>' +
-          '<td class="t-val">' + r.val(b) + '</td>' + P(b, r.pts(b)) + '</tr>';
+        html += '<tr>' + P(a, r.pts(a), 'col-me') +
+          '<td class="t-val col-me">' + r.val(a) + '</td><th class="t-lab" scope="row">' + r.name + '</th>' +
+          '<td class="t-val col-opp">' + r.val(b) + '</td>' + P(b, r.pts(b), 'col-opp') + '</tr>';
       }
     }
     /* the totals close the table: each side's points column sums to it */
@@ -2416,9 +2419,9 @@
     } else {
       const a = stats[0], b = stats[1];
       html += '<tr class="total">' +
-        '<td class="t-pts tot' + (res.winners.includes(a.name) ? ' win' : '') + '">' + a.total + '</td>' +
-        '<td class="t-val"></td><th class="t-lab" scope="row">Total</th><td class="t-val"></td>' +
-        '<td class="t-pts tot' + (res.winners.includes(b.name) ? ' win' : '') + '">' + b.total + '</td></tr>';
+        '<td class="t-pts tot col-me' + (res.winners.includes(a.name) ? ' win' : '') + '">' + a.total + '</td>' +
+        '<td class="t-val col-me"></td><th class="t-lab" scope="row">Total</th><td class="t-val col-opp"></td>' +
+        '<td class="t-pts tot col-opp' + (res.winners.includes(b.name) ? ' win' : '') + '">' + b.total + '</td></tr>';
     }
     html += '</table></div>';
     html += '<details class="score-law"><summary>&#9432; ' + res.totalInPlay +
