@@ -897,6 +897,41 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
   background: linear-gradient(180deg, rgba(156,37,41,.94), rgba(140,29,34,.92) 45%, rgba(87,14,18,.96));
 }
 #screen-game.p2.w2 #rail-r { right: 0; align-items: center; border-radius: 0 23px 23px 0; border-left: none; }
+/* COLOUR-CODED AREAS (owner 2026-09-18): HIS boxes crimson, MINE blue — on
+   both the phone and the wide table (the rows live in the same containers on
+   each). The boxes keep their dashed/solid character; the side's colour rides
+   the border, the wash and the counter badge, and the interaction states
+   (selection, highlight, preview) always outrank the tint */
+#opp-side .area-box {
+  border-color: rgba(156,37,41,.5);
+  background: rgba(87,14,18,.28);
+}
+#opp-side .area-box.has-build {
+  border-color: rgba(176,42,47,.85);
+  background: rgba(87,14,18,.42);
+}
+#my-side .area-box {
+  border-color: rgba(42,84,176,.5);
+  background: rgba(16,26,58,.3);
+}
+#my-side .area-box.has-build {
+  border-color: rgba(58,102,196,.85);
+  background: rgba(16,26,58,.45);
+}
+#opp-side .area-box.highlight, #my-side .area-box.highlight { border-color: var(--ivory); }
+#opp-side .area-box.selected, #my-side .area-box.selected {
+  border-color: var(--ivory); box-shadow: 0 0 0 2px rgba(244,239,226,.7);
+}
+#opp-side .area-box.preview, #my-side .area-box.preview {
+  border-color: #7fd4ff; box-shadow: 0 0 10px rgba(127,212,255,.3);
+}
+/* the counter badge carries its side's colour (owner: "and his counter") */
+#opp-side .build-val {
+  background: linear-gradient(180deg, #A62B2F, #6E1014); color: #f4efe2;
+}
+#my-side .build-val {
+  background: linear-gradient(180deg, #2a54b0, #16357c); color: #f4efe2;
+}
 /* inside a rail the warn zone is just centred words on the panel */
 #screen-game.p2.w2 #opp-warn,
 #screen-game.p2.w2 #my-warn {
