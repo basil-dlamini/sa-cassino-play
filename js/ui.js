@@ -129,9 +129,11 @@
       const railPad = wide ? 172 : 0;
       const innerPad = wide ? 0 : 16;   /* wide: the rails ARE the padding */
       const wGrid = Math.floor((col.clientWidth - innerPad - gridGaps - railPad) / gridCols);
-      /* wide: the fan above his banner, his areas, TWO grid rows, my areas,
-         my bar, my hand — seven rows of card height all told */
-      const wH = Math.floor((col.clientHeight - 195) / ((wide ? 7 : 5) * 1.4));
+      /* wide: the fan, his areas, TWO grid rows, my areas, my hand — six rows
+         of card height; banners/bars/control sit in the fixed reserve. The
+         5-wide grid leaves horizontal air, so the HEIGHT is the honest limit
+         — sized to fill the table, not float in it (owner 2026-09-18) */
+      const wH = Math.floor((col.clientHeight - 195) / ((wide ? 6 : 5) * 1.4));
       const w = Math.max(52, Math.min(104, Math.min(wDeep, wGrid, wH)));
       document.documentElement.style.setProperty('--card-w', w + 'px');
       /* the fan's overlap follows the card size — but NEVER mid-ceremony:
