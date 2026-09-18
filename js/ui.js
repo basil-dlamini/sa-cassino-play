@@ -121,13 +121,13 @@
       }
       const wDeep = Math.floor((col.clientWidth - 16) / (1 + 9 * 0.25));
       /* the wide row runs TEN across (owner 2026-09-18): ten cards + nine
-         gaps must fit the 900 column MINUS the side rails (the blue info
-         panels outside the table, 108 each side) — this caps the card
-         everywhere wide */
+         gaps must fit the TABLE AREA — which matches the advertising strip's
+         width (the 584 desktop ad cap; 316 of rails outside it) */
       const gridCols = wide ? 10 : (p2FiveCols() ? 5 : 4);
       const gridGaps = wide ? 9 * 5 : (p2FiveCols() ? 4 * 5 : 3 * 5);
-      const railPad = wide ? 216 : 0;
-      const wGrid = Math.floor((col.clientWidth - 16 - gridGaps - railPad) / gridCols);
+      const railPad = wide ? 314 : 0;   /* 2×157 — the felt border gives back the last 2px */
+      const innerPad = wide ? 0 : 16;   /* wide: the rails ARE the padding */
+      const wGrid = Math.floor((col.clientWidth - innerPad - gridGaps - railPad) / gridCols);
       /* wide: his face-down fan costs one more card row above his banner */
       const wH = Math.floor((col.clientHeight - (wide ? 195 : 175)) / ((wide ? 6 : 5) * 1.4));
       const w = Math.max(52, Math.min(104, Math.min(wDeep, wGrid, wH)));
@@ -480,16 +480,17 @@
         mine.appendChild(pileEl(HUMAN));
       }
       if (p2Wide()) {
-        /* THE FULL-HEIGHT RAILS (owner's ruling 2026-09-18): the blue info
-           panels stand outside the play area for the table's entire height —
-           Sipho's rail on the LEFT carrying his areas at his end (top), my
-           rail on the RIGHT carrying mine at my end (bottom) */
+        /* THE FULL-HEIGHT RAILS (owner's rulings 2026-09-18): ONLY the blue
+           info panels stand outside for the table's entire height — Sipho's
+           on the LEFT, mine on the RIGHT. The AREAS stay inside the table
+           where they have always lived (owner: "the areas must remain where
+           they were") */
         const rl = $('rail-l'), rr = $('rail-r');
         rl.innerHTML = ''; rr.innerHTML = '';
-        rl.appendChild(theirs);
         rl.appendChild(ow);
         rr.appendChild(warnZone('my-warn'));
-        rr.appendChild(mine);
+        oppSide.appendChild(theirs);
+        mySide.appendChild(mine);
         return;
       }
       oppSide.appendChild(theirs);

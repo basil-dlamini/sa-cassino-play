@@ -840,36 +840,32 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
    ten — top-left, bottom-left, top-second… — every phone slot IS a slot here.
    The freed row's height stays in the band: the row centres in it, the space
    is reclaimed, not left as a hole */
-#screen-game.p2.w2 #table-cards.cols-10w { grid-template-columns: repeat(10, var(--card-w)); }
+#screen-game.p2.w2 #table-cards.cols-10w { grid-template-columns: repeat(10, var(--card-w)); width: 100%; justify-content: space-between; }
 #screen-game.p2.w2 #discard-grid-wrap { flex: 1 1 auto; justify-content: center; }
-/* THE FULL-HEIGHT RAILS (owner's ruling 2026-09-18): the blue info panels
-   stand OUTSIDE the play area for the table's ENTIRE height — Sipho's rail on
-   the LEFT carrying his areas at his end (top), mine on the RIGHT carrying my
-   areas at my end (bottom). The table narrows inside the 900 to fit. Only the
-   wide table: the phone keeps its strips in their rows */
+/* THE FULL-HEIGHT RAILS (owner's rulings 2026-09-18): ONLY the blue info
+   panels stand outside the play area, running the table's ENTIRE height —
+   Sipho's on the LEFT, mine on the RIGHT. The AREAS stay inside the table
+   where they have always lived. The TABLE AREA matches the advertising strip's
+   width (584 — the desktop ad cap); the rest of the space outside is the
+   rails'. Only the wide table: the phone keeps its strips in their rows */
 .side-rail { display: none; }
-#screen-game.p2.w2 { position: relative; padding: 0 108px; }
+#screen-game.p2.w2 { position: relative; padding: 0 157px; }  /* 157+157 inside the 1px felt border: the table area lands at exactly the ad width */
 #screen-game.p2.w2 .side-rail {
-  display: flex; flex-direction: column; gap: 6px; padding: 8px 4px;
-  position: absolute; top: 0; bottom: 0; width: 94px; z-index: 5;
+  display: flex; flex-direction: column; gap: 6px; padding: 8px 6px;
+  position: absolute; top: 0; bottom: 0; width: 144px; z-index: 5;
   border: 1px solid rgba(244,239,226,.35); border-radius: 10px;
   background: rgba(9,15,38,.8);
   font-family: 'Segoe UI', system-ui, sans-serif;
 }
 #screen-game.p2.w2 #rail-l { left: 7px; }
-#screen-game.p2.w2 #rail-r { right: 7px; align-items: center; }
+#screen-game.p2.w2 #rail-r { right: 7px; }
 /* inside a rail the warn zone is just centred words on the panel */
 #screen-game.p2.w2 #opp-warn,
 #screen-game.p2.w2 #my-warn {
   position: static; flex: 1 1 auto; width: auto; min-height: 0;
   border: none; background: none; border-radius: 0;
-  justify-content: center; padding: 2px 4px;
+  justify-content: center; padding: 2px 6px;
 }
-/* the area boxes stack down the rail at the player's end */
-#screen-game.p2.w2 .side-rail .area-row {
-  flex-direction: column; align-items: center; gap: 6px; flex: 0 0 auto; width: 100%;
-}
-#screen-game.p2.w2 .side-rail .area-box { max-width: 100%; }
 #screen-game.p2 .grid-cell { border-radius: 0; }   /* rectangles with the cards (v49) */
 
 /* my bar: full width under my areas; my fan packs RIGHT.
