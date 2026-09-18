@@ -870,8 +870,10 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
    column: the SAME approved layout with room to breathe, and exactly ONE
    addition — Sipho's full face-down hand standing above his banner. Narrower
    screens, and every three/four-hand game, keep exactly what they had.
-   The felt column centres itself on the navy body (the table gains air). */
-#screen-game.p2.w2 { max-width: 1160px; }
+   The felt column centres itself on the navy body (the table gains air).
+   (owner 2026-09-18, while testing the landscape version) the table is EXACTLY
+   900 wide — every landscape screen, 900 or 1920, shows the same table. */
+#screen-game.p2.w2 { max-width: 900px; }
 /* the fan's air: the zone re-gains the padding the portrait bar zeroed */
 #screen-game.p2.w2 #opp-zone { padding: 8px 12px 2px; gap: 4px; }
 /* his backs sit a touch tighter than my spread hand — a held fan, every back
