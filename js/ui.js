@@ -122,10 +122,11 @@
       const wDeep = Math.floor((col.clientWidth - 16) / (1 + 9 * 0.25));
       /* the wide row runs TEN across (owner 2026-09-18): ten cards + nine
          gaps must fit the TABLE AREA — which follows the 728 advertising
-         strip (equal widths; 170 of rails outside it) */
+         strip. The info rails are 86 each — LOCKED by the owner
+         (900 − 728 = 172, 172 ÷ 2 = 86; do not change until asked) */
       const gridCols = wide ? 10 : (p2FiveCols() ? 5 : 4);
       const gridGaps = wide ? 9 * 5 : (p2FiveCols() ? 4 * 5 : 3 * 5);
-      const railPad = wide ? 170 : 0;
+      const railPad = wide ? 172 : 0;
       const innerPad = wide ? 0 : 16;   /* wide: the rails ARE the padding */
       const wGrid = Math.floor((col.clientWidth - innerPad - gridGaps - railPad) / gridCols);
       /* wide: his fan costs one more card row above his banner, my areas a row
