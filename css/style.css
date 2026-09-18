@@ -837,12 +837,8 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
 #screen-game.p2 #discard-grid-wrap { padding: 3px 0; justify-content: flex-start; flex: 0 0 auto; }
 #screen-game.p2 #table-cards { gap: 5px; }
 #table-cards.cols-4 { grid-template-columns: repeat(4, var(--card-w)); }
-#screen-game.p2 #table-cards.cols-5 { grid-template-columns: repeat(5, var(--card-w)); }   /* the owner's 5×2 on phones */
-/* THE WIDE ROW (owner 2026-09-18): the phone's 5×2 staggered into one row of
-   ten — top-left, bottom-left, top-second… — every phone slot IS a slot here.
-   The freed row's height stays in the band: the row centres in it, the space
-   is reclaimed, not left as a hole */
-#screen-game.p2.w2 #table-cards.cols-10w { grid-template-columns: repeat(10, var(--card-w)); width: 100%; justify-content: space-between; }
+#screen-game.p2 #table-cards.cols-5 { grid-template-columns: repeat(5, var(--card-w)); }   /* the owner's 5×2 — phones AND the wide table (2026-09-18: back to the original) */
+/* the wide band still centres the grid — the two rows sit mid-table */
 #screen-game.p2.w2 #discard-grid-wrap { flex: 1 1 auto; justify-content: center; }
 /* THE RAILS (owner's rulings 2026-09-18): the blue info panels run the
    table's ENTIRE height outside the play area — Sipho's LEFT, mine RIGHT.

@@ -120,18 +120,18 @@
         if (g && !dealSeq) { renderOppZone(); renderSides(); renderTable(); }
       }
       const wDeep = Math.floor((col.clientWidth - 16) / (1 + 9 * 0.25));
-      /* the wide row runs TEN across (owner 2026-09-18): ten cards + nine
-         gaps must fit the TABLE AREA — which follows the 728 advertising
-         strip. The info rails are 86 each — LOCKED by the owner
-         (900 − 728 = 172, 172 ÷ 2 = 86; do not change until asked) */
-      const gridCols = wide ? 10 : (p2FiveCols() ? 5 : 4);
-      const gridGaps = wide ? 9 * 5 : (p2FiveCols() ? 4 * 5 : 3 * 5);
+      /* the wide grid is the original 5×2 (owner 2026-09-18): five cards
+         across the 728 table area. The info rails are 86 each — LOCKED by
+         the owner (900 − 728 = 172, 172 ÷ 2 = 86; do not change until
+         asked) */
+      const gridCols = wide ? 5 : (p2FiveCols() ? 5 : 4);
+      const gridGaps = wide ? 4 * 5 : (p2FiveCols() ? 4 * 5 : 3 * 5);
       const railPad = wide ? 172 : 0;
       const innerPad = wide ? 0 : 16;   /* wide: the rails ARE the padding */
       const wGrid = Math.floor((col.clientWidth - innerPad - gridGaps - railPad) / gridCols);
-      /* wide: his fan costs one more card row above his banner, my areas a row
-         above my banner — six rows of card height all told */
-      const wH = Math.floor((col.clientHeight - 195) / (6 * 1.4));
+      /* wide: the fan above his banner, his areas, TWO grid rows, my areas,
+         my bar, my hand — seven rows of card height all told */
+      const wH = Math.floor((col.clientHeight - 195) / ((wide ? 7 : 5) * 1.4));
       const w = Math.max(52, Math.min(104, Math.min(wDeep, wGrid, wH)));
       document.documentElement.style.setProperty('--card-w', w + 'px');
       /* the fan's overlap follows the card size — but NEVER mid-ceremony:
@@ -663,37 +663,22 @@
       }
     } else {
       /* 2/3 hands — rectangle grid; two-hand phones run FIVE columns (the
-         owner's 5×2 ruling), everything else keeps the mockup's four */
-      if (g.numPlayers === 2 && p2Wide()) {
-        /* THE WIDE ROW (owner's ruling 2026-09-18): the phone's 5×2 collapses
-           to ONE row of ten, staggered down the phone's columns — top-left,
-           bottom-left, top-second, bottom-second, … — so every phone slot IS
-           a landscape slot and a card keeps its place when the screen turns.
-           The loose-twin law caps the table at ten (one card per rank, ten
-           ranks in the deck), so ten places always suffice */
-        area.classList.remove('cols-4', 'cols-5');
-        area.classList.add('cols-10w');
-        for (let c = 1; c <= 5; c++) slots.push('1 / ' + c, '2 / ' + c);
-      } else {
-        area.classList.remove('cols-10w');
-        const cols = g.numPlayers === 2 ? (p2FiveCols() ? 5 : 4) : 4;
-        area.classList.toggle('cols-4', cols === 4);
-        area.classList.toggle('cols-5', cols === 5);
-        const minRows = g.numPlayers === 2 ? 2 : 3;
-        const rows = Math.max(minRows, Math.floor((wrap.clientHeight - 8) / ch));
-        /* cell floor: two full rows of whatever the column count is */
-        const floor = g.numPlayers === 2 ? cols * 2 : 9;
-        const cells = Math.max(rows * cols, Math.ceil(Math.max(n, floor) / cols) * cols);
-        for (let i = 0; i < cells; i++) slots.push(Math.floor(i / cols) + 1 + ' / ' + (i % cols + 1));
-      }
+         owner's 5×2 ruling), everything else keeps the mockup's four.
+         (owner 2026-09-18: the wide table returned to the original 5×2 too —
+         the v119 single staggered row is retired; ten slots, the same slot
+         identities as the phone, no translation) */
+      const cols = g.numPlayers === 2 ? (p2FiveCols() || p2Wide() ? 5 : 4) : 4;
+      area.classList.remove('cols-10w');
+      area.classList.toggle('cols-4', cols === 4);
+      area.classList.toggle('cols-5', cols === 5);
+      const minRows = g.numPlayers === 2 ? 2 : 3;
+      const rows = p2Wide() ? 2 : Math.max(minRows, Math.floor((wrap.clientHeight - 8) / ch));
+      /* cell floor: two full rows of whatever the column count is */
+      const floor = g.numPlayers === 2 ? cols * 2 : 9;
+      const cells = Math.max(rows * cols, Math.ceil(Math.max(n, floor) / cols) * cols);
+      for (let i = 0; i < cells; i++) slots.push(Math.floor(i / cols) + 1 + ' / ' + (i % cols + 1));
     }
     assignSlots(slots);
-    /* the stagger itself: in the wide row a phone slot (r / c) lands at
-       landscape column (c-1)×2 + r — down each column first, then into the row */
-    const place = p2Wide() ? (s) => {
-      const m = s.match(/^(\d+) \/ (\d+)$/);
-      return m ? '1 / ' + ((Number(m[2]) - 1) * 2 + Number(m[1])) : s;
-    } : ((s) => s);
     for (const s of slots) {
       let el = null, id = null;
       for (const t of g.table) if (tableSlots[t] === s) { id = t; break; }
@@ -703,12 +688,12 @@
         const live = g.correctable && g.correctable.seat === HUMAN && id === g.correctable.card;
         el = cardEl(id, { highlight: involved || arrived, selected: selectedCard === id });
         if (live) el.classList.add('correctable');   // still in play — tap to use it
-        el.style.gridArea = place(s);
+        el.style.gridArea = s;
       } else {
         el = document.createElement('div');
         el.className = 'grid-cell';
         el.dataset.area = s;
-        el.style.gridArea = place(s);
+        el.style.gridArea = s;
       }
       area.appendChild(el);
     }
@@ -724,7 +709,7 @@
       const z = document.createElement('div');
       z.className = 'area-box build-box has-build scaffold';
       z.dataset.idx = g.builds.indexOf(scBuild);
-      z.style.gridArea = place(tableSlots[anchor]);
+      z.style.gridArea = tableSlots[anchor];
       const el = cardEl(scBuild.cards[scBuild.cards.length - 1]);   // the face is the top card
       el.style.boxShadow = stackShadow(scBuild.cards.length);
       z.appendChild(el);
