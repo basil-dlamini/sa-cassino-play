@@ -842,6 +842,18 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
    is reclaimed, not left as a hole */
 #screen-game.p2.w2 #table-cards.cols-10w { grid-template-columns: repeat(10, var(--card-w)); }
 #screen-game.p2.w2 #discard-grid-wrap { flex: 1 1 auto; justify-content: center; }
+/* THE SIDE RAILS (owner's ruling 2026-09-18): the blue info panels leave the
+   table — Sipho's message strip stands OUTSIDE on the LEFT, mine on the RIGHT,
+   and the table narrows to fit everything inside the 900. Only the wide table:
+   the phone keeps its strips in their rows */
+#screen-game.p2.w2 #table-middle { padding: 0 108px; }
+#screen-game.p2.w2 #opp-warn,
+#screen-game.p2.w2 #my-warn {
+  position: absolute; top: 0; bottom: 0; width: 94px;
+  min-height: 0; flex: none; z-index: 5;
+}
+#screen-game.p2.w2 #opp-warn { left: 7px; }
+#screen-game.p2.w2 #my-warn { right: 7px; }
 #screen-game.p2 .grid-cell { border-radius: 0; }   /* rectangles with the cards (v49) */
 
 /* my bar: full width under my areas; my fan packs RIGHT.

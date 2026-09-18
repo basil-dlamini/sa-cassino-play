@@ -121,10 +121,13 @@
       }
       const wDeep = Math.floor((col.clientWidth - 16) / (1 + 9 * 0.25));
       /* the wide row runs TEN across (owner 2026-09-18): ten cards + nine
-         gaps must fit the 900 column — this caps the card everywhere wide */
+         gaps must fit the 900 column MINUS the side rails (the blue info
+         panels outside the table, 108 each side) — this caps the card
+         everywhere wide */
       const gridCols = wide ? 10 : (p2FiveCols() ? 5 : 4);
       const gridGaps = wide ? 9 * 5 : (p2FiveCols() ? 4 * 5 : 3 * 5);
-      const wGrid = Math.floor((col.clientWidth - 16 - gridGaps) / gridCols);
+      const railPad = wide ? 216 : 0;
+      const wGrid = Math.floor((col.clientWidth - 16 - gridGaps - railPad) / gridCols);
       /* wide: his face-down fan costs one more card row above his banner */
       const wH = Math.floor((col.clientHeight - (wide ? 195 : 175)) / ((wide ? 6 : 5) * 1.4));
       const w = Math.max(52, Math.min(104, Math.min(wDeep, wGrid, wH)));
