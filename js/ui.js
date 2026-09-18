@@ -120,20 +120,19 @@
         if (g && !dealSeq) { renderOppZone(); renderSides(); renderTable(); }
       }
       const wDeep = Math.floor((col.clientWidth - 16) / (1 + 9 * 0.25));
-      /* the wide grid is the original 5×2 (owner 2026-09-18): five cards
-         across the 728 table area. The info rails are 86 each — LOCKED by
-         the owner (900 − 728 = 172, 172 ÷ 2 = 86; do not change until
-         asked) */
-      const gridCols = wide ? 5 : (p2FiveCols() ? 5 : 4);
-      const gridGaps = wide ? 4 * 5 : (p2FiveCols() ? 4 * 5 : 3 * 5);
+      /* THE BAND (owner 2026-09-18): the areas flank the slot lines (his at
+         the top row, mine at the bottom row), so one line-up of SEVEN cards
+         spans the table — five grid cards + one area card per flank. The
+         info rails are 86 each — LOCKED by the owner (900 − 728 = 172,
+         172 ÷ 2 = 86; do not change until asked) */
+      const gridCols = wide ? 7 : (p2FiveCols() ? 5 : 4);
+      const gridGaps = wide ? 4 * 5 + 2 * 10 + 2 * 8 : (p2FiveCols() ? 4 * 5 : 3 * 5);
       const railPad = wide ? 172 : 0;
       const innerPad = wide ? 0 : 16;   /* wide: the rails ARE the padding */
       const wGrid = Math.floor((col.clientWidth - innerPad - gridGaps - railPad) / gridCols);
-      /* wide: the fan, his areas, TWO grid rows, my areas, my hand — six rows
-         of card height; banners/bars/control sit in the fixed reserve. The
-         5-wide grid leaves horizontal air, so the HEIGHT is the honest limit
-         — sized to fill the table, not float in it (owner 2026-09-18) */
-      const wH = Math.floor((col.clientHeight - 195) / ((wide ? 6 : 5) * 1.4));
+      /* wide: the fan, TWO grid rows, my hand — four rows of card height
+         (the areas ride the grid's own lines now, costing none) */
+      const wH = Math.floor((col.clientHeight - 195) / ((wide ? 4 : 5) * 1.4));
       const w = Math.max(52, Math.min(104, Math.min(wDeep, wGrid, wH)));
       document.documentElement.style.setProperty('--card-w', w + 'px');
       /* the fan's overlap follows the card size — but NEVER mid-ceremony:

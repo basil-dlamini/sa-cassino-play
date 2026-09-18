@@ -838,8 +838,33 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
 #screen-game.p2 #table-cards { gap: 5px; }
 #table-cards.cols-4 { grid-template-columns: repeat(4, var(--card-w)); }
 #screen-game.p2 #table-cards.cols-5 { grid-template-columns: repeat(5, var(--card-w)); }   /* the owner's 5×2 — phones AND the wide table (2026-09-18: back to the original) */
-/* the wide band still centres the grid — the two rows sit mid-table */
+/* the wide band centres the grid — and THE AREAS RIDE THE SLOT LINES (owner
+   2026-09-18): Sipho's areas flank the TOP row on the left, mine flank the
+   BOTTOM row on the right, all in one line-up using the space beside the
+   five-wide grid */
 #screen-game.p2.w2 #discard-grid-wrap { flex: 1 1 auto; justify-content: center; }
+#screen-game.p2.w2 #table-middle {
+  display: grid;
+  grid-template-columns: max-content max-content max-content;
+  grid-template-rows: 1fr max-content 1fr;
+  justify-content: center; gap: 10px;
+}
+#screen-game.p2.w2 #opp-side {
+  grid-column: 1; grid-row: 2; align-self: start;
+  width: auto; padding: 0 0 0 0; flex: 0 0 auto;
+}
+#screen-game.p2.w2 #discard-grid-wrap { grid-column: 2; grid-row: 2; flex: 0 0 auto; padding: 0; }
+#screen-game.p2.w2 #my-side {
+  grid-column: 3; grid-row: 2; align-self: end;
+  width: auto; padding: 0; flex: 0 0 auto;
+}
+/* each flank is ONE card wide — the boxes stack (his pile over build at the
+   top row's line, my build over pile at the bottom row's line) so the band
+   stays seven cards wide and the cards keep their size */
+#screen-game.p2.w2 #opp-side .area-row,
+#screen-game.p2.w2 #my-side .area-row {
+  flex-direction: column; align-items: center; gap: 8px;
+}
 /* THE RAILS (owner's rulings 2026-09-18): the blue info panels run the
    table's ENTIRE height outside the play area — Sipho's LEFT, mine RIGHT.
    THE INFO AREA WIDTH IS 86 — LOCKED BY THE OWNER (900 − 728 = 172, 172 ÷ 2
