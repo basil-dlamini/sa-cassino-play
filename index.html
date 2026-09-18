@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>South African Cassino</title>
-<link rel="stylesheet" href="css/style.css?v=120">
+<link rel="stylesheet" href="css/style.css?v=121">
 </head>
 <body>
 
@@ -89,6 +89,11 @@
       <svg viewBox="0 0 24 24"><path d="M5 21V4a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v17"/><path d="M3 21h16"/><path d="M12 12h8M17 9l3 3-3 3"/></svg>
     </button>
   </div>
+  <!-- THE FULL-HEIGHT RAILS (owner 2026-09-18): on the wide table the blue info
+       panels stand outside the play area, top to bottom — Sipho's rail left,
+       mine right, each carrying that player's areas at their end of the table -->
+  <div id="rail-l" class="side-rail"></div>
+  <div id="rail-r" class="side-rail"></div>
   <div id="opp-zone"></div>
   <div id="table-middle">
     <div id="opp-side"></div>
@@ -216,7 +221,7 @@ window.addEventListener('unhandledrejection', function (e) {
 <script src="js/ai.js?v=106"></script>
 <script src="js/ads.js?v=106"></script>
 <script src="js/audio.js?v=106"></script>
-<script src="js/ui.js?v=120"></script>
+<script src="js/ui.js?v=121"></script>
 <script>UI.init();</script>
 </body>
 </html>

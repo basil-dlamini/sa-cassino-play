@@ -117,7 +117,7 @@
         p2WideOn = wide;
         p2FiveOn = five;
         col.classList.toggle('w2', wide);
-        if (g && !dealSeq) { renderOppZone(); renderTable(); }
+        if (g && !dealSeq) { renderOppZone(); renderSides(); renderTable(); }
       }
       const wDeep = Math.floor((col.clientWidth - 16) / (1 + 9 * 0.25));
       /* the wide row runs TEN across (owner 2026-09-18): ten cards + nine
@@ -468,29 +468,49 @@
         const owned = g.builds.filter((b) => b.owner === 1 && !b.scaffold);
         for (let i = 0; i < slots; i++) theirs.appendChild(buildZoneEl(1, owned[i] || null));
       }
-      oppSide.appendChild(theirs);
       const ow = warnZone('opp-warn');
       ow.textContent = oppWarnText();
+      // my areas: build box ABOVE the captured pile (opponents keep pile-above-build)
+      const mine = document.createElement('div');
+      mine.className = 'area-row';
+      {
+        const slots = R.maxSlots(g);
+        const owned = g.builds.filter((b) => b.owner === HUMAN && !b.scaffold);
+        for (let i = 0; i < slots; i++) mine.appendChild(buildZoneEl(HUMAN, owned[i] || null));
+        mine.appendChild(pileEl(HUMAN));
+      }
+      if (p2Wide()) {
+        /* THE FULL-HEIGHT RAILS (owner's ruling 2026-09-18): the blue info
+           panels stand outside the play area for the table's entire height —
+           Sipho's rail on the LEFT carrying his areas at his end (top), my
+           rail on the RIGHT carrying mine at my end (bottom) */
+        const rl = $('rail-l'), rr = $('rail-r');
+        rl.innerHTML = ''; rr.innerHTML = '';
+        rl.appendChild(theirs);
+        rl.appendChild(ow);
+        rr.appendChild(warnZone('my-warn'));
+        rr.appendChild(mine);
+        return;
+      }
+      oppSide.appendChild(theirs);
       oppSide.appendChild(ow);
-    }
-    // my areas: build box ABOVE the captured pile (opponents keep pile-above-build)
-    const mine = document.createElement('div');
-    mine.className = 'area-row';
-    {
-      const slots = R.maxSlots(g);
-      const owned = g.builds.filter((b) => b.owner === HUMAN && !b.scaffold);
-      for (let i = 0; i < slots; i++) mine.appendChild(buildZoneEl(HUMAN, owned[i] || null));
-      mine.appendChild(pileEl(HUMAN));
-    }
-    if (g.numPlayers === 2) {
       /* my message zone comes first, then my slots — mirror of Sipho's row */
       mySide.appendChild(warnZone('my-warn'));
       mySide.appendChild(mine);
       return;
     }
-    mine.classList.add('vertical', 'keep-bottom');
-    mine.classList.toggle('active', isHumanTurn());
-    mySide.appendChild(mine);
+    /* three hands: my areas flank the grid on the right (vertical) */
+    const mine3 = document.createElement('div');
+    mine3.className = 'area-row';
+    {
+      const slots = R.maxSlots(g);
+      const owned = g.builds.filter((b) => b.owner === HUMAN && !b.scaffold);
+      for (let i = 0; i < slots; i++) mine3.appendChild(buildZoneEl(HUMAN, owned[i] || null));
+      mine3.appendChild(pileEl(HUMAN));
+    }
+    mine3.classList.add('vertical', 'keep-bottom');
+    mine3.classList.toggle('active', isHumanTurn());
+    mySide.appendChild(mine3);
   }
 
   /* ---------------- four hands: corner triangles + bottom-left opponent ---------------- */
