@@ -53,7 +53,9 @@ small { opacity: .75; }
   }
   #banner-ad {
     border-radius: 14px; border: 1px solid var(--frame-line);
-    max-width: calc(var(--col) - 16px);
+    /* the standard 728 leaderboard (owner 2026-09-18): the wide table's area
+       follows the ad's width — the bigger banner gives the cards their room */
+    max-width: 728px;
     box-shadow: 0 12px 30px rgba(0,0,0,.5);
   }
 }
@@ -842,29 +844,32 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
    is reclaimed, not left as a hole */
 #screen-game.p2.w2 #table-cards.cols-10w { grid-template-columns: repeat(10, var(--card-w)); width: 100%; justify-content: space-between; }
 #screen-game.p2.w2 #discard-grid-wrap { flex: 1 1 auto; justify-content: center; }
-/* THE FULL-HEIGHT RAILS (owner's rulings 2026-09-18): ONLY the blue info
-   panels stand outside the play area, running the table's ENTIRE height —
-   Sipho's on the LEFT, mine on the RIGHT. The AREAS stay inside the table
-   where they have always lived. The TABLE AREA matches the advertising strip's
-   width (584 — the desktop ad cap); the rest of the space outside is the
-   rails'. Only the wide table: the phone keeps its strips in their rows */
+/* THE RAILS (owner's rulings 2026-09-18): the blue info panels run the
+   table's ENTIRE height outside the play area — Sipho's LEFT, mine RIGHT —
+   and MY AREAS ride my rail at my end. The TABLE AREA follows the 728
+   advertising strip (equal widths); the rails take the rest of the 900 */
 .side-rail { display: none; }
-#screen-game.p2.w2 { position: relative; padding: 0 157px; }  /* 157+157 inside the 1px felt border: the table area lands at exactly the ad width */
+#screen-game.p2.w2 { position: relative; padding: 0 85px; }
 #screen-game.p2.w2 .side-rail {
-  display: flex; flex-direction: column; gap: 6px; padding: 8px 6px;
-  position: absolute; top: 0; bottom: 0; width: 144px; z-index: 5;
+  display: flex; flex-direction: column; gap: 5px; padding: 6px 3px;
+  position: absolute; top: 0; bottom: 0; width: 71px; z-index: 5;
   border: 1px solid rgba(244,239,226,.35); border-radius: 10px;
   background: rgba(9,15,38,.8);
   font-family: 'Segoe UI', system-ui, sans-serif;
 }
 #screen-game.p2.w2 #rail-l { left: 7px; }
-#screen-game.p2.w2 #rail-r { right: 7px; }
+#screen-game.p2.w2 #rail-r { right: 7px; align-items: center; }
 /* inside a rail the warn zone is just centred words on the panel */
 #screen-game.p2.w2 #opp-warn,
 #screen-game.p2.w2 #my-warn {
   position: static; flex: 1 1 auto; width: auto; min-height: 0;
   border: none; background: none; border-radius: 0;
-  justify-content: center; padding: 2px 6px;
+  justify-content: center; padding: 2px 2px;
+}
+/* my areas ride the right rail — sized to the rail, not the table's cards */
+#screen-game.p2.w2 #rail-r .area-box { --card-w: 50px; }
+#screen-game.p2.w2 #rail-r .area-row {
+  flex-direction: column; align-items: center; gap: 5px; flex: 0 0 auto; width: 100%;
 }
 #screen-game.p2 .grid-cell { border-radius: 0; }   /* rectangles with the cards (v49) */
 

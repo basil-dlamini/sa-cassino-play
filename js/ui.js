@@ -121,15 +121,16 @@
       }
       const wDeep = Math.floor((col.clientWidth - 16) / (1 + 9 * 0.25));
       /* the wide row runs TEN across (owner 2026-09-18): ten cards + nine
-         gaps must fit the TABLE AREA — which matches the advertising strip's
-         width (the 584 desktop ad cap; 316 of rails outside it) */
+         gaps must fit the TABLE AREA — which follows the 728 advertising
+         strip (equal widths; 170 of rails outside it) */
       const gridCols = wide ? 10 : (p2FiveCols() ? 5 : 4);
       const gridGaps = wide ? 9 * 5 : (p2FiveCols() ? 4 * 5 : 3 * 5);
-      const railPad = wide ? 314 : 0;   /* 2×157 — the felt border gives back the last 2px */
+      const railPad = wide ? 170 : 0;
       const innerPad = wide ? 0 : 16;   /* wide: the rails ARE the padding */
       const wGrid = Math.floor((col.clientWidth - innerPad - gridGaps - railPad) / gridCols);
-      /* wide: his face-down fan costs one more card row above his banner */
-      const wH = Math.floor((col.clientHeight - (wide ? 195 : 175)) / ((wide ? 6 : 5) * 1.4));
+      /* wide: his fan costs one more card row above his banner, and my areas
+         left the table for the rail — five rows of card height all told */
+      const wH = Math.floor((col.clientHeight - 175) / (5 * 1.4));
       const w = Math.max(52, Math.min(104, Math.min(wDeep, wGrid, wH)));
       document.documentElement.style.setProperty('--card-w', w + 'px');
       /* the fan's overlap follows the card size — but NEVER mid-ceremony:
@@ -480,17 +481,17 @@
         mine.appendChild(pileEl(HUMAN));
       }
       if (p2Wide()) {
-        /* THE FULL-HEIGHT RAILS (owner's rulings 2026-09-18): ONLY the blue
-           info panels stand outside for the table's entire height — Sipho's
-           on the LEFT, mine on the RIGHT. The AREAS stay inside the table
-           where they have always lived (owner: "the areas must remain where
-           they were") */
+        /* THE RAILS (owner's rulings 2026-09-18): the blue info panels stand
+           outside for the table's entire height — Sipho's on the LEFT, mine on
+           the RIGHT — and MY AREAS ride my rail at my end (owner: "my areas
+           must be on the right"). Sipho's areas stay INSIDE the table where
+           they have always lived */
         const rl = $('rail-l'), rr = $('rail-r');
         rl.innerHTML = ''; rr.innerHTML = '';
         rl.appendChild(ow);
         rr.appendChild(warnZone('my-warn'));
+        rr.appendChild(mine);
         oppSide.appendChild(theirs);
-        mySide.appendChild(mine);
         return;
       }
       oppSide.appendChild(theirs);
