@@ -128,9 +128,9 @@
       const railPad = wide ? 170 : 0;
       const innerPad = wide ? 0 : 16;   /* wide: the rails ARE the padding */
       const wGrid = Math.floor((col.clientWidth - innerPad - gridGaps - railPad) / gridCols);
-      /* wide: his fan costs one more card row above his banner, and my areas
-         left the table for the rail — five rows of card height all told */
-      const wH = Math.floor((col.clientHeight - 175) / (5 * 1.4));
+      /* wide: his fan costs one more card row above his banner, my areas a row
+         above my banner — six rows of card height all told */
+      const wH = Math.floor((col.clientHeight - 195) / (6 * 1.4));
       const w = Math.max(52, Math.min(104, Math.min(wDeep, wGrid, wH)));
       document.documentElement.style.setProperty('--card-w', w + 'px');
       /* the fan's overlap follows the card size — but NEVER mid-ceremony:
@@ -481,17 +481,17 @@
         mine.appendChild(pileEl(HUMAN));
       }
       if (p2Wide()) {
-        /* THE RAILS (owner's rulings 2026-09-18): the blue info panels stand
-           outside for the table's entire height — Sipho's on the LEFT, mine on
-           the RIGHT — and MY AREAS ride my rail at my end (owner: "my areas
-           must be on the right"). Sipho's areas stay INSIDE the table where
-           they have always lived */
+        /* THE RAILS (owner's rulings 2026-09-18): ONLY the blue info panels
+           stand outside for the table's entire height — Sipho's LEFT, mine
+           RIGHT. MY AREAS sit INSIDE the play area, on the RIGHT, directly
+           above the End Turn button in my banner; Sipho's stay inside at the
+           top where they have always lived */
         const rl = $('rail-l'), rr = $('rail-r');
         rl.innerHTML = ''; rr.innerHTML = '';
         rl.appendChild(ow);
         rr.appendChild(warnZone('my-warn'));
-        rr.appendChild(mine);
         oppSide.appendChild(theirs);
+        mySide.appendChild(mine);
         return;
       }
       oppSide.appendChild(theirs);

@@ -866,11 +866,9 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
   border: none; background: none; border-radius: 0;
   justify-content: center; padding: 2px 2px;
 }
-/* my areas ride the right rail — sized to the rail, not the table's cards */
-#screen-game.p2.w2 #rail-r .area-box { --card-w: 50px; }
-#screen-game.p2.w2 #rail-r .area-row {
-  flex-direction: column; align-items: center; gap: 5px; flex: 0 0 auto; width: 100%;
-}
+/* MY AREAS sit inside the play area on the RIGHT (owner 2026-09-18), directly
+   above the End Turn button in my banner */
+#screen-game.p2.w2 #my-side { justify-content: flex-end; }
 #screen-game.p2 .grid-cell { border-radius: 0; }   /* rectangles with the cards (v49) */
 
 /* my bar: full width under my areas; my fan packs RIGHT.
