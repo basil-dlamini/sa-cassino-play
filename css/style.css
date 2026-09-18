@@ -984,4 +984,8 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
 #screen-game.p2.w2 #opp-zone { padding: 8px 12px 2px; gap: 4px; }
 /* his backs sit a touch tighter than my spread hand — a held fan, every back
    clearly visible, thinning as he plays */
-#screen-game.p2.w2 #opp-fan .card { margin-left: calc(var(--card-w) * -0.6); }
+/* HIS FAN FILLS THE ROW like mine (owner 2026-09-18): ui.js sets the same
+   --fan-shift spread law per hand size — full width when the backs are many,
+   edge-to-edge when they thin out; the fixed overlap stays as the fallback */
+#screen-game.p2.w2 #opp-fan .card { margin-left: var(--fan-shift, calc(var(--card-w) * -0.6)); }
+#screen-game.p2.w2 #opp-fan .card:first-child { margin-left: 0; }

@@ -385,6 +385,16 @@
         fan.id = 'opp-fan';
         for (let i = 0, n = g.players[1].hand.length; i < n; i++) fan.appendChild(cardBack());
         zone.appendChild(fan);
+        /* HIS FAN FILLS THE ROW like mine (owner 2026-09-18): the same spread
+           law the hand uses — the backs fill the table's width while many,
+           thin to edge-to-edge as he plays, never more overlap than needed */
+        const avail = zone.clientWidth - 16;
+        const cw = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--card-w')) || 70;
+        const n = g.players[1].hand.length;
+        if (n > 1 && avail > cw) {
+          const slice = Math.floor((avail - cw) / (n - 1));
+          fan.style.setProperty('--fan-shift', (Math.min(slice, cw) - cw) + 'px');
+        }
       }
       zone.appendChild(nameBar(g, 1, {}));
     } else if (g.numPlayers === 3) {
