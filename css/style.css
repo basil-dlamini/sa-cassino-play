@@ -880,19 +880,21 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
   background: rgba(9,15,38,.8);
   font-family: 'Segoe UI', system-ui, sans-serif;
 }
-/* SIPHO WEARS MAROON (owner's pick 2026-09-18): his banner and his info rail
-   dress in the glossy maroon — #6E1423 lit at the top, #3E0A14 deep at the
-   bottom, the same ivory border and letters as ever */
+/* SIPHO WEARS DARK CRIMSON (owner's pick 2026-09-18, chosen on the shades
+   page): his banner on BOTH screens (phone and wide) and his info rail on
+   the wide table — #9C2529 lit at the top, #8C1D22 mid, #570E12 deep at the
+   bottom; his active turn brightens a step. The ivory border and letters
+   stay as ever */
+#screen-game #opp-zone .namebar {
+  background: linear-gradient(180deg, #9C2529, #8C1D22 45%, #570E12);
+}
+#screen-game #opp-zone .namebar.active {
+  background: linear-gradient(180deg, #A62B2F, #8C1D22 45%, #63100F);
+  border-color: rgba(244,239,226,.55);
+}
 #screen-game.p2.w2 #rail-l {
   left: 0; border-radius: 23px 0 0 23px; border-right: none;
-  background: linear-gradient(180deg, rgba(126,26,43,.94), rgba(110,20,35,.92) 45%, rgba(62,10,20,.96));
-}
-#screen-game.p2.w2 #opp-zone .namebar {
-  background: linear-gradient(180deg, #7E1A2B, #6E1423 45%, #3E0A14);
-}
-#screen-game.p2.w2 #opp-zone .namebar.active {
-  background: linear-gradient(180deg, #8C2033, #6E1423 45%, #450B17);
-  border-color: rgba(244,239,226,.55);
+  background: linear-gradient(180deg, rgba(156,37,41,.94), rgba(140,29,34,.92) 45%, rgba(87,14,18,.96));
 }
 #screen-game.p2.w2 #rail-r { right: 0; align-items: center; border-radius: 0 23px 23px 0; border-left: none; }
 /* inside a rail the warn zone is just centred words on the panel */
