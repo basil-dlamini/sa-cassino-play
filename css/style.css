@@ -969,6 +969,21 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
   background: linear-gradient(180deg, rgba(156,37,41,.30), rgba(87,14,18,.48));
   border-color: rgba(176,42,47,.5);
 }
+/* (owner 2026-09-19) THE PHONE LAYOUT IS LOCKED: the info zones stand at the
+   area boxes' height and the words must FIT INSIDE — long notes clamp with an
+   ellipsis (the full text always lives in the log). Nothing grows, nothing
+   shifts. Scoped to the row zones only — the wide rails' panels keep their
+   full-height flex */
+#screen-game.p2 #opp-side .warn-zone,
+#screen-game.p2 #my-side .warn-zone {
+  height: calc(var(--card-w) * 1.4 + 12px);
+  min-height: 0;
+  display: -webkit-box; -webkit-box-orient: vertical;
+  -webkit-box-align: center; -webkit-box-pack: center;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+  font-size: 11px;
+}
 #screen-game.p2 .grid-cell { border-radius: 0; }   /* rectangles with the cards (v49) */
 
 /* my bar: full width under my areas; my fan packs RIGHT.
