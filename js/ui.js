@@ -506,11 +506,11 @@
         mySide.appendChild(mine);
         return;
       }
-      oppSide.appendChild(theirs);
       oppSide.appendChild(ow);
-      /* my message zone comes first, then my slots — mirror of Sipho's row */
-      mySide.appendChild(warnZone('my-warn'));
+      oppSide.appendChild(theirs);   /* (owner 2026-09-19) HIS boxes sit RIGHT of his row */
+      /* my message zone closes my row — MY boxes sit LEFT of it (owner 2026-09-19) */
       mySide.appendChild(mine);
+      mySide.appendChild(warnZone('my-warn'));
       return;
     }
     /* three hands: my areas flank the grid on the right (vertical) */
