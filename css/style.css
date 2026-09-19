@@ -964,10 +964,11 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
 }
 /* MY AREAS sit inside the play area on the RIGHT (owner 2026-09-18), directly
    above the End Turn button in my banner */
-/* (owner 2026-09-19) HIS message zone on the PHONE wears the crimson too */
+/* (owner 2026-09-19) HIS message zone on the PHONE wears the crimson — SOLID,
+   the same opaque dark-crimson as his banner (no translucency) */
 #screen-game.p2 #opp-side .warn-zone {
-  background: linear-gradient(180deg, rgba(156,37,41,.30), rgba(87,14,18,.48));
-  border-color: rgba(176,42,47,.5);
+  background: linear-gradient(180deg, #9C2529, #8C1D22 45%, #570E12);
+  border-color: rgba(244,239,226,.4);
 }
 /* (owner 2026-09-19) THE PHONE LAYOUT IS LOCKED: the info zones stand at the
    area boxes' height and the words must FIT INSIDE — long notes clamp with an
