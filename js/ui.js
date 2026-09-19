@@ -2359,11 +2359,6 @@
     /* COLOUR-CODED RESULTS (owner 2026-09-18): my side blue, the enemy side
       crimson — the head badges and the table's columns carry their side */
     const sideCls = (t) => ' vs-' + (t.members.includes(HUMAN) ? 'me' : 'opp');
-    html += '<div class="versus' + (stats.length === 3 ? ' three' : '') + '">';
-    html += '<div class="vs-head">' + (stats.length === 3 ? '<i></i>' : '') +
-      stats.map((t) => '<div class="vs-side' + sideCls(t) + (res.winners.includes(t.name) ? ' winner' : '') + '">' +
-        '<span class="vs-name">' + lab(t) + '</span><span class="vs-total">' + t.total + '</span></div>')
-        .join(stats.length === 2 ? '<span class="vs-mid">vs</span>' : '') + '</div>';
     /* bare numbers only (owner 2026-09-15): no ×, no suit icons, no 'pts'
        suffix — and the Spy 2 / Big 10 indicators read 1 or 0.
        Row order (owner 2026-09-15): Big 10, Spy 2, ONE ROW PER ACE from the
@@ -2395,9 +2390,32 @@
       { name: 'Cards sweep', val: (t) => allCards(t) ? '1' : '0',
         pts: (t) => t.sweep >= cleanPts2 ? t.sweep : 0 }
     );
+    if (p2Wide() && stats.length === 2) {
+      /* (owner 2026-09-19) THE PC RESULTS SHEET IS LANDSCAPE: one wide
+         scoreboard — MY row on top, Sipho's below; the side ribbons span
+         the table's width, equal by construction; each cell reads its value
+         with the points it earned beneath */
+      const short = { '10&diams; Big 10': 'Big 10', '2&spades; Spy': 'Spy', 'Spades': '&spades;', 'Cards': 'Cards', 'Points sweep': 'P. swp', 'Cards sweep': 'C. swp' };
+      const cat = (r) => short[r.name] || r.name;
+      html += '<div class="versus land"><table class="vs-table land">';
+      html += '<tr><th class="t-rib"></th>' +
+        rows.map((r) => '<th class="t-cat">' + cat(r) + '</th>').join('') + '<th class="t-cat">Total</th></tr>';
+      const sideRow = (t, cls) =>
+        '<tr class="' + cls + '"><th class="t-rib" scope="row">' + lab(t) + '</th>' +
+        rows.map((r) => '<td class="t-cell">' + r.val(t) + (r.pts(t) ? '<small>+' + r.pts(t) + '</small>' : '') + '</td>').join('') +
+        '<td class="t-cell tot' + (res.winners.includes(t.name) ? ' win' : '') + '">' + t.total + '</td></tr>';
+      html += sideRow(stats[0], 'r-me');
+      html += sideRow(stats[1], 'r-opp');
+      html += '</table></div>';
+    } else {
     /* one true table (owner-approved preview 2026-09-15): every column a
        single shared channel — the vertical lines run straight from the
        first row to the Total, all text centred in its cell */
+    html += '<div class="versus' + (stats.length === 3 ? ' three' : '') + '">';
+    html += '<div class="vs-head">' + (stats.length === 3 ? '<i></i>' : '') +
+      stats.map((t) => '<div class="vs-side' + sideCls(t) + (res.winners.includes(t.name) ? ' winner' : '') + '">' +
+        '<span class="vs-name">' + lab(t) + '</span><span class="vs-total">' + t.total + '</span></div>')
+        .join(stats.length === 2 ? '<span class="vs-mid">vs</span>' : '') + '</div>';
     html += '<table class="vs-table">';
     for (const r of rows) {
       if (stats.length === 3) {
@@ -2423,6 +2441,7 @@
         '<td class="t-pts tot col-opp' + (res.winners.includes(b.name) ? ' win' : '') + '">' + b.total + '</td></tr>';
     }
     html += '</table></div>';
+    }
     html += '<details class="score-law"><summary>&#9432; ' + res.totalInPlay +
       ' points were in play &mdash; how scoring works</summary><p>' +
       (res.teamMode

@@ -562,6 +562,28 @@ small { opacity: .75; }
 .vs-table td.col-opp { background: rgba(87,14,18,.22); }
 .vs-table tr.total td.col-me { background: rgba(16,26,58,.42); }
 .vs-table tr.total td.col-opp { background: rgba(87,14,18,.36); }
+/* (owner 2026-09-19) THE LANDSCAPE RESULTS (PC): one wide scoreboard — my
+   row on top, Sipho's below; the side ribbons span the table's width, equal
+   by construction; values read with their earned points beneath */
+.versus.land { display: block; }
+.vs-table.land { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.vs-table.land th.t-cat {
+  font-size: 11px; font-weight: 700; opacity: .72;
+  padding: 5px 2px; text-align: center; overflow-wrap: break-word;
+}
+.vs-table.land th.t-rib {
+  width: 20%; text-align: left; font-size: 14px; font-weight: 800;
+  letter-spacing: 1.5px; text-transform: uppercase; padding: 10px 12px;
+}
+.vs-table.land td.t-cell { text-align: center; font-weight: 800; font-size: 1.05rem; padding: 9px 2px; }
+.vs-table.land td.t-cell small { display: block; font-size: 10px; color: #ffd682; line-height: 1.1; }
+.vs-table.land td.t-cell.tot { font-size: 1.45rem; }
+.vs-table.land tr.r-me th, .vs-table.land tr.r-me td { background: rgba(16,26,58,.34); border-top: 1px solid rgba(244,239,226,.25); }
+.vs-table.land tr.r-opp th, .vs-table.land tr.r-opp td {
+  background: rgba(87,14,18,.30);
+  border-top: 1px solid rgba(244,239,226,.25);
+  border-bottom: 2px solid rgba(244,239,226,.3);
+}
 .vs-side:not(.winner) { opacity: .78; }
 .vs-name {
   display: block; font-size: .88rem; font-weight: 700;
