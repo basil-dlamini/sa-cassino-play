@@ -1029,6 +1029,12 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
 #screen-game.p2.w2 { max-width: 900px; }
 /* the fan's air: the zone re-gains the padding the portrait bar zeroed */
 #screen-game.p2.w2 #opp-zone { padding: 8px 12px 2px; gap: 4px; }
+/* (owner 2026-09-19) HIS BANNER RUNS THE TABLE'S FULL WIDTH like mine —
+   pulled out of the zone's side padding so it sits flush against my info
+   rail on the left and his on the right, no felt gaps */
+#screen-game.p2.w2 #opp-zone .namebar {
+  margin-left: -12px; margin-right: -12px; width: calc(100% + 24px);
+}
 /* his backs sit a touch tighter than my spread hand — a held fan, every back
    clearly visible, thinning as he plays */
 /* HIS FAN FILLS THE ROW like mine (owner 2026-09-18): ui.js sets the same
