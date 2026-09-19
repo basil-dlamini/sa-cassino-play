@@ -27,20 +27,28 @@
   /* round 1 (owner-approved 2026-09-08): place=playcard, discard/UI=flick,
      build=contact, steal=draw, deal=shuffle. Capture/sweep/win/lose stay
      interim pending the owner's own recordings (record.html) */
+  /* (owner 2026-09-19) THE OWNER'S OWN RECORDINGS ARE THE SHIPPED VOICE: the
+     seven takes from his phone (carried by the voice bridge) live in sounds/
+     as owner-*.wav and play on EVERY device — the PC, his phone, any fresh
+     browser — exactly as the mobile version always sounded. His voice map
+     holds: discard speaks with the PLACE recording (owner-discard.wav ships
+     too, simply unused, as on the phone). Groups he never recorded (deal,
+     win, lose, click, sweeps) keep their approved stand-ins — identical on
+     every device as well */
   const GROUPS = {
-    place:   ['playcard.wav'],
-    discard: ['mixkit-2001.mp3'],
-    build:   ['pcs-contact1.wav'],
-    steal:   ['draw.wav'],
+    place:   ['owner-place.wav'],
+    discard: ['owner-place.wav'],
+    build:   ['owner-build.wav'],
+    steal:   ['owner-steal.wav'],
     deal:    ['mixkit-3175.mp3'],
     dealout: ['draw.wav'],          /* the per-card slide of the dealing ceremony */
-    capture: ['card-shove-1.ogg', 'card-shove-2.ogg'],
+    capture: ['owner-capture.wav'],
     sweep:   ['card-shove-1.ogg', 'card-shove-2.ogg'],
     win:     ['card-fan-1.ogg'],
     lose:    ['playcard.wav'],
     click:   ['mixkit-2001.mp3'],
-    select:  ['playcard.wav'],
-    deselect: ['playcard.wav']
+    select:  ['owner-select.wav'],
+    deselect: ['owner-deselect.wav']
   };
   /* the owner's voice map (SOUND MAP 2026-09-11): discard speaks with the
      PLACE recording — the card slipping into place. The take keyed 'discard'
@@ -306,7 +314,11 @@
     if (!list.length) return false;
     const src = c.createBufferSource();
     src.buffer = buffers[list[Math.floor(Math.random() * list.length)]];
-    src.playbackRate.value = (rate || 1) * (0.94 + Math.random() * 0.12);
+    /* the owner's own recordings play VERBATIM — no jitter, no pitch shift —
+       exactly as they play from his phone's personal voice; the stand-in
+       samples keep their life-like variation */
+    const isOwner = list.some((n) => n.indexOf('owner-') === 0);
+    src.playbackRate.value = isOwner ? 1 : (rate || 1) * (0.94 + Math.random() * 0.12);
     const g = c.createGain();
     g.gain.value = vol;
     src.connect(g); g.connect(c.destination);
