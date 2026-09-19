@@ -2390,11 +2390,14 @@
       { name: 'Cards sweep', val: (t) => allCards(t) ? '1' : '0',
         pts: (t) => t.sweep >= cleanPts2 ? t.sweep : 0 }
     );
+    const sheetCard = document.querySelector('#modal-results .modal-card');
     if (p2Wide() && stats.length === 2) {
       /* (owner 2026-09-19) THE PC RESULTS SHEET IS LANDSCAPE: one wide
          scoreboard — MY row on top, Sipho's below; the side ribbons span
          the table's width, equal by construction; each cell reads its value
-         with the points it earned beneath */
+         with the points it earned beneath. The card itself goes wide
+         (land-sheet) so the sheet truly reads landscape on the PC felt */
+      sheetCard.classList.add('land-sheet');
       const short = { '10&diams; Big 10': 'Big 10', '2&spades; Spy': 'Spy', 'Spades': '&spades;', 'Cards': 'Cards', 'Points sweep': 'P. swp', 'Cards sweep': 'C. swp' };
       const cat = (r) => short[r.name] || r.name;
       html += '<div class="versus land"><table class="vs-table land">';
@@ -2408,6 +2411,7 @@
       html += sideRow(stats[1], 'r-opp');
       html += '</table></div>';
     } else {
+    sheetCard.classList.remove('land-sheet');
     /* one true table (owner-approved preview 2026-09-15): every column a
        single shared channel — the vertical lines run straight from the
        first row to the Total, all text centred in its cell */

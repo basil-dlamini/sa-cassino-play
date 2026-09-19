@@ -564,7 +564,9 @@ small { opacity: .75; }
 .vs-table tr.total td.col-opp { background: rgba(87,14,18,.36); }
 /* (owner 2026-09-19) THE LANDSCAPE RESULTS (PC): one wide scoreboard — my
    row on top, Sipho's below; the side ribbons span the table's width, equal
-   by construction; values read with their earned points beneath */
+   by construction; values read with their earned points beneath. The card
+   sheds its 520px phone cap so the sheet truly reads landscape */
+#modal-results .modal-card.results-sheet.land-sheet { width: min(92vw, 860px); max-width: none; }
 .versus.land { display: block; }
 .vs-table.land { width: 100%; border-collapse: collapse; table-layout: fixed; }
 .vs-table.land th.t-cat {
