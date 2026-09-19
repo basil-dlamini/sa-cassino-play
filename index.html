@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>South African Cassino</title>
-<link rel="stylesheet" href="css/style.css?v=142">
+<link rel="stylesheet" href="css/style.css?v=143">
 </head>
 <body>
 
@@ -185,6 +185,11 @@
     <div class="my-sounds-row">
       <div class="my-sounds-label">My table voice (✓ = your recording plays):</div>
       <div id="my-sounds" class="my-sounds-list"></div>
+      <div class="voice-port-row">
+        <button id="btn-voice-save" class="btn subtle">Save my sounds to a file</button>
+        <button id="btn-voice-load" class="btn subtle">Load my sounds from a file</button>
+        <input type="file" id="voice-file" accept=".json,application/json" hidden>
+      </div>
     </div>
     <div class="btn-row">
       <button id="btn-settings-close" class="btn primary">Done</button>
@@ -216,12 +221,12 @@ window.addEventListener('unhandledrejection', function (e) {
 });
 </script>
 
-<script src="js/cards.js?v=106"></script>
-<script src="js/rules.js?v=106"></script>
-<script src="js/ai.js?v=106"></script>
-<script src="js/ads.js?v=106"></script>
-<script src="js/audio.js?v=106"></script>
-<script src="js/ui.js?v=142"></script>
+<script src="js/cards.js?v=143"></script>
+<script src="js/rules.js?v=143"></script>
+<script src="js/ai.js?v=143"></script>
+<script src="js/ads.js?v=143"></script>
+<script src="js/audio.js?v=143"></script>
+<script src="js/ui.js?v=143"></script>
 <script>UI.init();</script>
 </body>
 </html>

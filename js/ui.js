@@ -2692,6 +2692,46 @@
 
     $('btn-settings-close').addEventListener('click', () => { Snd.click(); $('modal-settings').classList.add('hidden'); });
     $('snd-toggle').addEventListener('click', () => { Snd.muted = !Snd.muted; renderSettings(); if (!Snd.muted) Snd.click(); });
+    /* THE VOICE BRIDGE (owner 2026-09-19): the personal recordings live in
+       this device's browser storage alone — the phone that made them plays
+       them, a fresh device plays the shipped samples. SAVE them to a file on
+       the phone, send the file to the PC, LOAD it there once — both screens
+       then speak with exactly the same voice */
+    $('btn-voice-save').addEventListener('click', async () => {
+      Snd.click();
+      const pack = await Snd.exportVoice();
+      if (!pack) { toast('No recordings of yours on this device yet.'); return; }
+      const file = new File([JSON.stringify(pack)], 'sa-cassino-my-sounds.json', { type: 'application/json' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: 'SA Cassino — my table voice' });
+          return;
+        } catch (e) {
+          if (e && e.name === 'AbortError') return;   /* changed his mind — no download needed */
+          /* share refused — fall through to a plain download */
+        }
+      }
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(file);
+      a.download = file.name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      toast('Saved — send this file to your other device, then Load it there.');
+    });
+    $('btn-voice-load').addEventListener('click', () => { Snd.click(); $('voice-file').click(); });
+    $('voice-file').addEventListener('change', async () => {
+      const f = $('voice-file').files[0];
+      $('voice-file').value = '';
+      if (!f) return;
+      try {
+        const n = await Snd.importVoice(f);
+        Snd.reloadOwnerSounds();
+        renderSettings();
+        toast('Loaded ' + n + ' of your recordings — this device now plays your voice.');
+      } catch (e) {
+        toast('That file is not an SA Cassino sounds file.');
+      }
+    });
     $('confirm-toggle').addEventListener('click', () => {
       localStorage.setItem('sacassino.confirmMode', directMode() ? 'prompt' : 'direct');
       renderSettings(); Snd.click();

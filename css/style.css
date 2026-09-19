@@ -92,6 +92,10 @@ small { opacity: .75; }
   background: rgba(255,255,255,.07); color: #f4efe2; }
 .my-sounds-list span.snd-mine { background: rgba(60,180,100,.22); color: #9fe8b5; font-weight: 700; }
 .my-sounds-list span.snd-ship { opacity: .55; }
+/* the voice bridge: SAVE the recordings to a file on one device, LOAD them
+   on the other — the two screens then speak with the same voice */
+.voice-port-row { display: flex; gap: 8px; margin-top: 8px; }
+.voice-port-row .btn { flex: 1; padding: 9px 6px; font-size: .78rem; }
 .btn.big { font-size: 17px; padding: 14px 18px; width: 100%; }
 .btn.hint-chip {
   background: rgba(244,239,226,.12); border-color: var(--ivory); color: var(--ivory);

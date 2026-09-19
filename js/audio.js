@@ -238,6 +238,43 @@
         .catch(() => { /* the synth fallback stands in */ });
     });
   }
+  /* THE VOICE BRIDGE (owner 2026-09-19): the personal recordings live in
+     THIS device's browser storage alone — the phone that made them plays
+     them, a fresh device plays the shipped samples. SAVE every recording
+     into one file on the phone, LOAD that file on the PC, and both screens
+     speak with exactly the same voice */
+  function readAllOwnerSounds() {
+    return new Promise((res) => {
+      const out = {};
+      openDb().then((db) => {
+        if (!db) return res(out);
+        try {
+          const rq = db.transaction('ownerSounds', 'readonly').objectStore('ownerSounds').openCursor();
+          rq.onsuccess = () => {
+            const cur = rq.result;
+            if (!cur) return res(out);
+            if (cur.value && cur.value.size) out[cur.key] = cur.value;
+            cur.continue();
+          };
+          rq.onerror = () => res(out);
+        } catch (e) { res(out); }
+      });
+    });
+  }
+  function blobToB64(blob) {
+    return new Promise((res, rej) => {
+      const fr = new FileReader();
+      fr.onload = () => res(String(fr.result).split(',')[1] || '');
+      fr.onerror = rej;
+      fr.readAsDataURL(blob);
+    });
+  }
+  function b64ToBlob(b64, mime) {
+    const bin = atob(b64);
+    const u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    return new Blob([u8], { type: mime || 'audio/wav' });
+  }
   /* play the owner's own recording if present, else a random variant of the
      group; returns false when nothing real is available. Personal takes:
      decoded buffer first (instant), primed element second — never a fresh
@@ -399,6 +436,47 @@
        in the game — distinct from each other (the owner records both) */
     select()   { if (sample('select', 0.22, 1.5)) return; tick(0.06); },
     deselect() { if (sample('deselect', 0.2, 1.15)) return; tick(0.045); },
+
+    /* the voice bridge: SAVE every personal recording into one portable
+       file (null when this device has none), LOAD such a file back into
+       storage (returns the number of recordings stored) */
+    async exportVoice() {
+      const takes = await readAllOwnerSounds();
+      const keys = Object.keys(takes);
+      if (!keys.length) return null;
+      const pack = { app: 'sa-cassino', kind: 'table-voice', version: 1, takes: {} };
+      for (const k of keys) pack.takes[k] = { mime: takes[k].type || 'audio/wav', data: await blobToB64(takes[k]) };
+      return pack;
+    },
+    async importVoice(file) {
+      const pack = JSON.parse(await file.text());
+      if (!pack || pack.kind !== 'table-voice' || !pack.takes) throw new Error('not a table-voice file');
+      const db = await openDb();
+      if (!db) throw new Error('storage unavailable');
+      let n = 0;
+      await new Promise((res, rej) => {
+        const tx = db.transaction('ownerSounds', 'readwrite');
+        const store = tx.objectStore('ownerSounds');
+        for (const k in pack.takes) {
+          const t = pack.takes[k];
+          if (!t || !t.data) continue;
+          store.put(b64ToBlob(t.data, t.mime), k);
+          n++;
+        }
+        tx.oncomplete = res;
+        tx.onerror = () => rej(tx.error || new Error('store failed'));
+        tx.onabort = tx.onerror;
+      });
+      return n;
+    },
+    /* after an import: forget the loaded voice and read storage afresh */
+    reloadOwnerSounds() {
+      for (const k in mineURLs) { try { URL.revokeObjectURL(mineURLs[k]); } catch (e) { /* already gone */ } }
+      for (const k in mineEls) { delete mineEls[k]; }
+      for (const k in mineBufs) { delete mineBufs[k]; }
+      for (const k in mineRoute) { delete mineRoute[k]; }
+      loadOwnerSounds();
+    },
 
     /* SWEEP MOMENTS — placeholders until the owner's car/crowd recordings
        arrive (record.html). The shapes hint at the coming voices */
