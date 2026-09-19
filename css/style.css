@@ -810,7 +810,9 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
 /* the middle becomes a vertical stack: their areas, the grid, my areas.
    Content pins to the TOP — centring split the leftover space into gaps
    between the banners and the areas (owner's ruling: minimize that space). */
-#screen-game.p2 #table-middle { flex-direction: column; gap: 0; padding: 0; align-items: stretch; justify-content: flex-start; }
+/* (owner 2026-09-19) the group rides LOW on the phone too — the slack moves
+   above his row, the gap to my banner below is gone */
+#screen-game.p2 #table-middle { flex-direction: column; gap: 0; padding: 0; align-items: stretch; justify-content: flex-end; }
 #screen-game.p2 #opp-side,
 #screen-game.p2 #my-side {
   width: 100%; flex: 0 0 auto;
@@ -862,7 +864,9 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
 #screen-game.p2.w2 #table-middle {
   display: grid;
   grid-template-columns: max-content max-content max-content;
-  grid-template-rows: 1fr max-content 1fr;
+  /* (owner 2026-09-19) the band sits LOW: all the free height stays ABOVE it,
+     the gap to my banner below is a hair — orientation and design unchanged */
+  grid-template-rows: 1fr max-content 6px;
   justify-content: center; gap: 10px;
 }
 #screen-game.p2.w2 #opp-side {
