@@ -120,12 +120,12 @@
         if (g && !dealSeq) { renderOppZone(); renderSides(); renderTable(); }
       }
       const wDeep = Math.floor((col.clientWidth - 16) / (1 + 9 * 0.25));
-      /* THE BAND (owner 2026-09-18): the areas flank the slot lines (his at
-         the top row, mine at the bottom row), so one line-up of SEVEN cards
-         spans the table — five grid cards + one area card per flank. The
-         info rails are 86 each — LOCKED by the owner (900 − 728 = 172,
+      /* THE BAND (owner 2026-09-19): the areas ride the slot lines BESIDE ONE
+         ANOTHER — my flank (pile + build) left of the grid at the bottom row,
+         his (build + pile) right at the top row — nine cards span the table.
+         The info rails are 86 each — LOCKED by the owner (900 − 728 = 172,
          172 ÷ 2 = 86; do not change until asked) */
-      const gridCols = wide ? 7 : (p2FiveCols() ? 5 : 4);
+      const gridCols = wide ? 9 : (p2FiveCols() ? 5 : 4);
       const gridGaps = wide ? 4 * 5 + 2 * 10 + 2 * 8 : (p2FiveCols() ? 4 * 5 : 3 * 5);
       const railPad = wide ? 172 : 0;
       const innerPad = wide ? 0 : 16;   /* wide: the rails ARE the padding */
@@ -471,45 +471,44 @@
       return;
     }
     if (g.numPlayers === 2) {
-      /* Sipho's row: captured pile, build box, then the message zone —
-         the mirror of mine (owner's ruling) */
+      /* (owner 2026-09-19) the box orders inside each row: HIS pile stands at
+         his far edge (build LEFT of the pile), MY pile at my far edge (build
+         RIGHT of the pile) — one order serving the phone rows and the wide
+         band's side-by-side flanks alike */
       const theirs = document.createElement('div');
       theirs.className = 'area-row';
-      theirs.appendChild(pileEl(1));
       {
         const slots = R.maxSlots(g);
         const owned = g.builds.filter((b) => b.owner === 1 && !b.scaffold);
         for (let i = 0; i < slots; i++) theirs.appendChild(buildZoneEl(1, owned[i] || null));
+        theirs.appendChild(pileEl(1));
       }
       const ow = warnZone('opp-warn');
       ow.textContent = oppWarnText();
-      // my areas: build box ABOVE the captured pile (opponents keep pile-above-build)
       const mine = document.createElement('div');
       mine.className = 'area-row';
+      mine.appendChild(pileEl(HUMAN));
       {
         const slots = R.maxSlots(g);
         const owned = g.builds.filter((b) => b.owner === HUMAN && !b.scaffold);
         for (let i = 0; i < slots; i++) mine.appendChild(buildZoneEl(HUMAN, owned[i] || null));
-        mine.appendChild(pileEl(HUMAN));
       }
       if (p2Wide()) {
-        /* THE RAILS (owner's rulings 2026-09-18): ONLY the blue info panels
-           stand outside for the table's entire height — Sipho's LEFT, mine
-           RIGHT. MY AREAS sit INSIDE the play area, on the RIGHT, directly
-           above the End Turn button in my banner; Sipho's stay inside at the
-           top where they have always lived */
+        /* (owner 2026-09-19) MY info rail LEFT, HIS RIGHT. The areas sit BESIDE
+           ONE ANOTHER (not stacked): my flank at the LEFT of the grid, pile
+           far-left then build, aligned to the BOTTOM row; his flank at the
+           RIGHT, build then pile far-right, aligned to the TOP row */
         const rl = $('rail-l'), rr = $('rail-r');
         rl.innerHTML = ''; rr.innerHTML = '';
-        rl.appendChild(ow);
-        rr.appendChild(warnZone('my-warn'));
-        oppSide.appendChild(theirs);
+        rl.appendChild(warnZone('my-warn'));
+        rr.appendChild(ow);
         mySide.appendChild(mine);
+        oppSide.appendChild(theirs);
         return;
       }
       oppSide.appendChild(ow);
-      oppSide.appendChild(theirs);   /* (owner 2026-09-19) HIS boxes sit RIGHT of his row */
-      /* my message zone closes my row — MY boxes sit LEFT of it (owner 2026-09-19) */
-      mySide.appendChild(mine);
+      oppSide.appendChild(theirs);   /* HIS boxes sit RIGHT of his row */
+      mySide.appendChild(mine);      /* MY boxes sit LEFT of my row */
       mySide.appendChild(warnZone('my-warn'));
       return;
     }

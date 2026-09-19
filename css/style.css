@@ -874,12 +874,12 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
   grid-column: 1; grid-row: 2; align-self: end;
   width: auto; padding: 0; flex: 0 0 auto;
 }
-/* each flank is ONE card wide — the boxes stack (his pile over build at the
-   top row's line, my build over pile at the bottom row's line) so the band
-   stays seven cards wide and the cards keep their size */
+/* (owner 2026-09-19) the flanks lie BESIDE ONE ANOTHER, not stacked: my row
+   reads pile-then-build from the far LEFT, his reads build-then-pile to the
+   far RIGHT — the band spans nine cards across */
 #screen-game.p2.w2 #opp-side .area-row,
 #screen-game.p2.w2 #my-side .area-row {
-  flex-direction: column; align-items: center; gap: 8px;
+  align-items: center; gap: 8px;
 }
 /* THE RAILS (owner's rulings 2026-09-18): the blue info panels run the
    table's ENTIRE height outside the play area — Sipho's LEFT, mine RIGHT.
@@ -910,6 +910,9 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
 }
 #screen-game.p2.w2 #rail-l {
   left: 0; border-radius: 23px 0 0 23px; border-right: none;
+}
+#screen-game.p2.w2 #rail-r {
+  right: 0; border-radius: 0 23px 23px 0; border-left: none;
   background: linear-gradient(180deg, rgba(156,37,41,.94), rgba(140,29,34,.92) 45%, rgba(87,14,18,.96));
 }
 #screen-game.p2.w2 #rail-r { right: 0; align-items: center; border-radius: 0 23px 23px 0; border-left: none; }
@@ -957,7 +960,11 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
 }
 /* MY AREAS sit inside the play area on the RIGHT (owner 2026-09-18), directly
    above the End Turn button in my banner */
-#screen-game.p2.w2 #my-side { justify-content: flex-end; }
+/* (owner 2026-09-19) HIS message zone on the PHONE wears the crimson too */
+#screen-game.p2 #opp-side .warn-zone {
+  background: linear-gradient(180deg, rgba(156,37,41,.30), rgba(87,14,18,.48));
+  border-color: rgba(176,42,47,.5);
+}
 #screen-game.p2 .grid-cell { border-radius: 0; }   /* rectangles with the cards (v49) */
 
 /* my bar: full width under my areas; my fan packs RIGHT.
