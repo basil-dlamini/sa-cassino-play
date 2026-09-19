@@ -1411,14 +1411,20 @@
 
   /* ---------------- lifecycle ---------------- */
   /* ---------------- the dealing ceremony ---------------- */
-  /* Cards slide out of the deck face down, one beat each, then the whole
-     hand turns face up — the riffle lands on the TURN (the owner's ruling:
-     the opening sound suits the moment the cards are flipped). Pure
-     staging: the engine has already dealt; nothing here touches a rule.
-     Any tap skips to the end — the tenth game of a session owes no wait. */
+  /* Two ceremonies live here. TWO HANDS (owner 2026-09-19): the full
+     packet ritual — packets of two fly alternately to BOTH players, first
+     player first; the leftover stock flies out to the second player's
+     edge, and returns from there for round two. THREE/FOUR HANDS keep the
+     simple hand-only ceremony. Both are pure staging: the engine has
+     already dealt; nothing here touches a rule. Any tap skips to the end —
+     the tenth game of a session owes no wait. */
   let dealSeq = null;
   let lastHandLen = 0;
   function runDealSequence(then) {
+    if (g && g.numPlayers === 2) return dealCeremony2(then);
+    return dealCeremonyHand(then);
+  }
+  function dealCeremonyHand(then) {
     const hand = g.players[HUMAN].hand.slice().sort(C.compare);
     const n = hand.length;
     if (!n || dealSeq) { then(); return; }
@@ -1479,6 +1485,164 @@
     }
     timers.push(setTimeout(finish, flipAt + n * 70 + 480));
     timers.push(setTimeout(finish, flipAt + n * 70 + 1500));   /* safety: a game never hangs on a ceremony */
+  }
+  /* THE TWO-HANDS CEREMONY (owner 2026-09-19): the deck stands mid-table;
+     packets of two fly out alternately — FIRST PLAYER FIRST — my cards
+     landing face down in my hand (flipping up at the end), Sipho's landing
+     in his fan on the wide table or flying off-screen toward his edge on
+     the phone. The leftover stock then flies OUT toward the second player's
+     edge. Round two mirrors it: the stock flies back IN from that edge,
+     deals out the same way, and nothing flies after it — the deck is done */
+  function dealCeremony2(then) {
+    const myHand = g.players[HUMAN].hand.slice().sort(C.compare);
+    const n = myHand.length;
+    if (!n || dealSeq) { then(); return; }
+    const wide = p2Wide();
+    const wave2 = g.wave > 1;
+    const second = g.dealer;                 /* the dealer plays second — the stock is his */
+    const first = (g.dealer + 1) % g.numPlayers;
+    const box = $('my-hand');
+    box.innerHTML = '';
+    /* my backs wait hidden in the hand row; each appears when its card lands */
+    const myStaged = [];
+    for (let i = 0; i < n; i++) {
+      const back = cardBack();
+      back.classList.add('in-hand', 'deal-wait');
+      box.appendChild(back);
+      myStaged.push(back);
+    }
+    /* his fan (wide only): drawn, then hidden — his cards land into it */
+    let oppStaged = [];
+    if (wide) {
+      renderOppZone();
+      oppStaged = Array.prototype.slice.call(document.querySelectorAll('#opp-fan .card'));
+      oppStaged.forEach((el) => el.classList.add('deal-wait'));
+    }
+    /* the deck mid-table */
+    const deckEl = document.createElement('div');
+    deckEl.id = 'deal-deck';
+    for (let i = 0; i < 6; i++) {
+      const b = cardBack();
+      b.style.setProperty('--i', i);
+      deckEl.appendChild(b);
+    }
+    $('table-middle').appendChild(deckEl);
+    const screen = $('screen-game');
+    const timers = [];
+    const flyers = [];
+    let finished = false;
+    const finish = (e) => {
+      if (finished) return;
+      finished = true;
+      if (e && e.stopPropagation) e.stopPropagation();
+      timers.forEach(clearTimeout);
+      flyers.forEach((f) => f.remove());
+      deckEl.remove();
+      screen.removeEventListener('click', finish, true);
+      dealSeq = null;
+      clearSelection();
+      render();
+      then();
+    };
+    dealSeq = { finish };
+    screen.addEventListener('click', finish, true);
+    /* the flight list: first player's two, second player's two, five packets
+       each — seat 0 lands on a hidden back of mine, seat 1 on a hidden fan
+       back (wide) or off-screen toward his edge (phone) */
+    const order = [];
+    for (let p = 0; p < Math.ceil(n / 2); p++) [first, second].forEach((seat) => { order.push(seat, seat); });
+    let mi = 0, oi = 0;
+    const flights = order.map((seat) => {
+      if (seat === HUMAN) return { seat, target: myStaged[mi++] || null };
+      if (wide) return { seat, target: oppStaged[oi++] || null };
+      return { seat, target: null };
+    });
+    const flyCard = (f) => {
+      const dr = deckEl.getBoundingClientRect();
+      const sr = screen.getBoundingClientRect();
+      const flyer = cardBack();
+      flyer.classList.add('deal-fly');
+      flyer.style.left = (dr.left - sr.left) + 'px';
+      flyer.style.top = (dr.top - sr.top) + 'px';
+      screen.appendChild(flyer);
+      flyers.push(flyer);
+      let dx = 0, dy = 0;
+      if (f.target) {
+        const tr = f.target.getBoundingClientRect();
+        dx = tr.left - dr.left; dy = tr.top - dr.top;
+      } else {
+        dy = -(dr.top - sr.top + dr.height + 60);   /* off-screen, toward his edge */
+      }
+      void flyer.offsetWidth;      /* commit the launch position */
+      flyer.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+      timers.push(setTimeout(() => {
+        flyer.remove();
+        if (f.target) { f.target.classList.remove('deal-wait'); f.target.classList.add('deal-land'); }
+      }, 400));
+    };
+    const flipMine = () => {
+      Snd.deal();
+      for (let i = 0; i < n; i++) {
+        timers.push(setTimeout(() => {
+          if (!myStaged[i].parentNode) return;
+          const real = cardEl(myHand[i], {});
+          real.classList.add('in-hand', 'flip-in');
+          myStaged[i].parentNode.replaceChild(real, myStaged[i]);
+        }, i * 70));
+      }
+    };
+    const CARD_MS = 170, GAP_MS = 110;
+    const dealMs = flights.length * CARD_MS + Math.floor(flights.length / 2) * GAP_MS;
+    const stockDir = second === HUMAN ? 1 : -1;   /* +1 down to my edge, −1 up to his */
+    const startDealing = () => {
+      flights.forEach((f, i) => {
+        timers.push(setTimeout(() => {
+          Snd.dealCard();
+          flyCard(f);
+          if (i % 4 === 3 && deckEl.children.length > 1 && deckEl.lastChild) deckEl.lastChild.remove();
+        }, i * CARD_MS + Math.floor(i / 2) * GAP_MS + 60));
+      });
+      if (wave2) {
+        timers.push(setTimeout(flipMine, dealMs + 260));
+        timers.push(setTimeout(finish, dealMs + 260 + n * 70 + 480));
+        timers.push(setTimeout(finish, dealMs + 260 + n * 70 + 1500));
+      } else {
+        /* round one: the leftover stock flies out to the second player's edge */
+        timers.push(setTimeout(() => {
+          Snd.deal();
+          const dr = deckEl.getBoundingClientRect();
+          const sr = screen.getBoundingClientRect();
+          const dy = stockDir < 0
+            ? -(dr.top - sr.top + dr.height + 70)
+            : (sr.bottom - dr.top + 70);
+          deckEl.style.transition = 'transform .7s ease-in, opacity .65s ease-in';
+          deckEl.style.transform = 'translate(0,' + dy + 'px)';
+          deckEl.style.opacity = '0';
+        }, dealMs + 160));
+        timers.push(setTimeout(flipMine, dealMs + 950));
+        timers.push(setTimeout(finish, dealMs + 950 + n * 70 + 480));
+        timers.push(setTimeout(finish, dealMs + 950 + n * 70 + 1500));
+      }
+    };
+    if (wave2) {
+      /* round two: the stock returns from the second player's edge — the
+         start state is committed with a forced reflow, then the transition
+         carries it home (no animation-frame race) */
+      const dr0 = deckEl.getBoundingClientRect();
+      const sr0 = screen.getBoundingClientRect();
+      const offY = stockDir < 0
+        ? -(dr0.top - sr0.top + dr0.height + 70)
+        : (sr0.bottom - dr0.top + 70);
+      deckEl.style.transition = 'none';
+      deckEl.style.transform = 'translate(0,' + offY + 'px)';
+      void deckEl.offsetWidth;      /* commit the off-screen start */
+      deckEl.style.transition = 'transform .7s cubic-bezier(.2,.7,.25,1)';
+      deckEl.style.transform = 'translate(0,0)';
+      Snd.deal();
+      timers.push(setTimeout(startDealing, 800));
+    } else {
+      timers.push(setTimeout(startDealing, 260));
+    }
   }
 
   function newGame(opts) {
