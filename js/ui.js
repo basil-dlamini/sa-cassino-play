@@ -2391,27 +2391,10 @@
         pts: (t) => t.sweep >= cleanPts2 ? t.sweep : 0 }
     );
     const sheetCard = document.querySelector('#modal-results .modal-card');
-    if (p2Wide() && stats.length === 2) {
-      /* (owner 2026-09-19) THE PC RESULTS SHEET IS LANDSCAPE: one wide
-         scoreboard — MY row on top, Sipho's below; the side ribbons span
-         the table's width, equal by construction; each cell reads its value
-         with the points it earned beneath. The card itself goes wide
-         (land-sheet) so the sheet truly reads landscape on the PC felt */
-      sheetCard.classList.add('land-sheet');
-      const short = { '10&diams; Big 10': 'Big 10', '2&spades; Spy': 'Spy', 'Spades': '&spades;', 'Cards': 'Cards', 'Points sweep': 'P. swp', 'Cards sweep': 'C. swp' };
-      const cat = (r) => short[r.name] || r.name;
-      html += '<div class="versus land"><table class="vs-table land">';
-      html += '<tr><th class="t-rib"></th>' +
-        rows.map((r) => '<th class="t-cat">' + cat(r) + '</th>').join('') + '<th class="t-cat">Total</th></tr>';
-      const sideRow = (t, cls) =>
-        '<tr class="' + cls + '"><th class="t-rib" scope="row">' + lab(t) + '</th>' +
-        rows.map((r) => '<td class="t-cell">' + r.val(t) + (r.pts(t) ? '<small>+' + r.pts(t) + '</small>' : '') + '</td>').join('') +
-        '<td class="t-cell tot' + (res.winners.includes(t.name) ? ' win' : '') + '">' + t.total + '</td></tr>';
-      html += sideRow(stats[0], 'r-me');
-      html += sideRow(stats[1], 'r-opp');
-      html += '</table></div>';
-    } else {
-    sheetCard.classList.remove('land-sheet');
+    /* (owner 2026-09-19, refined same day) THE FORMAT NEVER CHANGES — the
+       classic ledger on every screen; on the wide PC felt only the CARD
+       turns landscape (land-sheet) so the sheet reads wide, not tall */
+    sheetCard.classList.toggle('land-sheet', p2Wide() && stats.length === 2);
     /* one true table (owner-approved preview 2026-09-15): every column a
        single shared channel — the vertical lines run straight from the
        first row to the Total, all text centred in its cell */
@@ -2445,7 +2428,6 @@
         '<td class="t-pts tot col-opp' + (res.winners.includes(b.name) ? ' win' : '') + '">' + b.total + '</td></tr>';
     }
     html += '</table></div>';
-    }
     html += '<details class="score-law"><summary>&#9432; ' + res.totalInPlay +
       ' points were in play &mdash; how scoring works</summary><p>' +
       (res.teamMode
