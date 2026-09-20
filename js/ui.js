@@ -606,6 +606,10 @@
   }
 
   /* ---------------- bars & control strip ---------------- */
+  /* the three-hands info-area fold (owner 2026-09-21): the ribbon's message
+     strip hides until asked for — the name, the order chip, the buttons and
+     the fold itself always stay */
+  function minInfo3() { return localStorage.getItem('sacassino.minInfo3') === '1'; }
   function renderBars() {
     const p = g.players[g.turn];
     const myBar = $('my-bar');
@@ -622,6 +626,18 @@
       /* Sipho's message zone: what he is doing, or what he just did */
       const ow = $('opp-warn');
       if (ow) ow.textContent = oppWarnText();
+    } else if (g.numPlayers === 3) {
+      /* (owner 2026-09-21) THREE HANDS WEAR THE TWO-HAND RIBBON: my name
+         leads at the left, the prompts (message + action buttons) flow in
+         the bar, and a small button folds the info area away */
+      if (!$('turn-text') || !$('btn-min-info')) {
+        myBar.innerHTML = '<span class="nb-emblem">♠</span><span class="nb-name">YOU</span>' +
+          '<span class="nb-emblem">♠</span><span class="nb-order">' + playOrder(g, HUMAN) + '</span>' +
+          '<span id="turn-text"></span><span class="nb-acts" id="bar-acts3"></span>' +
+          '<button id="btn-min-info" title="Hide / show the info area">' +
+          (minInfo3() ? '&#9656;' : '&#9662;') + '</button>';
+      }
+      $('turn-text').textContent = turnText;
     } else {
       if (!$('turn-text')) {
         myBar.innerHTML = '<span id="turn-text"></span><span class="nb-emblem">♠</span>' +
@@ -1337,7 +1353,12 @@
 
   function renderActionPanel() {
     if (g && g.numPlayers === 2) { renderActionPanel2(); return; }
-    const panel = $('action-panel');
+    /* (owner 2026-09-21) three hands carry their prompts IN THE RIBBON —
+       the floating pill retires on that screen (four hands keep it) */
+    const inRibbon = g && g.numPlayers === 3;
+    const panel = inRibbon ? $('bar-acts3') : $('action-panel');
+    if ($('action-panel')) $('action-panel').innerHTML = '';
+    if (!panel) return;
     panel.innerHTML = '';
     if (!g || g.phase === 'gameover') return;
     if (g.phase === 'shiya') {
@@ -1447,6 +1468,7 @@
   let lastHandLen = 0;
   function runDealSequence(then) {
     if (g && g.numPlayers === 2) return dealCeremony2(then);
+    if (g && g.numPlayers === 3) return dealCeremony3(then);
     return dealCeremonyHand(then);
   }
   function dealCeremonyHand(then) {
@@ -1678,6 +1700,128 @@
       timers.push(setTimeout(startDealing, 260));
     }
   }
+  /* THE THREE-HANDS CEREMONY (owner 2026-09-21): the two-hands ritual with
+     its own ending — packets of two rotate through the three players in
+     playing order (six packets each = twelve cards apiece), then the LAST
+     FOUR cards go one at a time: one to each player (their thirteenth) and
+     the final card lands FACE-UP on the discard slot — the table card. All
+     forty cards are dealt — no stock, nothing flies out. Opponents' cards
+     vanish toward their own corners (Sipho top right, Thandi top left);
+     mine land hidden and flip at the end. Pure staging; a tap skips */
+  function dealCeremony3(then) {
+    const myHand = g.players[HUMAN].hand.slice().sort(C.compare);
+    const n = myHand.length;
+    if (!n || dealSeq) { then(); return; }
+    const first = (g.dealer + 1) % 3;
+    const order = [first, (first + 1) % 3, (first + 2) % 3];
+    const box = $('my-hand');
+    box.innerHTML = '';
+    const myStaged = [];
+    for (let i = 0; i < n; i++) {
+      const back = cardBack();
+      back.classList.add('in-hand', 'deal-wait');
+      box.appendChild(back);
+      myStaged.push(back);
+    }
+    /* the engine's table card already sits in its slot — hide it; the
+       ceremony deals it there itself, face up */
+    const tableCard = g.table[0] || null;
+    const tableEl = tableCard ? document.querySelector('#table-cards .card[data-id="' + tableCard + '"]') : null;
+    if (tableEl) tableEl.classList.add('deal-wait');
+    const deckEl = document.createElement('div');
+    deckEl.id = 'deal-deck';
+    for (let i = 0; i < 6; i++) {
+      const b = cardBack();
+      b.style.setProperty('--i', i);
+      deckEl.appendChild(b);
+    }
+    $('table-middle').appendChild(deckEl);
+    const screen = $('screen-game');
+    const timers = [];
+    const flyers = [];
+    let finished = false;
+    const finish = (e) => {
+      if (finished) return;
+      finished = true;
+      if (e && e.stopPropagation) e.stopPropagation();
+      timers.forEach(clearTimeout);
+      flyers.forEach((f) => f.remove());
+      deckEl.remove();
+      screen.removeEventListener('click', finish, true);
+      dealSeq = null;
+      clearSelection();
+      render();
+      then();
+    };
+    dealSeq = { finish };
+    screen.addEventListener('click', finish, true);
+    /* the flight list: six packets of two rotating through the players
+       (36 cards), then the last four — one to each player, then the table */
+    const flights = [];
+    for (let p = 0; p < 6; p++) order.forEach((seat) => { flights.push(seat, seat); });
+    order.forEach((seat) => flights.push(seat));
+    flights.push(-1);   /* -1 = the face-up table card */
+    let mi = 0;
+    const flyCard = (seat, isTable) => {
+      const dr = deckEl.getBoundingClientRect();
+      const sr = screen.getBoundingClientRect();
+      const flyer = isTable ? cardEl(tableCard, {}) : cardBack();
+      flyer.classList.add('deal-fly');
+      flyer.style.left = (dr.left - sr.left) + 'px';
+      flyer.style.top = (dr.top - sr.top) + 'px';
+      screen.appendChild(flyer);
+      flyers.push(flyer);
+      let dx = 0, dy = 0, target = null;
+      if (seat === HUMAN) {
+        target = myStaged[mi++];
+      } else if (seat === 1) {
+        dy = -(dr.top - sr.top + dr.height + 60);   /* off-screen, his corner: top right */
+        dx = sr.right - dr.right - 4;
+      } else if (seat === 2) {
+        dy = -(dr.top - sr.top + dr.height + 60);   /* off-screen, her corner: top left */
+        dx = sr.left - dr.left + 4;
+      }
+      if (target) {
+        const tr = target.getBoundingClientRect();
+        dx = tr.left - dr.left; dy = tr.top - dr.top;
+      } else if (isTable) {
+        const tr = (tableEl || {}).getBoundingClientRect ? tableEl.getBoundingClientRect() : null;
+        if (tr) { dx = tr.left - dr.left; dy = tr.top - dr.top; }
+      }
+      void flyer.offsetWidth;   /* commit the launch position */
+      flyer.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+      timers.push(setTimeout(() => {
+        flyer.remove();
+        if (target) { target.classList.remove('deal-wait'); target.classList.add('deal-land'); }
+        if (isTable && tableEl) { tableEl.classList.remove('deal-wait'); tableEl.classList.add('deal-land'); }
+      }, 400));
+    };
+    const flipMine = () => {
+      Snd.deal();
+      for (let i = 0; i < n; i++) {
+        timers.push(setTimeout(() => {
+          if (!myStaged[i].parentNode) return;
+          const real = cardEl(myHand[i], {});
+          real.classList.add('in-hand', 'flip-in');
+          myStaged[i].parentNode.replaceChild(real, myStaged[i]);
+        }, i * 70));
+      }
+    };
+    const CARD_MS = 140, GAP_MS = 80;
+    const dealMs = flights.length * CARD_MS + Math.floor(flights.length / 2) * GAP_MS;
+    flights.forEach((seat, i) => {
+      timers.push(setTimeout(() => {
+        Snd.dealCard();
+        flyCard(seat, seat === -1);
+        /* the deck thins evenly across all forty cards — it empties with
+           the deal (no leftover stock in three hands) */
+        if (Math.floor((i + 1) * 6 / flights.length) > Math.floor(i * 6 / flights.length) && deckEl.lastChild) deckEl.lastChild.remove();
+      }, i * CARD_MS + Math.floor(i / 2) * GAP_MS + 60));
+    });
+    timers.push(setTimeout(flipMine, dealMs + 420));
+    timers.push(setTimeout(finish, dealMs + 420 + n * 70 + 480));
+    timers.push(setTimeout(finish, dealMs + 420 + n * 70 + 1500));
+  }
 
   function newGame(opts) {
     opts = opts || {};
@@ -1898,6 +2042,14 @@
       if (g.numPlayers === 2) {
         const bar = document.querySelector('#opp-zone .namebar');
         if (bar) { const r = bar.getBoundingClientRect(); cx = r.left + r.width / 2; top = r.top; }
+      } else if (g.numPlayers === 3) {
+        /* (owner 2026-09-21) each opponent's cards ENTER FROM THEIR OWN
+           corner: Sipho's from the top right, Thandi's from the top left —
+           born fully above the edge, sliding down into the play area */
+        const sg = $('screen-game').getBoundingClientRect();
+        cx = actor === 1 ? sg.right - w / 2 - 6 : sg.left + w / 2 + 6;
+        top = sg.top;
+        return { left: cx - w / 2, top: top - h, width: w, height: h };
       }
       const sg = $('screen-game').getBoundingClientRect();
       if (cx == null) { cx = sg.left + sg.width / 2; top = sg.top; }
@@ -2523,6 +2675,14 @@
        turning); the loser of the last game always plays first — the winner deals */
     const soloWinner = res.stats.find((t) => res.winners.includes(t.name) && t.members.length === 1);
     lastWinnerSeat = soloWinner ? soloWinner.members[0] : null;
+    /* (owner 2026-09-21) THE WINNER PLAYS LAST in the next game — in every
+       game type: the winner takes the deal, play starts after him and
+       reaches him last. Set here (not only in the rematch button) so the
+       menu path carries it too */
+    if (lastWinnerSeat != null) {
+      session.dealer = lastWinnerSeat;
+      saveSession();
+    }
     $('btn-again').classList.toggle('hidden', g.numPlayers !== 2);
 
     /* the portrait ledger (owner-approved 2026-09-14): the verdict first,
@@ -2866,6 +3026,16 @@
     });
 
     $('btn-hint').addEventListener('click', () => { Snd.click(); requestHint(); });
+
+    /* the info-area fold lives inside the re-rendered ribbon — delegated */
+    document.addEventListener('click', (e) => {
+      if (e.target.id !== 'btn-min-info') return;
+      const folding = !minInfo3();
+      localStorage.setItem('sacassino.minInfo3', folding ? '1' : '0');
+      e.target.innerHTML = folding ? '&#9656;' : '&#9662;';
+      $('screen-game').classList.toggle('min-info', folding);
+      Snd.click();
+    });
 
     $('btn-shiya-call').addEventListener('click', () => { Snd.click(); closeShiyaModal(); performAction({ type: 'shiya' }, { human: true }); });
     $('btn-shiya-skip').addEventListener('click', () => { Snd.click(); closeShiyaModal(); performAction({ type: 'skip' }, { human: true }); });

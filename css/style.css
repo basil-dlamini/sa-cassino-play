@@ -1003,6 +1003,32 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
    short one; a short screen spaces itself out instead of stacking overlaps */
 #screen-game.p3 .area-row.vertical .area-box { flex: 0 0 auto; }
 #screen-game.p3 .area-row.vertical { flex: 0 0 auto; }
+/* (owner 2026-09-21) THE THREE-HANDS RIBBON: my name leads at the left,
+   prompts (message + action buttons) flow in the bar two-hands style, and
+   the fold button collapses the info area. My column takes the LEFT of the
+   screen with the discards to its right (the mirrored band) */
+#screen-game.p3 #my-bar { justify-content: flex-start; padding: 4px 8px; }
+#screen-game.p3 #my-bar #turn-text {
+  font-size: 12px; font-weight: 600; opacity: .85; margin-left: 8px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
+#screen-game.p3 #my-bar .nb-acts { margin-left: auto; max-width: 60%; }
+#screen-game.p3 #my-bar .nb-acts .btn { padding: 4px 8px; font-size: 11px; }
+#screen-game.p3 #my-bar .confirm-row,
+#screen-game.p3 #my-bar .nb-acts > div { display: flex; gap: 4px; justify-content: flex-end; }
+#screen-game.p3 #my-bar .panel-hint {
+  font-size: 10px; opacity: .7; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; max-width: 100%;
+}
+#btn-min-info {
+  flex: 0 0 auto; margin-left: 4px; width: 24px; height: 26px;
+  background: rgba(244,239,226,.12); color: var(--ivory);
+  border: 1px solid rgba(244,239,226,.3); border-radius: 6px;
+  font-size: 12px; line-height: 1; cursor: pointer; padding: 0;
+}
+#screen-game.min-info #turn-text,
+#screen-game.min-info #my-bar .panel-hint { display: none; }
+#screen-game.p3 #table-middle { flex-direction: row-reverse; }
 /* ---------------- THE THREE HANDS WEAR THEIR COLOURS (owner 2026-09-20) ----------------
    The phone's three-hands screen joins the colour law: SIPHO keeps his dark
    crimson on his RIGHT corner (banner comes free from the unscoped rule
