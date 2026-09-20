@@ -1518,10 +1518,14 @@
       oppStaged = Array.prototype.slice.call(document.querySelectorAll('#opp-fan .card'));
       oppStaged.forEach((el) => el.classList.add('deal-wait'));
     }
-    /* the deck mid-table */
+    /* the deck mid-table — round one's stack keeps one back past the deal
+       (it IS the leftover stock that flies out to the second player); round
+       two's stack empties with the final card (owner 2026-09-20: after the
+       last two cards are dealt nothing may linger and vanish) */
+    const backs = wave2 ? 5 : 6;
     const deckEl = document.createElement('div');
     deckEl.id = 'deal-deck';
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < backs; i++) {
       const b = cardBack();
       b.style.setProperty('--i', i);
       deckEl.appendChild(b);
@@ -1594,12 +1598,17 @@
     const CARD_MS = 170, GAP_MS = 110;
     const dealMs = flights.length * CARD_MS + Math.floor(flights.length / 2) * GAP_MS;
     const stockDir = second === HUMAN ? 1 : -1;   /* +1 down to my edge, −1 up to his */
+    /* the stack thins on an even schedule across the deal: round one holds
+       its last back for the fly-out, round two drops its final back at the
+       exact launch of the final card — the deck is spent with the deal */
+    const F = flights.length;
+    const R = backs - (wave2 ? 0 : 1);
     const startDealing = () => {
       flights.forEach((f, i) => {
         timers.push(setTimeout(() => {
           Snd.dealCard();
           flyCard(f);
-          if (i % 4 === 3 && deckEl.children.length > 1 && deckEl.lastChild) deckEl.lastChild.remove();
+          if (Math.floor((i + 1) * R / F) > Math.floor(i * R / F) && deckEl.lastChild) deckEl.lastChild.remove();
         }, i * CARD_MS + Math.floor(i / 2) * GAP_MS + 60));
       });
       if (wave2) {
