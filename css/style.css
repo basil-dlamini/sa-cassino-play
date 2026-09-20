@@ -979,6 +979,49 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
 #my-side .build-val {
   background: linear-gradient(180deg, #2a54b0, #16357c); color: #f4efe2;
 }
+/* ---------------- THE THREE HANDS WEAR THEIR COLOURS (owner 2026-09-20) ----------------
+   The phone's three-hands screen joins the colour law: SIPHO keeps his dark
+   crimson on his RIGHT corner (banner comes free from the unscoped rule
+   above — his areas and counter gain it here), and THANDI takes her own
+   colour on the LEFT corner. THANDI'S GREEN IS PROVISIONAL — the owner
+   picks colours BY EYE on the shades page; swap this one block when he
+   rules. My areas stay blue via #my-side (the three-hand column). */
+#screen-game #opp-zone.mode-3 .opp-corner.left .namebar {
+  background: linear-gradient(180deg, #2E7D46, #1F5B35 45%, #0E3A1F);
+}
+#screen-game #opp-zone.mode-3 .opp-corner.left .namebar.active {
+  background: linear-gradient(180deg, #37904F, #236839 45%, #134726);
+  border-color: rgba(244,239,226,.55);
+}
+#opp-zone.mode-3 .opp-corner.right .area-box {
+  border-color: rgba(156,37,41,.5);
+  background: rgba(87,14,18,.28);
+}
+#opp-zone.mode-3 .opp-corner.right .area-box.has-build {
+  border-color: rgba(176,42,47,.85);
+  background: rgba(87,14,18,.42);
+}
+#opp-zone.mode-3 .opp-corner.right .build-val {
+  background: linear-gradient(180deg, #A62B2F, #6E1014); color: #f4efe2;
+}
+#opp-zone.mode-3 .opp-corner.left .area-box {
+  border-color: rgba(46,125,70,.5);
+  background: rgba(14,58,31,.28);
+}
+#opp-zone.mode-3 .opp-corner.left .area-box.has-build {
+  border-color: rgba(62,150,94,.85);
+  background: rgba(14,58,31,.42);
+}
+#opp-zone.mode-3 .opp-corner.left .build-val {
+  background: linear-gradient(180deg, #358853, #1C4A2A); color: #f4efe2;
+}
+#opp-zone.mode-3 .opp-corner .area-box.highlight { border-color: var(--ivory); }
+#opp-zone.mode-3 .opp-corner .area-box.selected {
+  border-color: var(--ivory); box-shadow: 0 0 0 2px rgba(244,239,226,.7);
+}
+#opp-zone.mode-3 .opp-corner .area-box.preview {
+  border-color: #7fd4ff; box-shadow: 0 0 10px rgba(127,212,255,.3);
+}
 /* inside a rail the warn zone is just centred words on the panel */
 #screen-game.p2.w2 #opp-warn,
 #screen-game.p2.w2 #my-warn {
