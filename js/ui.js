@@ -3148,6 +3148,23 @@
     badge.id = 'ver-badge';
     badge.textContent = 'v' + (vm ? vm[1] : '?');
     document.body.appendChild(badge);
+
+    /* THE STALE GUARD (owner 2026-09-21): a cached old page must never
+       masquerade as the live game. version.json — fetched cache-busted — is
+       the deployed truth; when the page's own build is older, it reloads
+       ONCE onto the fresh files (the ?fresh= in the URL stops any loop).
+       GitHub Pages' ten-minute cache shrinks from forever-stale to at most
+       one ghost window */
+    fetch('version.json?t=' + Date.now())
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => {
+        const live = v && +v.v;
+        const mine = vm ? +vm[1] : null;
+        if (live && mine && live > mine && !/[?&]fresh=/.test(location.search)) {
+          location.replace(location.pathname + '?fresh=' + live + location.hash);
+        }
+      })
+      .catch(() => { /* no truth available — the page stands as loaded */ });
   }
 
   root.UI = { init, toast };
