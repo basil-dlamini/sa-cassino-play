@@ -143,9 +143,21 @@
       return;
     }
     const wW = Math.floor(availW / (1 + (n - 1) / 3));
+    if (session.numPlayers === 3) {
+      /* (owner 2026-09-20) FILL THE SCREEN: the band is three grid columns
+         plus my area column — the WIDTH is the binding edge (the hand now
+         spreads to fit whatever it gets, and the height carries air). The
+         band overhead: screen+middle padding, two grid gaps, the column's
+         side slack — trimmed in the p3 CSS to buy card size */
+      const wBand = Math.floor((col.clientWidth - 46) / 4);
+      const wH3 = Math.floor((col.clientHeight - 150) / 5.6);
+      const w = Math.max(52, Math.min(96, Math.min(wBand, wH3)));
+      document.documentElement.style.setProperty('--card-w', w + 'px');
+      if (g && !dealSeq) renderHand();
+      return;
+    }
     /* four hands: three opponent strips crowd the column, so reserve more
-       height and cap the card smaller than the two/three-hand games;
-       three hands: the banners now carry area boxes underneath them */
+       height and cap the card smaller than the two/three-hand games */
     const reserve = session.numPlayers === 4 ? 310 : 330;
     const cap = session.numPlayers === 4 ? 64 : 72;
     const wH = Math.floor((col.clientHeight - reserve) / 4.8);
@@ -754,8 +766,11 @@
        apart until there is no overlap left (each card edge to edge), and once
      no overlap remains the group packs to the LEFT. The width is measured on
      the ROW, never on the hand itself: the hand's own box follows its
-     content, and a stale shift would feed back into the measurement. */
-    if (g.numPlayers === 2 && box.children.length > 1) {
+     content, and a stale shift would feed back into the measurement.
+     THREE HANDS fill their width the same way (owner 2026-09-20: bigger
+     cards, no unused space) — thirteen backs compress to whatever the row
+     gives and breathe apart as the hand thins */
+    if ((g.numPlayers === 2 || g.numPlayers === 3) && box.children.length > 1) {
       const row = $('my-row');
       if (row) {
         const avail = row.clientWidth - 16;   // the row's 8px side padding
