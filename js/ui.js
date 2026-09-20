@@ -144,12 +144,13 @@
     }
     const wW = Math.floor(availW / (1 + (n - 1) / 3));
     if (session.numPlayers === 3) {
-      /* (owner 2026-09-20) FILL THE SCREEN: the band is three grid columns
-         plus my area column — the WIDTH is the binding edge (the hand now
-         spreads to fit whatever it gets, and the height carries air). The
-         band overhead: screen+middle padding, two grid gaps, the column's
-         side slack — trimmed in the p3 CSS to buy card size */
-      const wBand = Math.floor((col.clientWidth - 46) / 4);
+      /* (owner 2026-09-20) FILL THE SCREEN — then TRIMMED BACK (owner's
+         correction, same day): the first cut left the grid-to-column gap a
+         razor 4-6px, which a real phone's scaling closes into an overlap.
+         The overhead now carries honest margins — every gap keeps real
+         breathing room at any width (measured ≥8px grid↔column, ≥16px
+         between the corner groups) */
+      const wBand = Math.floor((col.clientWidth - 70) / 4);
       const wH3 = Math.floor((col.clientHeight - 150) / 5.6);
       const w = Math.max(52, Math.min(96, Math.min(wBand, wH3)));
       document.documentElement.style.setProperty('--card-w', w + 'px');
