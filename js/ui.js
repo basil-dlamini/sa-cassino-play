@@ -676,15 +676,17 @@
          owner's 5×2 ruling), everything else keeps the mockup's four.
          (owner 2026-09-18: the wide table returned to the original 5×2 too —
          the v119 single staggered row is retired; ten slots, the same slot
-         identities as the phone, no translation) */
-      const cols = g.numPlayers === 2 ? (p2FiveCols() || p2Wide() ? 5 : 4) : 4;
+         identities as the phone, no translation)
+         (owner 2026-09-20) THREE HANDS run a fixed 3×2 — six slots */
+      const cols = g.numPlayers === 2 ? (p2FiveCols() || p2Wide() ? 5 : 4) : (g.numPlayers === 3 ? 3 : 4);
       area.classList.remove('cols-10w');
+      area.classList.toggle('cols-3', cols === 3);
       area.classList.toggle('cols-4', cols === 4);
       area.classList.toggle('cols-5', cols === 5);
-      const minRows = g.numPlayers === 2 ? 2 : 3;
-      const rows = p2Wide() ? 2 : Math.max(minRows, Math.floor((wrap.clientHeight - 8) / ch));
+      const minRows = g.numPlayers === 2 ? 2 : (g.numPlayers === 3 ? 2 : 3);
+      const rows = (p2Wide() || g.numPlayers === 3) ? 2 : Math.max(minRows, Math.floor((wrap.clientHeight - 8) / ch));
       /* cell floor: two full rows of whatever the column count is */
-      const floor = g.numPlayers === 2 ? cols * 2 : 9;
+      const floor = g.numPlayers === 2 ? cols * 2 : (g.numPlayers === 3 ? 6 : 9);
       const cells = Math.max(rows * cols, Math.ceil(Math.max(n, floor) / cols) * cols);
       for (let i = 0; i < cells; i++) slots.push(Math.floor(i / cols) + 1 + ' / ' + (i % cols + 1));
     }
@@ -834,8 +836,8 @@
       if (pileTopSel != null) {
         /* cardless moves: pile-top digs, mixed folds, scaffolds from table cards, folds */
         const sameCards = (arr) => tableSel.size === (arr || []).length && (arr || []).every((x) => tableSel.has(x));
-        const digs = humanActions.filter((a) => a.type === 'topdig' && a.victim === pileTopSel &&
-          (buildSel == null || a.buildIdx === buildSel));
+        const digs = humanActions.filter((a) => a.type === 'topdig' && a.victims.includes(pileTopSel) &&
+          sameCards(a.loose) && (buildSel == null || a.buildIdx === buildSel));
         const digfolds = humanActions.filter((a) => a.type === 'digfold' && a.victim === pileTopSel &&
           sameCards(a.loose) && (buildSel == null || a.buildIdx === buildSel));
         const edigs = humanActions.filter((a) => a.type === 'edig' &&
@@ -1675,6 +1677,7 @@
     shiyaTick = null; shiyaOfferValue = null; clearTimeout(shiyaTimer);
     show('screen-game');
     $('screen-game').classList.toggle('p2', n === 2);   // the two-hand layout
+    $('screen-game').classList.toggle('p3', n === 3);   // …the three-hand twin (uniform card-size slots)
     $('screen-game').classList.toggle('w2', p2Wide());  // …and its wide twin at ≥900px
     p2WideOn = p2Wide();
     fitCards();
@@ -1981,11 +1984,7 @@
         }
         break;
       }
-      case 'topdig':
-        parts.push({ id: dug(a.victim), rect: dugRect(a.victim) });
-        dest = bIdx != null ? buildRect(bIdx) : null;
-        break;
-      case 'digfold': case 'edig': {
+      case 'topdig': case 'digfold': case 'edig': {
         const to = bIdx != null ? buildRect(bIdx) : null;
         const ids = (a.victims || (a.victim != null ? [a.victim] : [])).map(dug)
           .concat(a.loose || []);

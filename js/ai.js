@@ -179,6 +179,17 @@
         why = 'digs a card into the build';
       }
 
+      if (a.type === 'topdig') {
+        /* the cardless pile-top dig (owner's law 2026-09-20: single top, two
+           tops summing, tops + table cards): fattens my own build with the
+           enemies' points — value never moves, nothing is owed */
+        const dugTops = a.victims.map((s2) => g.players[s2].pile[g.players[s2].pile.length - 1]).filter(Boolean);
+        const set = (a.loose || []).concat(dugTops);
+        s += w.build * (0.3 + 0.3 * pilePointsOf(set)) +
+          w.steal * (0.5 + dugTops.reduce((n, c) => n + C.points(c) * 1.2, 0));
+        why = dugTops.length > 1 ? 'digs both piles into the build' : 'digs the pile top into the build';
+      }
+
       if (a.type === 'discard') {
         const c = C.parse(a.card);
         s -= 2.6 * C.points(a.card);

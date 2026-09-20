@@ -481,11 +481,11 @@
     g.capturedThisTurn = false;
     g.builds = [{ value: 10, cards: ['H5', 'D5'], owner: 0, augmented: false }];
     g.players[0].hand = ['S10'];
-    let dig = R.legalActions(g).find((a) => a.type === 'topdig' && a.victim === 1);
+    let dig = R.legalActions(g).find((a) => a.type === 'topdig' && a.victims.includes(1));
     assert(dig, 'the pile top is diggable');
     R.applyAction(g, dig);
     eq(g.builds[0].cards[g.builds[0].cards.length - 1], 'C10', 'his played 10♣ comes off first');
-    dig = R.legalActions(g).find((a) => a.type === 'topdig' && a.victim === 1);
+    dig = R.legalActions(g).find((a) => a.type === 'topdig' && a.victims.includes(1));
     assert(dig, 'the next card is diggable too');
     R.applyAction(g, dig);
     eq(g.builds[0].cards[g.builds[0].cards.length - 1], 'D10', 'the 10♦ right behind it — the owner\'s very case');
@@ -840,7 +840,7 @@
     g.players[1].hand = ['C2'];
     g.players[1].pile = ['H9', 'S10'];
     g.openedCardless = true;               // the scaffold debt is live
-    const td = R.legalActions(g).find((a) => a.type === 'topdig' && a.victim === 1);
+    const td = R.legalActions(g).find((a) => a.type === 'topdig' && a.victims.includes(1));
     assert(td, 'the equal pile-top dig into the scaffold is offered');
     R.applyAction(g, td);
     const b = g.builds[0];
@@ -876,6 +876,68 @@
     g4.turn = 0;
     assert(!has(R.legalActions(g4), (a) => a.type === 'digfold' && a.victim === 2),
       'never dig a partner\u2019s pile');
+  });
+
+  /* ============ THE PAIR DIG (owner's law 2026-09-20) — the 6 and the 4 into the 10 ============ */
+  test('PAIR DIG: two enemy tops summing to the build value dig cardless (the owner\'s exact case)', () => {
+    const g = mkState(3, {});                      // three hands: Sipho (1) and Thandi (2) both enemies
+    g.builds = [{ value: 10, cards: ['H6', 'S4'], owner: 0, augmented: false }];
+    g.players[0].hand = ['D10', 'H7'];
+    g.players[1].pile = ['H9', 'C4'];              // Sipho's top: the 4
+    g.players[2].pile = ['S8', 'D6'];              // Thandi's top: the 6
+    const pair = R.legalActions(g).find((a) => a.type === 'topdig' && a.victims.length === 2);
+    assert(pair, 'the 6 + 4 pair dig is offered');
+    eq(pair.victims.slice().sort().join(','), '1,2', 'both enemy piles');
+    eq(pair.loose.length, 0, 'pure pair — no table cards needed');
+    R.applyAction(g, pair);
+    const b = g.builds[0];
+    eq(b.value, 10, 'value never moves');
+    eq(b.cards.length, 4, 'both tops folded in');
+    assert(b.cards.includes('C4') && b.cards.includes('D6'), 'the 6 and the 4 are in the build');
+    eq(g.players[1].pile.length, 1, 'Sipho lost his top');
+    eq(g.players[2].pile.length, 1, 'Thandi lost her top');
+    eq(g.openedCardless, true, 'a cardless opening');
+    assert(R.legalActions(g).length > 0, 'the turn continues');
+  });
+
+  test('PAIR DIG: two tops + table cards complete the value', () => {
+    const g = mkState(3, { table: ['C3'] });
+    g.builds = [{ value: 10, cards: ['H7', 'S3'], owner: 0, augmented: false }];
+    g.players[0].hand = ['D10'];
+    g.players[1].pile = ['H9', 'C4'];
+    g.players[2].pile = ['S8', 'D3'];
+    const mixed = R.legalActions(g).find((a) => a.type === 'topdig' && a.victims.length === 2);
+    assert(mixed, '4 + 3 + the table 3 offered');
+    eq(mixed.loose.join(','), 'C3', 'the table card completes the ten');
+    R.applyAction(g, mixed);
+    const b = g.builds[0];
+    eq(b.value, 10, 'value unchanged');
+    assert(b.cards.includes('C3') && b.cards.includes('C4') && b.cards.includes('D3'), 'all three folded in');
+    eq(g.table.length, 0, 'the table card left the floor');
+  });
+
+  test('PAIR DIG: a partner\'s pile is never dug (four hands)', () => {
+    const g4 = mkState(4, {});
+    g4.builds = [{ value: 10, cards: ['H6', 'S4'], owner: 0, augmented: false }];
+    g4.players[0].hand = ['D10'];
+    g4.players[1].pile = ['H9', 'C4'];              // Sipho (enemy): the 4
+    g4.players[2].pile = ['S8', 'D6'];              // Thandi (PARTNER): the 6 — untouchable
+    g4.players[3].pile = ['H2', 'C10'];             // Naledi (enemy): the 10
+    const digs = R.legalActions(g4).filter((a) => a.type === 'topdig');
+    assert(digs.length === 1, 'exactly one dig: Naledi\'s equal 10');
+    assert(digs.every((a) => !a.victims.includes(2)), 'never the partner\'s pile (seat 2)');
+    assert(!digs.some((a) => a.victims.length === 2),
+      'no pair can form — the 6 that would complete Sipho\'s 4 sits on the partner\'s pile');
+  });
+
+  test('PAIR DIG: no duplicate of the mixed single (digfold keeps its ground)', () => {
+    const g = mkState(3, { table: ['C6'] });
+    g.builds = [{ value: 10, cards: ['H4', 'S6'], owner: 0, augmented: false }];
+    g.players[0].hand = ['D10'];
+    g.players[1].pile = ['H9', 'C4'];
+    const singles = R.legalActions(g).filter((a) => a.type === 'topdig' && a.victims.length === 1);
+    assert(singles.every((a) => a.loose.length === 0), 'single-top topdigs stay pure');
+    assert(has(R.legalActions(g), (a) => a.type === 'digfold' && a.victim === 1), 'the mixed single is still a digfold');
   });
 
   /* ============ the pairs reservation — a pair summing to a live own-side build ============ */
@@ -1041,7 +1103,7 @@
     // the pile-top dig is offered without any hand card
     const td = R.legalActions(g).find((a) => a.type === 'topdig');
     assert(td, 'pile-top dig offered');
-    eq(td.victim, 1); eq(td.buildIdx, 0);
+    eq(td.victims[0], 1); eq(td.buildIdx, 0);
     R.applyAction(g, td);
     eq(g.players[1].pile.length, 1, 'pile top taken');
     assert(g.builds[0].cards.includes('C10'), 'dug card joined the build');
@@ -1087,7 +1149,7 @@
     assert(!acts.some((a) => a.type === 'efold'), 'enemy folds never touch a scaffold');
     // the owner's own cardless folds DO fatten the stack — Sipho's top 8 is
     // the equal pile-top dig, but the fold never resolves the debt (v41 law)
-    const td = acts.find((a) => a.type === 'topdig' && a.victim === 1);
+    const td = acts.find((a) => a.type === 'topdig' && a.victims.includes(1));
     assert(td, 'the equal pile-top dig folds into the scaffold');
     R.applyAction(g, td);
     eq(g.builds[0].value, 8, 'value unchanged');
@@ -1760,10 +1822,18 @@
               }
               if (a.type === 'topdig') {
                 const b = g.builds[a.buildIdx];
-                const top = g.players[a.victim].pile[g.players[a.victim].pile.length - 1];
                 assert(R.sameSide(g, b.owner, g.turn), 'pile-top dig into an enemy build');
-                assert(!R.sameSide(g, a.victim, g.turn), 'pile-top dig from a partner');
-                assert(C.rank(top) === b.value, 'pile top does not match the build value');
+                const tops = a.victims.map((s) => {
+                  assert(!R.sameSide(g, s, g.turn), 'pile-top dig from a partner');
+                  return g.players[s].pile[g.players[s].pile.length - 1];
+                });
+                const sum = tops.reduce((n, c) => n + C.rank(c), 0) +
+                  (a.loose || []).reduce((n, id) => n + C.rank(id), 0);
+                eq(sum, b.value, 'tops + table must total the build value');
+                if (a.victims.length === 1) {
+                  assert(a.loose.length === 0 && C.rank(tops[0]) === b.value,
+                    'single-top digs stay pure (the mixed single is a digfold)');
+                }
               }
               if (a.type === 'capture') {
                 /* the v6 capture law: a build falls ONLY to its exact value,

@@ -519,19 +519,45 @@
     return acts;
   }
 
-  /* Pile-top digs: fold an opponent's pile top into an own-side build OR
-     SCAFFOLD whose value it matches — the debt stands, nothing resolves.
-     These are the no-hand-card moves of a turn. */
+  /* Pile-top digs: fold opponents' pile tops into an own-side build — the
+     tops (at most one per opponent pile, never a partner's, at most TWO in
+     any game: two hands have one opponent, three and four have two) may be
+     joined by loose table cards, everything together totalling the build's
+     value. The pure equal single top remains the classic case; scaffolds
+     take only that one (their resolution admits no additions). Owner's law
+     2026-09-20: the 6 and the 4 from the two enemy piles dig into the 10.
+     These are the no-hand-card moves of a turn — no debt, nothing resolves */
   function pileTopDigs(g, me, idxOf) {
     const out = [];
+    const tops = [];
+    for (let seat = 0; seat < g.numPlayers; seat++) {
+      if (sameSide(g, seat, me)) continue;   // never a partner's pile
+      const top = g.players[seat].pile[g.players[seat].pile.length - 1];
+      if (top) tops.push({ seat: seat, card: top });
+    }
     for (const b of g.builds) {
       if (!sameSide(g, b.owner, me)) continue;
       const bi = idxOf(b);
-      for (let seat = 0; seat < g.numPlayers; seat++) {
-        if (sameSide(g, seat, me)) continue;   // never a partner's pile
-        const top = g.players[seat].pile[g.players[seat].pile.length - 1];
-        if (top && C.rank(top) === b.value) {
-          out.push({ type: 'topdig', buildIdx: bi, victim: seat });
+      if (b.scaffold) {
+        for (const t of tops) {
+          if (C.rank(t.card) === b.value) out.push({ type: 'topdig', buildIdx: bi, victims: [t.seat], loose: [] });
+        }
+        continue;
+      }
+      /* every subset of the available tops (at least one), each completed by
+         table cards to exactly the build's value. The single top keeps only
+         its PURE form — single-top-plus-table is the digfold's territory
+         (no duplicates in the move list); the two-top forms are new */
+      for (let mask = 1; mask < (1 << tops.length); mask++) {
+        const chosen = tops.filter((t, i) => mask & (1 << i));
+        if (chosen.length !== 1 && chosen.length !== 2) continue;
+        const sum = chosen.reduce((n, t) => n + C.rank(t.card), 0);
+        if (sum > b.value) continue;
+        const rest = b.value - sum;
+        if (chosen.length === 1 && rest !== 0) continue;   // digfold owns the mixed single
+        const subs = rest === 0 ? [[]] : allSubsets(g.table, rest, 8);
+        for (const sub of subs) {
+          out.push({ type: 'topdig', buildIdx: bi, victims: chosen.map((t) => t.seat), loose: sub });
         }
       }
     }
@@ -680,8 +706,12 @@
       for (const id of move.loose) table.splice(table.indexOf(id), 1);
       builds[move.buildIdx].cards.push(...move.loose);
       builds[move.buildIdx].augmented = true;
+    } else if (move.type === 'topdig') {
+      /* the tops change piles, the loose cards leave the table — the build
+         only fattens, its value (what resolutions read) never moves */
+      for (const id of (move.loose || [])) table.splice(table.indexOf(id), 1);
+      builds[move.buildIdx].augmented = true;
     }
-    /* topdig only changes piles — resolutions read hand/table/builds */
     return resolutionExists(Object.assign({}, g, { table, builds }), me);
   }
 
@@ -777,15 +807,30 @@
       for (const sub of allSubsets(others, b.value, 6)) {
         out.push({ type: 'caugment', buildIdx: bi, loose: sub, claim: true });
       }
+      const claimTops = [];
       for (let seat = 0; seat < g.numPlayers; seat++) {
         if (sameSide(g, seat, E)) continue;
         const pt = top(seat);
         if (!pt) continue;
-        if (C.rank(pt) === b.value) out.push({ type: 'topdig', buildIdx: bi, victim: seat, claim: true });
+        claimTops.push({ seat: seat, card: pt });
+        if (C.rank(pt) === b.value) out.push({ type: 'topdig', buildIdx: bi, victims: [seat], loose: [], claim: true });
         const rest = b.value - C.rank(pt);
         if (rest > 0) {
           for (const sub of allSubsets(others, rest, 6)) {
             out.push({ type: 'digfold', buildIdx: bi, victim: seat, loose: sub, claim: true });
+          }
+        }
+      }
+      /* two enemy tops summing to the value, alone or completed by the
+         table — the neglected pair-dig (owner's law 2026-09-20: the 6 and
+         the 4 into the 10) */
+      if (claimTops.length === 2) {
+        const a0 = claimTops[0], a1 = claimTops[1];
+        const rest = b.value - C.rank(a0.card) - C.rank(a1.card);
+        if (rest >= 0) {
+          const subs = rest === 0 ? [[]] : allSubsets(others, rest, 6);
+          for (const sub of subs) {
+            out.push({ type: 'topdig', buildIdx: bi, victims: [a0.seat, a1.seat], loose: sub, claim: true });
           }
         }
       }
@@ -845,12 +890,21 @@
       addLog(g, 'build',
         act(claimer, 'claims', 'claim') + ' ' + ename + '\u2019s neglected move — folds ' + fmt(sortDesc(a.loose)) + ' into the ' + b.value + '-build.');
     } else if (a.type === 'topdig') {
-      const dugId = g.players[a.victim].pile.pop();
-      b.cards.push(dugId);
+      const dugIds = [];
+      const fromNames = [];
+      for (const seat of a.victims) {
+        dugIds.push(g.players[seat].pile.pop());
+        fromNames.push(names(g, seat));
+      }
+      removeFromTable(g, a.loose || []);
+      const folded = sortDesc(dugIds.concat(a.loose || []));
+      b.cards.push(...folded);
       b.augmented = true;
       addLog(g, 'steal',
-        act(claimer, 'claims', 'claim') + ' ' + ename + '\u2019s neglected move — digs ' + C.label(dugId) + ' from ' +
-        names(g, a.victim) + '\u2019s pile into the ' + b.value + '-build.');
+        act(claimer, 'claims', 'claim') + ' ' + ename + '\u2019s neglected move — digs ' + fmt(folded) + ' from ' +
+        fromNames.map((n) => n + '\u2019s pile').join(' and ') +
+        ((a.loose && a.loose.length) ? ' and the table' : '') +
+        ' into the ' + b.value + '-build.');
     } else if (a.type === 'digfold') {
       const dugId = g.players[a.victim].pile.pop();
       removeFromTable(g, a.loose);
@@ -927,13 +981,21 @@
 
     if (a.type === 'topdig') {
       const b = g.builds[a.buildIdx];
-      const victim = g.players[a.victim];
-      const dug = victim.pile.pop();
-      b.cards.push(dug);
-      b.augmented = true;           // folding in a pile top locks the build
+      const dugIds = [];
+      const fromNames = [];
+      for (const seat of a.victims) {
+        dugIds.push(g.players[seat].pile.pop());
+        fromNames.push(g.players[seat].name);
+      }
+      removeFromTable(g, a.loose || []);
+      const folded = sortDesc(dugIds.concat(a.loose || []));
+      b.cards.push(...folded);
+      b.augmented = true;           // folding in pile tops locks the build
       if (!g.turnUsed) g.openedCardless = true;
-      addLog(g, 'steal', act(me, 'digs', 'dig') + ' ' + C.label(dug) + ' from ' + victim.name +
-        "'s pile into the " + b.value + '-build.');
+      addLog(g, 'steal', act(me, 'digs', 'dig') + ' ' + fmt(folded) + ' from ' +
+        fromNames.map((n) => n + "'s pile").join(' and ') +
+        ((a.loose && a.loose.length) ? ' and the table' : '') +
+        ' into the ' + b.value + '-build.');
       return;                       // no hand card spent — the turn continues
     }
 

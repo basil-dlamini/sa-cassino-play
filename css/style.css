@@ -979,6 +979,15 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
 #my-side .build-val {
   background: linear-gradient(180deg, #2a54b0, #16357c); color: #f4efe2;
 }
+/* (owner 2026-09-20) THREE HANDS, ONE SIZE: every build and capture box is
+   EXACTLY a card's footprint — the same size as the hand cards and the
+   discard slots (the +12 inflation and padding retire on this screen) */
+#screen-game.p3 .area-box {
+  width: var(--card-w);
+  height: calc(var(--card-w) * 1.4);
+  min-height: calc(var(--card-w) * 1.4);
+  padding: 0;
+}
 /* ---------------- THE THREE HANDS WEAR THEIR COLOURS (owner 2026-09-20) ----------------
    The phone's three-hands screen joins the colour law: SIPHO keeps his dark
    crimson on his RIGHT corner (banner comes free from the unscoped rule
