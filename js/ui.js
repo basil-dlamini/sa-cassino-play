@@ -151,8 +151,15 @@
          breathing room at any width (measured ≥8px grid↔column, ≥16px
          between the corner groups) */
       const wBand = Math.floor((col.clientWidth - 70) / 4);
-      const wH3 = Math.floor((col.clientHeight - 150) / 5.6);
-      const w = Math.max(52, Math.min(96, Math.min(wBand, wH3)));
+      /* (owner's correction 2026-09-21) the HEIGHT budget is honest now:
+         the true fixed furniture (both banners, the zone and middle pads,
+         the hand row's slack) measures ~165px, and equality IS collision —
+         a reserve with no margin let the boxes pile onto each other on the
+         owner's shorter real screen. 185 carries the furniture + air */
+      const wH3 = Math.floor((col.clientHeight - 185) / 5.6);
+      /* the floor is lower than the other games: on an absurdly short screen
+         small-but-clean beats big-and-overlapping (the owner's no-pile law) */
+      const w = Math.max(44, Math.min(96, Math.min(wBand, wH3)));
       document.documentElement.style.setProperty('--card-w', w + 'px');
       if (g && !dealSeq) renderHand();
       return;

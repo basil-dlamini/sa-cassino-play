@@ -995,9 +995,14 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
 #screen-game.p3 { justify-content: space-between; }
 #screen-game.p3 #opp-zone { padding: 8px 3px 2px; }
 #screen-game.p3 .corner-row { padding: 0; gap: 6px; }
-#screen-game.p3 #table-middle { padding: 6px 6px; }
+#screen-game.p3 #table-middle { padding: 6px 6px; min-height: 0; }
 #screen-game.p3 #table-cards { gap: 5px; }
 #screen-game.p3 #my-hand .card + .card { margin-left: var(--fan-shift, calc(var(--card-w) * -0.6667)); }
+/* THE NO-PILE GUARANTEE (owner 2026-09-21): the column's boxes are always
+   EXACTLY card size — never stretched by a tall table, never squeezed by a
+   short one; a short screen spaces itself out instead of stacking overlaps */
+#screen-game.p3 .area-row.vertical .area-box { flex: 0 0 auto; }
+#screen-game.p3 .area-row.vertical { flex: 0 0 auto; }
 /* ---------------- THE THREE HANDS WEAR THEIR COLOURS (owner 2026-09-20) ----------------
    The phone's three-hands screen joins the colour law: SIPHO keeps his dark
    crimson on his RIGHT corner (banner comes free from the unscoped rule
