@@ -418,28 +418,25 @@
             const use = { type: 'augment', buildIdx: bi, card, loose: sub, method: 'combine' };
             if (cardUseLegal(g, me, card, use)) acts.push(use);
           }
-          /* dig-fold: an opponent's pile top completes the value alongside
-             the hand card (e.g. A in hand + 8 on their pile into a 9-build) */
+          /* THE MULTI-TOP DIG (owner's law 2026-09-21): the hand card may
+             combine with ANY opponents' pile tops (never a partner's) plus
+             optional table cards to complete the value — one top alone (the
+             old dig-fold), one top + table (the old three-source), two tops
+             (the 3 + Ace + Ace into a live 5), or more. Folds into a live
+             own-side build ONLY — a captured card never helps FOUND a build */
+          const augTops = [];
           for (let seat = 0; seat < g.numPlayers; seat++) {
             if (sameSide(g, seat, me)) continue;   // never a partner's pile
             const pt = g.players[seat].pile[g.players[seat].pile.length - 1];
-            if (pt && C.rank(pt) + r === b.value) {
-              const use = { type: 'augment', buildIdx: bi, card, loose: [], victim: seat, method: 'combine' };
-              if (cardUseLegal(g, me, card, use)) acts.push(use);
-            }
+            if (pt) augTops.push({ seat: seat, card: pt });
           }
-          /* THREE-SOURCE COMBINE: a hand card + an opponent's pile top +
-             table cards TOGETHER complete the value (3 + his Ace + the 6 into
-             a live 10). Folds into a live own-side build ONLY — a captured
-             card never helps FOUND a build (founding needs the loose base) */
-          for (let seat = 0; seat < g.numPlayers; seat++) {
-            if (sameSide(g, seat, me)) continue;
-            const pt = g.players[seat].pile[g.players[seat].pile.length - 1];
-            if (!pt) continue;
-            const need = b.value - r - C.rank(pt);
-            if (need <= 0) continue;
-            for (const sub of allSubsets(g.table, need, 8)) {
-              const use = { type: 'augment', buildIdx: bi, card, loose: sub, victim: seat, method: 'combine' };
+          for (let mask = 1; mask < (1 << augTops.length); mask++) {
+            const chosen = augTops.filter((t, i) => mask & (1 << i));
+            const need = b.value - r - chosen.reduce((n, t) => n + C.rank(t.card), 0);
+            if (need < 0) continue;
+            const subs = need === 0 ? [[]] : allSubsets(g.table, need, 8);
+            for (const sub of subs) {
+              const use = { type: 'augment', buildIdx: bi, card, loose: sub, victims: chosen.map((t) => t.seat), method: 'combine' };
               if (cardUseLegal(g, me, card, use)) acts.push(use);
             }
           }
@@ -538,23 +535,20 @@
     for (const b of g.builds) {
       if (!sameSide(g, b.owner, me)) continue;
       const bi = idxOf(b);
-      if (b.scaffold) {
-        for (const t of tops) {
-          if (C.rank(t.card) === b.value) out.push({ type: 'topdig', buildIdx: bi, victims: [t.seat], loose: [] });
-        }
-        continue;
-      }
+      /* (owner 2026-09-21) SCAFFOLDS DIG BY THE SAME LAW as registered
+         builds — the A + A + 8 into a 10-scaffold folds in cardless, the
+         debt standing as ever; digging never resolves it */
       /* every subset of the available tops (at least one), each completed by
-         table cards to exactly the build's value. The single top keeps only
-         its PURE form — single-top-plus-table is the digfold's territory
-         (no duplicates in the move list); the two-top forms are new */
+         table cards to exactly the build's value. On REGISTERED builds the
+         single top keeps only its PURE form — single-top-plus-table is the
+         digfold's territory (no duplicates in the move list) */
       for (let mask = 1; mask < (1 << tops.length); mask++) {
         const chosen = tops.filter((t, i) => mask & (1 << i));
         if (chosen.length !== 1 && chosen.length !== 2) continue;
         const sum = chosen.reduce((n, t) => n + C.rank(t.card), 0);
         if (sum > b.value) continue;
         const rest = b.value - sum;
-        if (chosen.length === 1 && rest !== 0) continue;   // digfold owns the mixed single
+        if (!b.scaffold && chosen.length === 1 && rest !== 0) continue;   // digfold owns the mixed single
         const subs = rest === 0 ? [[]] : allSubsets(g.table, rest, 8);
         for (const sub of subs) {
           out.push({ type: 'topdig', buildIdx: bi, victims: chosen.map((t) => t.seat), loose: sub });
@@ -1194,9 +1188,16 @@
       takeFromHand(me, a.card);
       playedVirtual(g, me.id, a.card);
       removeFromTable(g, a.loose);
-      /* the added set: sorted internally, placed on top of the build */
+      /* the added set: sorted internally, placed on top of the build — the
+         dug tops come off their piles in seat order (owner's law 2026-09-21:
+         any opponents' tops may join the hand card) */
       let set = [a.card, ...a.loose];
-      if (a.victim != null) set.push(g.players[a.victim].pile.pop());   // dig-fold
+      const augVictims = a.victims || (a.victim != null ? [a.victim] : []);
+      const augFromNames = [];
+      for (const seat of augVictims) {
+        set.push(g.players[seat].pile.pop());
+        augFromNames.push(names(g, seat));
+      }
       b.cards.push(...sortDesc(set));
       b.augmented = true;               // the value is now locked
       if (a.method === 'top') {
@@ -1206,8 +1207,9 @@
           g.players[b.owner].virtual[b.value] = true;
         }
       }
-      const setDesc = a.victim != null
-        ? C.label(a.card) + ' + ' + C.label(set.find((id) => id !== a.card)) + ' from ' + names(g, a.victim) + '\u2019s pile'
+      const setDesc = augFromNames.length
+        ? C.label(a.card) + ' + ' + fmt(set.filter((id) => id !== a.card)) + ' from ' +
+          augFromNames.map((n) => n + '\u2019s pile').join(' and ')
         : fmt(sortDesc(set));
       addLog(g, 'build', (a.method === 'top' ? act(me, 'tops', 'top') : act(me, 'augments', 'augment')) +
         ' the ' + b.value + '-build with ' + setDesc + '.');

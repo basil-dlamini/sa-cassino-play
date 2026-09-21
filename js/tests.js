@@ -314,7 +314,7 @@
     g.players[1].hand = ['C2'];
     g.players[1].pile = ['H9', 'S1'];      // Sipho's top: the Ace
     const a = R.legalActions(g).find((x) => x.type === 'augment' && x.method === 'combine' &&
-      x.card === 'D3' && x.victim === 1 && x.loose.includes('C6'));
+      x.card === 'D3' && x.victims && x.victims.includes(1) && x.loose.includes('C6'));
     assert(a, 'the three-source combine is offered');
     R.applyAction(g, a);
     const b = g.builds[0];
@@ -940,6 +940,43 @@
     assert(has(R.legalActions(g), (a) => a.type === 'digfold' && a.victim === 1), 'the mixed single is still a digfold');
   });
 
+  /* ============ THE OWNER'S TWO SCENARIOS (2026-09-21) ============ */
+  test('MULTI-TOP HAND DIG: the 3 + both Aces augments the 5-build (the owner\'s exact case)', () => {
+    const g = mkState(3, {});
+    g.builds = [{ value: 5, cards: ['H2', 'S3'], owner: 0, augmented: false }];
+    g.players[0].hand = ['C3', 'H9'];
+    g.players[1].pile = ['H9', 'S1'];       // Sipho's top: Ace
+    g.players[2].pile = ['H8', 'D1'];       // Thandi's top: Ace
+    const mv = R.legalActions(g).find((a) => a.type === 'augment' && a.card === 'C3' &&
+      a.victims && a.victims.length === 2);
+    assert(mv, 'the 3 + Ace + Ace into the 5 is offered');
+    eq(mv.victims.slice().sort().join(','), '1,2', 'both enemy piles');
+    eq(mv.loose.length, 0, 'no table cards needed');
+    R.applyAction(g, mv);
+    const b = g.builds[0];
+    eq(b.value, 5, 'value unchanged');
+    assert(b.cards.includes('S1') && b.cards.includes('D1'), 'both Aces folded in');
+    eq(g.players[0].hand.includes('C3'), false, 'the 3 left the hand');
+    eq(g.turnUsed, true, 'the hand card is spent');
+  });
+
+  test('SCAFFOLD DIG: A + A + the table 8 folds into the 10-scaffold cardless (the owner\'s second case)', () => {
+    const g = mkState(3, { table: ['C8'] });
+    g.builds = [{ value: 10, cards: ['S10'], owner: 0, augmented: false, scaffold: true }];
+    g.players[0].hand = ['D10', 'H5'];
+    g.players[1].pile = ['H9', 'S1'];       // Sipho's top: Ace
+    g.players[2].pile = ['H8', 'D1'];       // Thandi's top: Ace
+    const mv = R.legalActions(g).find((a) => a.type === 'topdig' && a.victims.length === 2 && a.loose.includes('C8'));
+    assert(mv, 'the A + A + 8 into the 10-scaffold is offered');
+    R.applyAction(g, mv);
+    const b = g.builds[0];
+    eq(b.value, 10, 'value unchanged');
+    eq(b.scaffold, true, 'still a scaffold — the debt stands');
+    assert(b.cards.includes('S1') && b.cards.includes('D1') && b.cards.includes('C8'), 'both Aces and the 8 folded in');
+    eq(g.players[1].pile.length, 1, 'Sipho lost his top');
+    eq(g.players[2].pile.length, 1, 'Thandi lost her top');
+  });
+
   /* ============ the pairs reservation — a pair summing to a live own-side build ============ */
   test('v6 PAIRS: a 4+4 pair with a live own 8 is reserved — no Capture 4, only Build 8', () => {
     const g = mkState(2, { table: ['S4'] });
@@ -1368,7 +1405,7 @@
     g.players[0].hand = ['C1', 'D9'];
     g.players[1].hand = ['H7'];
     g.players[1].pile = ['H3', 'C8'];       // Sipho top: 8♣
-    const df = R.legalActions(g).find((a) => a.type === 'augment' && a.victim === 1 && a.card === 'C1');
+    const df = R.legalActions(g).find((a) => a.type === 'augment' && a.victims && a.victims.includes(1) && a.card === 'C1');
     assert(df, 'dig-fold offered as a first move');
     R.applyAction(g, df);
     eq(g.builds[0].cards.join(), 'S9,H8,S1,C8,C1', '8 then Ace appended (set sorted, highest first)');
@@ -1830,9 +1867,9 @@
                 const sum = tops.reduce((n, c) => n + C.rank(c), 0) +
                   (a.loose || []).reduce((n, id) => n + C.rank(id), 0);
                 eq(sum, b.value, 'tops + table must total the build value');
-                if (a.victims.length === 1) {
+                if (a.victims.length === 1 && !b.scaffold) {
                   assert(a.loose.length === 0 && C.rank(tops[0]) === b.value,
-                    'single-top digs stay pure (the mixed single is a digfold)');
+                    'single-top digs stay pure on registered builds (the mixed single is a digfold)');
                 }
               }
               if (a.type === 'capture') {

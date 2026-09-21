@@ -49,7 +49,7 @@
   let selectedCard = null;      // the hand card the move is built around
   let tableSel = new Set();     // loose table cards tapped for the move
   let buildSel = null;          // index of the tapped build box
-  let pileTopSel = null;        // victim seat whose pile top was tapped (dig)
+  let pileTopSel = new Set();   // victim seats whose pile tops are tapped (multi-top dig, owner 2026-09-21)
   let tableSlots = {};          // table card id → grid-area it occupies
   let pendingConfirm = null;    // { matches:[actions], discardArea? } in the popup
   let lastAction = null;
@@ -67,9 +67,9 @@
     selectedCard = null;
     tableSel = new Set();
     buildSel = null;
-    pileTopSel = null;
+    pileTopSel = new Set();
   }
-  const hasSideSelection = () => tableSel.size > 0 || buildSel != null || pileTopSel != null;
+  const hasSideSelection = () => tableSel.size > 0 || buildSel != null || pileTopSel.size > 0;
   const discardLegalFor = (card) =>
     humanActions.some((a) => a.type === 'discard' && a.card === card);
 
@@ -879,20 +879,25 @@
   function matchesForSelection() {
     if (!selectedCard) {
       /* cardless moves: pile-top digs, scaffolds from table cards, folds */
-      if (pileTopSel != null) {
-        /* cardless moves: pile-top digs, mixed folds, scaffolds from table cards, folds */
+      if (pileTopSel.size) {
+        /* cardless moves: pile-top digs, mixed folds, scaffolds from table cards, folds.
+           (owner 2026-09-21) the tapped tops are a SET now — both opponents'
+           tops may stand selected together, and a move matches only when it
+           digs from EXACTLY the tapped tops */
         const sameCards = (arr) => tableSel.size === (arr || []).length && (arr || []).every((x) => tableSel.has(x));
-        const digs = humanActions.filter((a) => a.type === 'topdig' && a.victims.includes(pileTopSel) &&
+        const sameTops = (victims) => pileTopSel.size === victims.length && victims.every((v) => pileTopSel.has(v));
+        const digs = humanActions.filter((a) => a.type === 'topdig' && sameTops(a.victims) &&
           sameCards(a.loose) && (buildSel == null || a.buildIdx === buildSel));
-        const digfolds = humanActions.filter((a) => a.type === 'digfold' && a.victim === pileTopSel &&
+        const digfolds = humanActions.filter((a) => a.type === 'digfold' && pileTopSel.size === 1 &&
+          pileTopSel.has(a.victim) &&
           sameCards(a.loose) && (buildSel == null || a.buildIdx === buildSel));
         const edigs = humanActions.filter((a) => a.type === 'edig' &&
-          a.victims.includes(pileTopSel) && sameCards(a.loose) &&
+          sameTops(a.victims || []) && sameCards(a.loose) &&
           (buildSel == null || a.buildIdx === buildSel));
         /* a dig-founding's BASE may or may not be in the selection — it folds
            beneath automatically either way (the owner's tap: his 7 + the 7) */
         const scaffs = humanActions.filter((a) => {
-          if (a.type !== 'scaffold' || a.victim !== pileTopSel) return false;
+          if (a.type !== 'scaffold' || pileTopSel.size !== 1 || !pileTopSel.has(a.victim)) return false;
           if (sameCards(a.cards)) return true;
           if (a.cards.length + 1 !== tableSel.size) return false;
           const extra = [...tableSel].find((id) => !a.cards.includes(id));
@@ -910,7 +915,7 @@
         /* no build tapped: the sum itself identifies the target — a fold can
            only belong to the build of that value (values are unique) */
         let m = humanActions.filter((a) => a.type === 'scaffold' && sameCards(a.cards || []));
-        if (!m.length && pileTopSel == null) {
+        if (!m.length && pileTopSel.size === 0) {
           m = humanActions.filter((a) =>
             (a.type === 'caugment' || a.type === 'efold') && sameCards(a.loose || []));
         }
@@ -923,12 +928,15 @@
       if (a.card !== selectedCard) return false;
       /* top-the-base: the hand card tapped onto the loose base card */
       if (a.type === 'basetop') {
-        return tableSel.size === 1 && tableSel.has(a.base) && buildSel == null && pileTopSel == null;
+        return tableSel.size === 1 && tableSel.has(a.base) && buildSel == null && pileTopSel.size === 0;
       }
       if (!same(tableSel, a.loose)) return false;
-      /* a tapped pile top pairs only with actions that dig from that victim */
-      if (pileTopSel != null && a.victim !== pileTopSel) return false;
-      if (pileTopSel == null && a.victim != null) return false;
+      /* the tapped pile tops pair only with actions that dig from EXACTLY
+         those victims (one or both opponents — owner's law 2026-09-21) */
+      const topsOf = (x) => x.victims || (x.victim != null ? [x.victim] : []);
+      if (pileTopSel.size && !topsOf(a).length) return false;
+      if (!pileTopSel.size && topsOf(a).length) return false;
+      if (pileTopSel.size && !(pileTopSel.size === topsOf(a).length && topsOf(a).every((v) => pileTopSel.has(v)))) return false;
       switch (a.type) {
         case 'capture': return same(new Set(buildSel == null ? [] : [buildSel]), a.buildIds);
         case 'build':   return buildSel == null;
@@ -947,11 +955,20 @@
      the maximal selection instead of ambushing a legal partial (5+A must
      not fire as a 6-scaffold while 2+5+A=8 is still reachable) */
   function selectionCanGrow(match) {
-    const base = cardsOfAction(match);
+    /* (owner's correction 2026-09-21) the comparison rides ONLY the selected
+       cards — hand card, table cards, tapped tops — never the builds' resident
+       cards: a dig-fold into one build and a bigger dig into another share no
+       residents, and that cross-build extension is exactly the owner's case
+       (8 + his Ace could still become 8 + BOTH Aces into the scaffold) */
+    const topsOf = (x) => new Set(x.victims || (x.victim != null ? [x.victim] : []));
+    const looseOf = (x) => new Set(x.type === 'scaffold' ? (x.cards || []) : (x.loose || []));
+    const sup = (big, small) => { for (const v of small) if (!big.has(v)) return false; return true; };
+    const baseT = topsOf(match), baseL = looseOf(match);
     return humanActions.some((a) => {
       if (a === match) return false;
-      const ids = cardsOfAction(a);
-      return ids.length > base.length && base.every((id) => ids.includes(id));
+      if ((a.card || null) !== (match.card || null)) return false;
+      if (!sup(topsOf(a), baseT) || !sup(looseOf(a), baseL)) return false;
+      return topsOf(a).size + looseOf(a).size > baseT.size + baseL.size;
     });
   }
 
@@ -989,7 +1006,7 @@
 
   function afterSelectionChange() {
     const m = matchesForSelection();
-    const armed = selectedCard ? hasSideSelection() : (pileTopSel != null || tableSel.size > 0);
+    const armed = selectedCard ? hasSideSelection() : (pileTopSel.size > 0 || tableSel.size > 0);
     /* DIRECT mode: a complete, MAXIMAL selection that means exactly one move
        plays at once — the confirmation returns only for real choices.
        Returns true when the tap EXECUTED a move, so the caller plays the
@@ -1003,9 +1020,9 @@
     applySelClasses();
     /* a cardless combine that matched nothing: if the shape would otherwise
        be legal, the failing reason is the reservation law — say so */
-    if (!m.length && !selectedCard && tableSel.size + (pileTopSel != null ? 1 : 0) >= 2) maybeReservedAlert();
+    if (!m.length && !selectedCard && tableSel.size + pileTopSel.size >= 2) maybeReservedAlert();
     /* and a hand+table selection that is final and dead gets its one line */
-    else if (!m.length && selectedCard && tableSel.size && pileTopSel == null && buildSel == null &&
+    else if (!m.length && selectedCard && tableSel.size && pileTopSel.size === 0 && buildSel == null &&
              !selectionCouldGrow()) explainDeadSelection();
     return false;
   }
@@ -1053,8 +1070,8 @@
   }
   function togglePileSel(seat) {
     if (!isHumanTurn() || !turnArmed) return;
-    const removing = pileTopSel === seat;
-    pileTopSel = removing ? null : seat;
+    const removing = pileTopSel.has(seat);
+    if (removing) pileTopSel.delete(seat); else pileTopSel.add(seat);
     if (!afterSelectionChange()) (removing ? Snd.deselect() : Snd.select());
   }
 
@@ -1199,7 +1216,7 @@
     document.querySelectorAll('.build-box.has-build').forEach((z) =>
       z.classList.toggle('selected', buildSel === Number(z.dataset.idx)));
     document.querySelectorAll('.pile-box').forEach((z) =>
-      z.classList.toggle('selected', pileTopSel === Number(z.dataset.seat)));
+      z.classList.toggle('selected', pileTopSel.has(Number(z.dataset.seat))));
     const droppable = isHumanTurn() && !!selectedCard && !hasSideSelection() && discardLegalFor(selectedCard);
     document.querySelectorAll('#table-cards .grid-cell').forEach((c) =>
       c.classList.toggle('can-drop', droppable));
@@ -2138,7 +2155,7 @@
       }
       case 'augment': case 'dig': {
         const to = bIdx != null ? buildRect(bIdx) : buildRectByValue(a.value);
-        const ids = (a.loose || []).concat([dug(a.victim)]);
+        const ids = (a.loose || []).concat((a.victims || (a.victim != null ? [a.victim] : [])).map(dug));
         collectInto(a.card, ids, to);
         break;
       }
@@ -2697,7 +2714,10 @@
       session.dealer = lastWinnerSeat;
       saveSession();
     }
-    $('btn-again').classList.toggle('hidden', g.numPlayers !== 2);
+    /* (owner 2026-09-21) PLAY AGAIN is a two- AND three-hand privilege now —
+       the rematch keeps the settings and the winner takes the deal (playing
+       last); four-hand pairs keep the menu flow */
+    $('btn-again').classList.toggle('hidden', g.numPlayers === 4);
 
     /* the portrait ledger (owner-approved 2026-09-14): the verdict first,
        then one card per side stacked full-width — counts left, points right,
@@ -3053,9 +3073,9 @@
     $('btn-shiya-skip').addEventListener('click', () => { Snd.click(); closeShiyaModal(); performAction({ type: 'skip' }, { human: true }); });
 
     $('btn-again').addEventListener('click', () => {
-      $('modal-results').classList.add('hidden');
-      if (session.numPlayers === 2 && lastWinnerSeat != null) {
-        session.dealer = lastWinnerSeat;   // the winner deals — the loser plays first
+      $('modal-results').classList.remove('hidden');
+      if (session.numPlayers !== 4 && lastWinnerSeat != null) {
+        session.dealer = lastWinnerSeat;   // the winner deals — and plays last next game
       } else {
         session.dealer = (session.dealer + 1) % session.numPlayers;
       }
