@@ -3073,7 +3073,7 @@
     $('btn-shiya-skip').addEventListener('click', () => { Snd.click(); closeShiyaModal(); performAction({ type: 'skip' }, { human: true }); });
 
     $('btn-again').addEventListener('click', () => {
-      $('modal-results').classList.remove('hidden');
+      $('modal-results').classList.add('hidden');   /* the sheet CLOSES — restored (my v157 typo left it open, hiding the new game) */
       if (session.numPlayers !== 4 && lastWinnerSeat != null) {
         session.dealer = lastWinnerSeat;   // the winner deals — and plays last next game
       } else {
