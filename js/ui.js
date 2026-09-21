@@ -61,6 +61,7 @@
   let coachMsg = null;         // the AI's last move, explained (tutorial)
   let oppNote = null;          // Sipho's last move, one line (two hands)
   let lastWinnerSeat = null;   // the last game's solo winner — the loser leads the rematch
+  let deciderMode = null;      // { seats:[a,b], res } — a tie-breaker two-hands game in progress (owner's law 2026-09-22)
   let turnArmed = false;       // the human's moves are computed — the turn is LIVE
 
   function clearSelection() {
@@ -1859,8 +1860,18 @@
     demoMode = !!opts.demo;   // the AI plays every seat ONLY in an explicit demo
     const n = session.numPlayers;
     tutorialMode = session.mode === 'tutorial';
-    const players = [{ name: 'You', isHuman: true }];
-    for (let i = 1; i < n; i++) players.push(Object.assign({}, AI_SEATS[i], { isHuman: false }));
+    let players;
+    if (opts.decider) {
+      /* (owner's law 2026-09-22) the decider is a TWO-HANDS game between the
+         two tied seats — seat order mirrors opts.decider, the human playing
+         seat 0 when he is in the fight (he never sits seat 1) */
+      players = opts.decider.map((s) => s === HUMAN
+        ? { name: 'You', isHuman: true }
+        : Object.assign({}, AI_SEATS[s], { isHuman: false }));
+    } else {
+      players = [{ name: 'You', isHuman: true }];
+      for (let i = 1; i < n; i++) players.push(Object.assign({}, AI_SEATS[i], { isHuman: false }));
+    }
     g = R.createGame({ numPlayers: n, players, dealer: session.dealer % n });
     clearSelection();
     lastAction = null; humanActions = [];
@@ -2680,7 +2691,8 @@
        (owner's ruling 2026-09-10) — cards left on the table, swept up */
     if (g.finalSweep > 0) Snd.sweep(1);
     Ads.onGameFinished();
-    session.games++;
+    const isDecider = !!deciderMode;
+    if (!isDecider) session.games++;
     /* finishing a tutorial unlocks the next table size */
     if (tutorialMode) {
       const prog = loadProgress();
@@ -2689,6 +2701,38 @@
       saveProgress(prog);
     }
     const res = R.scoreGame(g);
+    if (isDecider) {
+      /* (owner's law 2026-09-22) the decider has spoken — two hands never
+         tie. Crown its winner for the TIED three-hands game: the tally
+         credits them, the original sheet shows the verdict, and the session
+         returns to three hands */
+      const orig = deciderMode.res;
+      const winnerName = res.winners[0];
+      const deciderIdx = g.players[0].name === winnerName ? 0 : 1;   /* decider seat order mirrors deciderMode.seats */
+      const origSeat = deciderMode.seats[deciderIdx];
+      orig.winners = [orig.stats[origSeat].name];
+      orig.tie = false;
+      orig.deciderNote = winnerName + ' won the two-hands decider';
+      session.wins[origSeat] = (session.wins[origSeat] || 0) + 1;
+      deciderMode = null;
+      session.numPlayers = 3;
+      saveSession();
+      render();
+      /* the crowning never waits on an interstitial — the tied game already
+         had its ad moment before the decider launched */
+      showResults(orig);
+      return;
+    }
+    if (res.pendingDecider) {
+      /* level on points, spades AND cards — the two tied players fight a
+         two-hands decider before any sheet is shown */
+      deciderMode = { seats: res.pendingDecider, res: res };
+      toast('Level on points, spades and cards — a two-hands decider follows!');
+      saveSession();
+      render();
+      setTimeout(() => startDecider(res.pendingDecider), 1600);
+      return;
+    }
     const teams = R.teamsOf(g) || g.players.map((p) => [p.id]);
     res.stats.forEach((t, i) => {
       if (res.winners.includes(t.name)) {
@@ -2698,6 +2742,15 @@
     saveSession();
     render();
     Ads.maybeInterstitial('results').then(() => showResults(res));
+  }
+
+  /* the decider: a fresh two-hands game between the two tied seats — the
+     human plays if he is one of them, otherwise he watches the two fight */
+  function startDecider(seats) {
+    session.numPlayers = 2;
+    saveSession();
+    const humanIn = seats.includes(HUMAN);
+    newGame({ decider: seats, demo: !humanIn });
   }
 
   function showResults(res) {
@@ -2737,6 +2790,7 @@
     let html = '<div class="verdict ' + vClass + '">' +
       '<div class="verdict-title">' + title + '</div>' +
       '<div class="verdict-score">' + stats.map((t) => t.total).join('<small>&ndash;</small>') + '</div>' +
+      (res.deciderNote ? '<div class="verdict-decider">' + escapeHtml(res.deciderNote) + '</div>' : '') +
       '<div class="verdict-session">Session: ' + escapeHtml(sessionTallyText()) + '</div>' +
       '</div>';
     /* the table (owner 2026-09-15): no column headers — the middle column
@@ -2753,7 +2807,9 @@
        Row order (owner 2026-09-15): Big 10, Spy 2, ONE ROW PER ACE from the
        final pile, then Spades, then Cards; Sweep and Total close */
     const P = (t, pts, side) => '<td class="t-pts' + (side ? ' ' + side : '') + (pts ? ' win' : '') + '">' + (pts || '') + '</td>';
-    const pileOf = (t) => t.members.flatMap((m) => g.players[m].pile);
+    /* the snapshot first — a decider crowning renders the ORIGINAL sheet
+       while the live game is the two-hands decider (owner's law 2026-09-22) */
+    const pileOf = (t) => t.pile || t.members.flatMap((m) => g.players[m].pile);
     const rows = [
       { name: '10&diams; Big 10', val: (t) => t.d10 ? '1' : '0', pts: (t) => t.d10 * 2 },
       { name: '2&spades; Spy', val: (t) => t.s2 ? '1' : '0', pts: (t) => t.s2 }
@@ -2784,6 +2840,28 @@
        classic ledger on every screen; on the wide PC felt only the CARD
        turns landscape (land-sheet) so the sheet reads wide, not tall */
     sheetCard.classList.toggle('land-sheet', p2Wide() && stats.length === 2);
+    if (stats.length === 3) {
+      /* (owner 2026-09-22) THE THREE-HANDS SHEET: ONE table — each name and
+         score sits EXACTLY over its own columns, and every column wears its
+         player's colour (me navy, Sipho crimson, Thandi green) */
+      const colCls = ['c-me', 'c-opp', 'c-thandi'];
+      html += '<div class="versus three"><table class="vs-table three">';
+      html += '<tr><th class="t-corner"></th>' + stats.map((t, i) =>
+        '<th class="t-head ' + colCls[i] + (res.winners.includes(t.name) ? ' win' : '') + '" colspan="2">' +
+        lab(t) + ' <span class="h-total">' + t.total + '</span></th>').join('') + '</tr>';
+      for (const r of rows) {
+        html += '<tr><th class="t-lab" scope="row">' + r.name + '</th>' +
+          stats.map((t, i) =>
+            '<td class="t-val ' + colCls[i] + '">' + r.val(t) + '</td>' +
+            '<td class="t-pts ' + colCls[i] + (r.pts(t) ? ' win' : '') + '">' + (r.pts(t) || '') + '</td>').join('') +
+          '</tr>';
+      }
+      html += '<tr class="total"><th class="t-lab" scope="row">Total</th>' +
+        stats.map((t, i) =>
+          '<td class="t-pts tot ' + colCls[i] + (res.winners.includes(t.name) ? ' win' : '') + '" colspan="2">' + t.total + '</td>').join('') +
+        '</tr>';
+      html += '</table></div>';
+    } else {
     /* one true table (owner-approved preview 2026-09-15): every column a
        single shared channel — the vertical lines run straight from the
        first row to the Total, all text centred in its cell */
@@ -2817,6 +2895,7 @@
         '<td class="t-pts tot col-opp' + (res.winners.includes(b.name) ? ' win' : '') + '">' + b.total + '</td></tr>';
     }
     html += '</table></div>';
+    }
     html += '<details class="score-law"><summary>&#9432; ' + res.totalInPlay +
       ' points were in play &mdash; how scoring works</summary><p>' +
       (res.teamMode

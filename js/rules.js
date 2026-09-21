@@ -1397,7 +1397,11 @@
         members: team,
         name: team.length === 1 ? g.players[team[0]].name
           : g.players[team[0]].name + ' & ' + g.players[team[1]].name,
-        ...agg, mostCards: 0, mostSpades: 0
+        ...agg, mostCards: 0, mostSpades: 0,
+        /* the pile SNAPSHOT — the results sheet reads this, never the live
+           game (a decider crowning renders the ORIGINAL sheet while the live
+           game is the two-hands decider itself — owner's law 2026-09-22) */
+        pile: team.reduce((a, id) => a.concat(g.players[id].pile), [])
       };
     });
     if (teamMode) {
@@ -1418,8 +1422,23 @@
     }
     for (const t of stats) t.total = t.sweep > 0 ? t.sweep : (t.points + t.mostCards + t.mostSpades);
     const max = Math.max(...stats.map((t) => t.total));
-    const winners = stats.filter((t) => t.total === max).map((t) => t.name);
-    return { teamMode, totalInPlay: teamMode ? 11 : 7, stats, winners, tie: winners.length > 1 };
+    let top = stats.filter((t) => t.total === max);
+    /* (owner's law 2026-09-22) A THREE-HANDS TIE FOR FIRST breaks by MOST
+       SPADES, then MOST CARDS, then a two-hands DECIDER between the two —
+       the pairs games never tie (the sweep IS the score), so this chain is
+       singles-only. Spades and cards stay TIEBREAKERS, never points */
+    let pendingDecider = null;
+    if (!teamMode && top.length > 1) {
+      const bySpades = Math.max(...top.map((t) => t.spades));
+      top = top.filter((t) => t.spades === bySpades);
+      if (top.length > 1) {
+        const byCards = Math.max(...top.map((t) => t.cards));
+        top = top.filter((t) => t.cards === byCards);
+      }
+      if (top.length > 1) pendingDecider = top.map((t) => t.members[0]);   /* the two seats */
+    }
+    const winners = top.map((t) => t.name);
+    return { teamMode, totalInPlay: teamMode ? 11 : 7, stats, winners, tie: winners.length > 1, pendingDecider };
   }
   function awardMost(stats, key, field) {
     const max = Math.max(...stats.map((t) => t[key]));

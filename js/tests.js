@@ -977,6 +977,42 @@
     eq(g.players[2].pile.length, 1, 'Thandi lost her top');
   });
 
+  /* ============ THE TIEBREAK LAW (owner 2026-09-22) — three hands only ============ */
+  test('TIEBREAK: a tie for first breaks by MOST SPADES', () => {
+    const g = mkState(3, {});
+    /* equal points (2 each); Sipho holds more spades */
+    g.players[0].pile = ['S1', 'H4', 'D6'];        // 1 pt, 1 spade
+    g.players[1].pile = ['S1', 'S9', 'S8', 'H4'];  // 1 pt, 3 spades
+    g.players[2].pile = ['H2', 'C3', 'D5'];        // 0 pts
+    g.players[0].hand = []; g.players[1].hand = []; g.players[2].hand = [];
+    const res = R.scoreGame(g);
+    eq(res.winners.length, 1, 'one winner after the spades tiebreak');
+    eq(res.winners[0], 'P1', 'most spades takes it');
+    eq(res.pendingDecider, null, 'no decider needed');
+  });
+
+  test('TIEBREAK: spades level too — MOST CARDS decides', () => {
+    const g = mkState(3, {});
+    g.players[0].pile = ['S1', 'H4'];              // 1 pt, 1 spade, 2 cards
+    g.players[1].pile = ['S1', 'H5', 'H6', 'H7'];  // 1 pt, 1 spade, 4 cards
+    g.players[2].pile = ['C3'];
+    g.players[0].hand = []; g.players[1].hand = []; g.players[2].hand = [];
+    const res = R.scoreGame(g);
+    eq(res.winners.length, 1, 'one winner after the cards tiebreak');
+    eq(res.winners[0], 'P1', 'most cards takes it');
+  });
+
+  test('TIEBREAK: level on points, spades AND cards — the two-hands DECIDER is called', () => {
+    const g = mkState(3, {});
+    g.players[0].pile = ['S1', 'H4'];       // identical shape
+    g.players[1].pile = ['S1', 'H4'];
+    g.players[2].pile = ['C3'];
+    g.players[0].hand = []; g.players[1].hand = []; g.players[2].hand = [];
+    const res = R.scoreGame(g);
+    eq(res.pendingDecider && res.pendingDecider.join(','), '0,1', 'the two tied seats fight a decider');
+    eq(res.winners.length, 2, 'both still stand as winners until the decider speaks');
+  });
+
   /* ============ the pairs reservation — a pair summing to a live own-side build ============ */
   test('v6 PAIRS: a 4+4 pair with a live own 8 is reserved — no Capture 4, only Build 8', () => {
     const g = mkState(2, { table: ['S4'] });
