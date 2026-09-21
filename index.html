@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>South African Cassino</title>
-<link rel="stylesheet" href="css/style.css?v=153">
+<link rel="stylesheet" href="css/style.css?v=154">
 </head>
 <body>
 
@@ -79,6 +79,9 @@
     <button id="btn-hint" class="cbtn hidden" title="hint — watch an ad (tutorial only)">
       <svg viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 1 6 6c0 2.2-1.2 3.6-2.4 4.6-.9.8-1.6 1.4-1.6 2.4h-4c0-1-.7-1.6-1.6-2.4C7.2 12.6 6 11.2 6 9a6 6 0 0 1 6-6z"/><path d="M10 19h4M10.5 21.5h3"/></svg>
     </button>
+    <button id="btn-min-info" class="cbtn" title="info area — show / hide">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 7.6v.4"/></svg>
+    </button>
     <button id="btn-log" class="cbtn" title="game log">
       <svg viewBox="0 0 24 24"><path d="M6 3h12v13l-2-1.5-2 1.5-2-1.5-2 1.5-2-1.5-2 1.5z"/><path d="M9 7h6M9 10h6"/></svg>
     </button>
@@ -108,6 +111,10 @@
     <div id="opp-corner-bl" class="hidden"></div>
     <div class="namebar me" id="my-bar"><span id="turn-text"></span><span class="nb-emblem">♠</span><span id="my-name">YOU</span><span class="nb-emblem">♠</span><span class="nb-order">1</span></div>
   </div>
+  <!-- (owner 2026-09-21) THE INFO AREA — outside the ribbon, its own strip:
+       the turn message and the prompts live here, folded from the top-right
+       button (three-hands screen) -->
+  <div id="info-strip" class="hidden"><span id="info-turn"></span><span id="info-hints"></span></div>
   <div id="my-row"><div id="my-hand"></div></div>
   <aside id="log-panel">
     <div class="log-head">
@@ -221,12 +228,12 @@ window.addEventListener('unhandledrejection', function (e) {
 });
 </script>
 
-<script src="js/cards.js?v=153"></script>
-<script src="js/rules.js?v=153"></script>
-<script src="js/ai.js?v=153"></script>
-<script src="js/ads.js?v=153"></script>
-<script src="js/audio.js?v=153"></script>
-<script src="js/ui.js?v=153"></script>
+<script src="js/cards.js?v=154"></script>
+<script src="js/rules.js?v=154"></script>
+<script src="js/ai.js?v=154"></script>
+<script src="js/ads.js?v=154"></script>
+<script src="js/audio.js?v=154"></script>
+<script src="js/ui.js?v=154"></script>
 <script>UI.init();</script>
 </body>
 </html>

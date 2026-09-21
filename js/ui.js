@@ -155,8 +155,9 @@
          the true fixed furniture (both banners, the zone and middle pads,
          the hand row's slack) measures ~165px, and equality IS collision —
          a reserve with no margin let the boxes pile onto each other on the
-         owner's shorter real screen. 185 carries the furniture + air */
-      const wH3 = Math.floor((col.clientHeight - 185) / 5.6);
+         owner's shorter real screen. 215 carries the furniture + the info
+         strip + the grid's top margin + air */
+      const wH3 = Math.floor((col.clientHeight - 215) / 5.6);
       /* the floor is lower than the other games: on an absurdly short screen
          small-but-clean beats big-and-overlapping (the owner's no-pile law) */
       const w = Math.max(44, Math.min(96, Math.min(wBand, wH3)));
@@ -606,10 +607,16 @@
   }
 
   /* ---------------- bars & control strip ---------------- */
-  /* the three-hands info-area fold (owner 2026-09-21): the ribbon's message
-     strip hides until asked for — the name, the order chip, the buttons and
-     the fold itself always stay */
+  /* the three-hands info-area fold (owner 2026-09-21): the strip OUTSIDE the
+     ribbon carries the words; the fold button sits top-right with the others */
   function minInfo3() { return localStorage.getItem('sacassino.minInfo3') === '1'; }
+  function updateInfoStrip() {
+    const strip = $('info-strip');
+    if (!strip) return;
+    const has = (($('info-turn') || {}).textContent || '').trim() ||
+      (($('info-hints') || {}).innerHTML || '').trim();
+    strip.classList.toggle('hidden', minInfo3() || !has);
+  }
   function renderBars() {
     const p = g.players[g.turn];
     const myBar = $('my-bar');
@@ -627,17 +634,17 @@
       const ow = $('opp-warn');
       if (ow) ow.textContent = oppWarnText();
     } else if (g.numPlayers === 3) {
-      /* (owner 2026-09-21) THREE HANDS WEAR THE TWO-HAND RIBBON: my name
-         leads at the left, the prompts (message + action buttons) flow in
-         the bar, and a small button folds the info area away */
-      if (!$('turn-text') || !$('btn-min-info')) {
-        myBar.innerHTML = '<span class="nb-emblem">♠</span><span class="nb-name">YOU</span>' +
-          '<span class="nb-emblem">♠</span><span class="nb-order">' + playOrder(g, HUMAN) + '</span>' +
-          '<span id="turn-text"></span><span class="nb-acts" id="bar-acts3"></span>' +
-          '<button id="btn-min-info" title="Hide / show the info area">' +
-          (minInfo3() ? '&#9656;' : '&#9662;') + '</button>';
-      }
-      $('turn-text').textContent = turnText;
+      /* (owner 2026-09-21, corrected same day) THE RIBBON IS THE TWO-HAND
+         RIBBON — a fixed strip: name left, order chip, action buttons, and
+         NOTHING else. The messages live in their OWN strip outside the bar
+         (#info-strip, between the bar and the hand); its fold button sits
+         top-right among the corner buttons */
+      myBar.innerHTML = '<span class="nb-emblem">♠</span><span class="nb-name">YOU</span>' +
+        '<span class="nb-emblem">♠</span><span class="nb-order">' + playOrder(g, HUMAN) + '</span>' +
+        '<span class="nb-acts" id="bar-acts3"></span>';
+      if ($('info-turn')) $('info-turn').textContent = turnText;
+      updateInfoStrip();
+      $('btn-min-info').classList.toggle('on', !minInfo3());
     } else {
       if (!$('turn-text')) {
         myBar.innerHTML = '<span id="turn-text"></span><span class="nb-emblem">♠</span>' +
@@ -1353,16 +1360,20 @@
 
   function renderActionPanel() {
     if (g && g.numPlayers === 2) { renderActionPanel2(); return; }
-    /* (owner 2026-09-21) three hands carry their prompts IN THE RIBBON —
-       the floating pill retires on that screen (four hands keep it) */
+    /* (owner 2026-09-21, corrected) three hands: the BUTTONS live in the
+       fixed ribbon; the WORDS (hints, reminders, coach) live in the info
+       strip outside it. The floating pill retires on that screen */
     const inRibbon = g && g.numPlayers === 3;
     const panel = inRibbon ? $('bar-acts3') : $('action-panel');
+    const hints = inRibbon ? $('info-hints') : panel;
     if ($('action-panel')) $('action-panel').innerHTML = '';
     if (!panel) return;
     panel.innerHTML = '';
-    if (!g || g.phase === 'gameover') return;
+    if (hints && hints !== panel) hints.innerHTML = '';
+    if (!g || g.phase === 'gameover') { updateInfoStrip(); return; }
     if (g.phase === 'shiya') {
-      panel.innerHTML = '<div class="panel-hint">' + escapeHtml(g.players[g.shiyaPending.caller].name) + ' — Shiya window…</div>';
+      if (hints) hints.innerHTML = '<div class="panel-hint">' + escapeHtml(g.players[g.shiyaPending.caller].name) + ' — Shiya window…</div>';
+      updateInfoStrip();
       return;
     }
     /* the live confirmation strip — words only, board stays open */
@@ -1372,18 +1383,19 @@
         const rem = document.createElement('div');
         rem.className = 'panel-hint rule-note';
         rem.textContent = pendingConfirm.reminder;
-        panel.appendChild(rem);
+        (hints || panel).appendChild(rem);
       }
       const head = document.createElement('div');
       head.className = 'confirm-head';
       head.textContent = m.length === 1 ? actionTitle(m[0]) : 'Choose your move';
-      panel.appendChild(head);
+      (hints || panel).appendChild(head);
       if (tutorialMode && m.length === 1) {
         const note = document.createElement('div');
         note.className = 'confirm-note';
         note.textContent = actionExplainer(m[0]);
-        panel.appendChild(note);
+        (hints || panel).appendChild(note);
       }
+      updateInfoStrip();
       const row = document.createElement('div');
       row.className = 'confirm-row';
       if (m.length === 1) {
@@ -1417,20 +1429,22 @@
         const el = document.createElement('div');
         el.className = 'panel-hint rule-note';
         el.textContent = note;
-        panel.appendChild(el);
+        (hints || panel).appendChild(el);
       }
+      updateInfoStrip();
     }
     const p = g.players[g.turn];
-    if (!p.isHuman) return;   // whose turn it is lives on the name banner
+    if (!p.isHuman) { updateInfoStrip(); return; }   // whose turn it is lives on the name banner
     /* tutorial only: the coach explains the opponent's last move */
     if (tutorialMode && coachMsg) {
       const coach = document.createElement('div');
       coach.className = 'panel-hint coach';
       coach.textContent = coachMsg;
-      panel.appendChild(coach);
+      (hints || panel).appendChild(coach);
     }
+    updateInfoStrip();
     if (!tutorialMode) return;
-    appendTutorialHints(panel);
+    appendTutorialHints(hints || panel);
   }
 
   /* ---------------- log ---------------- */
@@ -3027,14 +3041,12 @@
 
     $('btn-hint').addEventListener('click', () => { Snd.click(); requestHint(); });
 
-    /* the info-area fold lives inside the re-rendered ribbon — delegated */
-    document.addEventListener('click', (e) => {
-      if (e.target.id !== 'btn-min-info') return;
-      const folding = !minInfo3();
-      localStorage.setItem('sacassino.minInfo3', folding ? '1' : '0');
-      e.target.innerHTML = folding ? '&#9656;' : '&#9662;';
-      $('screen-game').classList.toggle('min-info', folding);
+    /* the info-area fold — a corner button like the hint and log buttons */
+    $('btn-min-info').addEventListener('click', () => {
+      localStorage.setItem('sacassino.minInfo3', minInfo3() ? '0' : '1');
       Snd.click();
+      renderBars();
+      renderActionPanel();
     });
 
     $('btn-shiya-call').addEventListener('click', () => { Snd.click(); closeShiyaModal(); performAction({ type: 'shiya' }, { human: true }); });
