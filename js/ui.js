@@ -896,9 +896,12 @@
           sameTops(a.victims || []) && sameCards(a.loose) &&
           (buildSel == null || a.buildIdx === buildSel));
         /* a dig-founding's BASE may or may not be in the selection — it folds
-           beneath automatically either way (the owner's tap: his 7 + the 7) */
+           beneath automatically either way (the owner's tap: his 7 + the 7).
+           (owner 2026-09-24) the founding digs ONE top or TWO — the tapped
+           tops must be exactly the dug ones */
         const scaffs = humanActions.filter((a) => {
-          if (a.type !== 'scaffold' || pileTopSel.size !== 1 || !pileTopSel.has(a.victim)) return false;
+          if (a.type !== 'scaffold') return false;
+          if (!sameTops(a.victims || (a.victim != null ? [a.victim] : []))) return false;
           if (sameCards(a.cards)) return true;
           if (a.cards.length + 1 !== tableSel.size) return false;
           const extra = [...tableSel].find((id) => !a.cards.includes(id));
@@ -2111,6 +2114,13 @@
     const asc = (ids) => ids.filter(Boolean).sort((x, y) => C.rank(x) - C.rank(y));
     const dug = (victim) => (victim != null ? prev.pileTops[victim] : null);
     const dugRect = (victim) => (victim != null ? prev.piles[victim] : null);
+    /* every pile a dig empties from — one top or two (owner 2026-09-24) — so
+       each dug card lifts from ITS OWN pile, never a neighbour's */
+    const dugSeats = a.victims || (a.victim != null ? [a.victim] : []);
+    const dugOrigins = new Map();
+    for (const seat of dugSeats) {
+      if (prev.pileTops[seat] != null) dugOrigins.set(prev.pileTops[seat], prev.piles[seat]);
+    }
     const collectInto = (hand, ids, destRect, last) => {
       /* the base card(s) join LAST: the chain's final collection point —
          the movers land on top of the base where it lies, then all travel
@@ -2119,7 +2129,7 @@
       const movers = (hand ? [hand] : []).concat(asc(ids), tails);
       for (const id of movers) {
         const rect = (id === hand) ? origin(hand, destRect)
-          : (prev.cards[id] || dugRect(a.victim) || cardRect(id));
+          : (prev.cards[id] || dugOrigins.get(id) || cardRect(id));
         if (id && rect) parts.push({ id, rect });
       }
       dest = destRect;
@@ -2216,7 +2226,7 @@
            A scaffold can also fold in a SILENT base (absorbBases takes any
            loose table card of the value) — the animation finds it the same
            way the law engine does */
-        const ids = (a.cards || []).concat([dug(a.victim)]);
+        const ids = (a.cards || []).concat([...dugOrigins.keys()]);
         const bases = a.base ? [a.base]
           : prev.table.filter((id) => C.rank(id) === a.value && !(a.cards || []).includes(id));
         const baseRect = (bases.length && (prev.cards[bases[0]] ||
@@ -2388,8 +2398,11 @@
       gateStrip(buildBoxSelByValue(a.value),
         a.mergeInto != null ? prev.buildCards[a.mergeInto] : []);
     /* founding slots (build, basetop, scaffold) are covered by the arriving
-       gate — their strips surface with the box at landing */
-    if (a.victim != null && a.type !== 'capture') gateStrip(pileBoxSel(a.victim), prev.pileCards[a.victim]);
+       gate — their strips surface with the box at landing. A dig empties one
+       pile or two (owner 2026-09-24) — each dug pile's strip waits its turn */
+    if (a.type !== 'capture') {
+      for (const seat of dugSeats) gateStrip(pileBoxSel(seat), prev.pileCards[seat]);
+    }
     /* a founding stack's lot keeps its EMPTY look until the cards land
        (owner 2026-09-17) — the counter appears only when the build arrives,
        never before */

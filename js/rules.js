@@ -586,20 +586,28 @@
           if (sub.length < 2) continue;
           out.push({ type: 'scaffold', cards: sub, value: V });
         }
-        /* dig-foundings: an opponent's pile top (+ table cards) summing to V —
+        /* dig-foundings: opponent pile tops (+ table cards) summing to V —
            ONLY onto a loose BASE of V (the owner's law: no base, no prompt).
-           A lone pile top on its base is a legal two-card founding */
+           A lone pile top on its base is a legal two-card founding.
+           (owner 2026-09-24) the TWO-TOP law reaches foundings too: the 6 and
+           the 2 from the two enemy piles plus the table 2 raise a 10-scaffold —
+           one top or two, never a partner's, exactly as every other dig */
         const base = g.table.find((t) => C.rank(t) === V);
         if (base) {
+          const tops = [];
           for (let seat = 0; seat < g.numPlayers; seat++) {
-            if (sameSide(g, seat, me)) continue;
+            if (sameSide(g, seat, me)) continue;   // never a partner's pile
             const top = g.players[seat].pile[g.players[seat].pile.length - 1];
-            if (!top) continue;
-            const rest = V - C.rank(top);
+            if (top) tops.push({ seat: seat, card: top });
+          }
+          for (let mask = 1; mask < (1 << tops.length); mask++) {
+            const chosen = tops.filter((t, i) => mask & (1 << i));
+            if (chosen.length !== 1 && chosen.length !== 2) continue;
+            const rest = V - chosen.reduce((n, t) => n + C.rank(t.card), 0);
             if (rest < 0) continue;
             const subs = rest === 0 ? [[]] : allSubsets(g.table, rest, 8);
             for (const sub of subs) {
-              out.push({ type: 'scaffold', cards: sub, value: V, victim: seat });
+              out.push({ type: 'scaffold', cards: sub, value: V, victims: chosen.map((t) => t.seat) });
             }
           }
         }
@@ -996,16 +1004,18 @@
     if (a.type === 'scaffold') {
       removeFromTable(g, a.cards);
       const founding = a.cards.slice();
-      let dugFrom = null;
-      if (a.victim != null) {
-        founding.push(g.players[a.victim].pile.pop());
-        dugFrom = names(g, a.victim);
+      const dugSeats = a.victims || (a.victim != null ? [a.victim] : []);
+      const fromNames = [];
+      for (const seat of dugSeats) {
+        founding.push(g.players[seat].pile.pop());
+        fromNames.push(g.players[seat].name);
       }
       const bases = absorbBases(g, a.value);            // a loose V joins as the base
       g.builds.push({ value: a.value, cards: [...bases, ...sortDesc(founding)], owner: me.id, augmented: false, scaffold: true });
       if (!g.turnUsed) g.openedCardless = true;
       addLog(g, 'build', act(me, 'builds', 'build') + ' ' + a.value + ' from the table' +
-        (dugFrom ? ' and ' + dugFrom + '\u2019s pile' : '') + ' (' + fmt(sortDesc(founding)) +
+        (fromNames.length ? ' and ' + fromNames.map((n) => n + "'s pile").join(' and ') : '') +
+        ' (' + fmt(sortDesc(founding)) +
         (bases.length ? ' + ' + fmt(bases) + ' base' : '') + ') — capture or top it this turn.');
       return;                       // no hand card spent — the obligation is live
     }

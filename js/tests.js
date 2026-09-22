@@ -373,7 +373,8 @@
     g.players[0].hand = ['D7', 'H7'];
     g.players[1].hand = ['C2'];
     g.players[1].pile = ['H8', 'S7'];       // Sipho's top: the 7
-    const sc = R.legalActions(g).find((a) => a.type === 'scaffold' && a.value === 7 && a.victim === 1);
+    const sc = R.legalActions(g).find((a) => a.type === 'scaffold' && a.value === 7 &&
+      (a.victims || [a.victim]).includes(1));
     assert(sc, 'the dig-founding onto the base 7 is offered while owning the 10-build');
     R.applyAction(g, sc);
     const b = g.builds.find((x) => x.scaffold);
@@ -977,6 +978,46 @@
     eq(g.players[2].pile.length, 1, 'Thandi lost her top');
   });
 
+  test('TWO-TOP SCAFFOLD FOUNDING: the 6 + 2 + table 2 raise a 10-scaffold onto the base 10 (the owner\'s exact case, 2026-09-24)', () => {
+    const g = mkState(3, { table: ['D10', 'D2'] });
+    g.builds = [{ value: 9, cards: ['S4', 'H5'], owner: 0, augmented: false }];
+    g.players[0].hand = ['H9', 'H10'];
+    g.players[1].pile = ['H8', 'S6'];       // Sipho's top: 6
+    g.players[2].pile = ['H7', 'C2'];       // Thandi's top: 2
+    const acts = R.legalActions(g);
+    const scaf = acts.find((a) => a.type === 'scaffold' && a.value === 10 && a.victims && a.victims.length === 2);
+    assert(scaf, 'the 6 + 2 + 2 founding is offered');
+    eq(scaf.victims.slice().sort().join(','), '1,2', 'digs BOTH enemy piles');
+    eq(scaf.cards.join(','), 'D2', 'the table 2 completes the set');
+    R.applyAction(g, scaf);
+    eq(g.players[1].pile[g.players[1].pile.length - 1], 'H8', 'Sipho\'s 6 is gone from his pile');
+    eq(g.players[2].pile[g.players[2].pile.length - 1], 'H7', 'Thandi\'s 2 is gone from her pile');
+    const sc = g.builds.find((b) => b.scaffold);
+    assert(sc && sc.value === 10, 'the 10-scaffold stands');
+    assert(['S6', 'C2', 'D2', 'D10'].every((c) => sc.cards.includes(c)), 'the 6, both 2s and the base 10 all in the stack');
+    /* the escape held all along — the 10 in hand takes the whole stack */
+    const cap = R.legalActions(g).find((a) => a.type === 'capture' && a.card === 'H10' && a.scaffoldCap);
+    assert(cap, 'the held 10 can capture the scaffold');
+    R.applyAction(g, cap);
+    assert(!g.builds.some((b) => b.scaffold), 'the scaffold is taken');
+    assert(g.players[0].pile.includes('S6') && g.players[0].pile.includes('C2') && g.players[0].pile.includes('D10'),
+      'the dug tops and the base land in my pile');
+  });
+
+  test('COACH: dig sentences speak both piles, and the coach can NEVER crash a game (the v159 phone freeze)', () => {
+    const g = mkState(3, {});
+    g.builds = [{ value: 5, cards: ['H2', 'S3'], owner: 0, augmented: false }];
+    g.players[1].pile = ['H9', 'S1'];       // Sipho's top: Ace
+    g.players[2].pile = ['H8', 'D1'];       // Thandi's top: Ace
+    const td = { type: 'topdig', buildIdx: 0, victims: [1, 2], loose: [] };
+    const line = AI._explainMove(g, td);    // raw — a crash here fails the suite
+    assert(line.indexOf('P1') >= 0 && line.indexOf('P2') >= 0, 'both piles are named: "' + line + '"');
+    eq(AI.explain(g, td), line, 'the wrapper speaks the same sentence');
+    /* the freeze class, forever impossible: what cannot be spoken stays silent */
+    eq(AI.explain(g, { type: 'topdig', buildIdx: 99, victims: [7] }), '', 'an unspeakable dig leaves the coach silent');
+    eq(AI.explain(g, { type: 'nonsense' }), '', 'an unknown move leaves the coach silent');
+  });
+
   /* ============ THE TIEBREAK LAW (owner 2026-09-22) — three hands only ============ */
   test('TIEBREAK: a tie for first breaks by MOST SPADES', () => {
     const g = mkState(3, {});
@@ -1284,9 +1325,9 @@
     g.players[1].hand = ['H9'];
     g.players[1].pile = ['H6', 'C8'];      // Sipho's top: 8♣
     // the lone base is NOT a build by itself
-    assert(!has(R.legalActions(g), (a) => a.type === 'scaffold' && a.victim == null),
+    assert(!has(R.legalActions(g), (a) => a.type === 'scaffold' && !(a.victims || [a.victim]).length),
       'no single-card scaffold from the lone 8');
-    const sc = R.legalActions(g).find((a) => a.type === 'scaffold' && a.victim === 1);
+    const sc = R.legalActions(g).find((a) => a.type === 'scaffold' && (a.victims || [a.victim]).includes(1));
     assert(sc, 'dig-founding onto the base offered');
     R.applyAction(g, sc);
     eq(g.builds[0].cards.join(), 'S8,C8', 'base 8 beneath his dug 8');
@@ -1318,7 +1359,7 @@
     withBase.players[0].hand = ['D10'];
     withBase.players[1].hand = ['H9'];
     withBase.players[1].pile = ['H6', 'S8'];
-    const sc = R.legalActions(withBase).find((a) => a.type === 'scaffold' && a.victim === 1);
+    const sc = R.legalActions(withBase).find((a) => a.type === 'scaffold' && (a.victims || [a.victim]).includes(1));
     assert(sc, 'founding offered with the base present');
     R.applyAction(withBase, sc);
     eq(withBase.builds[0].cards.join(), 'C10,S8,H2', 'base + his 8 + the 2');
@@ -1802,6 +1843,15 @@
           const acts = R.legalActions(g);
           assert(acts.length > 0, 'no legal actions mid-game');
 
+          // the coach describes EVERY legal move without breaking — the v159
+          // phone-freeze class dies here, in every game shape there is
+          for (const a of acts) {
+            let txt = null;
+            try { txt = AI._explainMove(g, a); }
+            catch (e) { assert(false, 'coach crashed describing ' + a.type + ': ' + e.message); }
+            assert(typeof txt === 'string', 'coach returned ' + typeof txt + ' for ' + a.type);
+          }
+
           // conservation
           let total = g.stock.length + g.table.length +
             g.players.reduce((n, p) => n + p.hand.length + p.pile.length, 0) +
@@ -1883,12 +1933,15 @@
                 assert(!g.turnUsed, 'scaffold founded after the hand card');
                 assert(g.players[g.turn].hand.some((h) => C.rank(h) === a.value), 'scaffold without the value held');
                 assert(!vals.includes(a.value), 'scaffold duplicating a live value');
+                const dugSeats = (a.victims || [a.victim]).filter((s) => s != null);
                 const setSum = a.cards.reduce((n, id) => n + C.rank(id), 0) +
-                  (a.victim != null ? C.rank(g.players[a.victim].pile[g.players[a.victim].pile.length - 1]) : 0);
+                  dugSeats.reduce((n, s) => n + C.rank(g.players[s].pile[g.players[s].pile.length - 1]), 0);
                 eq(setSum, a.value, 'scaffold cards must sum to the value');
-                if (a.victim != null) {
+                if (dugSeats.length) {
                   assert(g.table.some((t) => C.rank(t) === a.value), 'dig-founding without a loose base');
-                  assert(!R.sameSide(g, a.victim, g.turn), 'dig-founding from a partner');
+                  for (const s of dugSeats) {
+                    assert(!R.sameSide(g, s, g.turn), 'dig-founding from a partner');
+                  }
                 } else {
                   assert(a.cards.length >= 2, 'a single-card scaffold offered');
                 }

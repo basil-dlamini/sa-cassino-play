@@ -269,10 +269,15 @@
     return ranked[0].action;
   }
 
-  function explain(g, a) {
+  function explainMove(g, a) {
     if (!a) return 'No action available.';
     const who = g.players[g.phase === 'shiya' ? g.shiyaPending.caller : g.turn];
     const n = who.name === 'You' ? 'You' : who.name;
+    /* the seats a dig empties — one top or two (owner's law 2026-09-21); every
+       dig-shaped move speaks through this one helper, never a bare a.victim */
+    const dugSeats = (x) => x.victims || (x.victim != null ? [x.victim] : []);
+    const dugTops = (x) => dugSeats(x).map((s2) => g.players[s2].pile[g.players[s2].pile.length - 1]).filter(Boolean);
+    const dugFrom = (x) => dugSeats(x).map((s2) => g.players[s2].name + "'s pile").join(' and ');
     switch (a.type) {
       case 'capture': {
         const parts = [];
@@ -285,12 +290,18 @@
       case 'augment': return n + ': ' + (a.method === 'top'
         ? 'top the ' + g.builds[a.buildIdx].value + '-build with ' + C.label(a.card)
         : 'augment the ' + g.builds[a.buildIdx].value + '-build with ' + C.label(a.card) +
-          (a.loose.length ? ' + ' + a.loose.map((id) => C.label(id)).join(' + ') : '')) + '.';
+          (a.loose.length ? ' + ' + a.loose.map((id) => C.label(id)).join(' + ') : '') +
+          (dugSeats(a).length ? ' from ' + dugFrom(a) : '')) + '.';
       case 'dig': return n + ': dig with ' + C.label(a.card) +
         ' from ' + g.players[a.victim].name + "'s pile into the " + g.builds[a.buildIdx].value + '-build.';
-      case 'topdig': return n + ': dig ' + C.label(g.players[a.victim].pile[g.players[a.victim].pile.length - 1]) +
-        ' from ' + g.players[a.victim].name + "'s pile into the " + g.builds[a.buildIdx].value + '-build.';
-      case 'scaffold': return n + ': build ' + a.value + ' from the table alone — it must be captured or topped this turn.';
+      case 'topdig': {
+        const tops = dugTops(a);
+        if (!tops.length) return n + ': digs into the ' + g.builds[a.buildIdx].value + '-build.';
+        return n + ': dig ' + tops.map((c) => C.label(c)).join(' + ') +
+          ' from ' + dugFrom(a) + ' into the ' + g.builds[a.buildIdx].value + '-build.';
+      }
+      case 'scaffold': return n + ': build ' + a.value + ' from the table' +
+        (dugSeats(a).length ? ' and ' + dugFrom(a) : ' alone') + ' — it must be captured or topped this turn.';
       case 'caugment': return n + ': fold table cards into the ' + g.builds[a.buildIdx].value + '-build.';
       case 'efold': return n + ': fold table cards into the enemy ' + g.builds[a.buildIdx].value + '-build — for capture.';
       case 'digfold': {
@@ -316,12 +327,20 @@
     return '';
   }
 
+  /* the coach may never crash a game (owner 2026-09-24): a sentence it cannot
+     build leaves it SILENT — the move itself plays on untouched. The v159
+     phone freeze (a describer left behind by the two-top law) must never
+     return in any form */
+  function explain(g, a) {
+    try { return explainMove(g, a); } catch (e) { return ''; }
+  }
+
   function hint(g) {
     const a = chooseAction(g);
     return { action: a, text: explain(g, a) };
   }
 
-  const AI = { PERSONALITIES, chooseAction, explain, hint, assess };
+  const AI = { PERSONALITIES, chooseAction, explain, hint, assess, _explainMove: explainMove };
   root.AI = AI;
   if (typeof module !== 'undefined' && module.exports) module.exports = AI;
 })(typeof window !== 'undefined' ? window : globalThis);
