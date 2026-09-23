@@ -1030,6 +1030,11 @@
     eq(res.winners.length, 1, 'one winner after the spades tiebreak');
     eq(res.winners[0], 'P1', 'most spades takes it');
     eq(res.pendingDecider, null, 'no decider needed');
+    /* the chain SPEAKS (owner 2026-09-30): who was level and which stage decided */
+    eq(res.tiebreak.how, 'spades', 'the explainer names the stage');
+    eq(res.tiebreak.winner, 'P1', 'the explainer names the winner');
+    eq(res.tiebreak.tied.join(','), 'P0,P1', 'the explainer names who was level');
+    eq(res.tiebreak.counts.join(','), '1,3', 'the spades counts travel with it');
   });
 
   test('TIEBREAK: spades level too — MOST CARDS decides', () => {
@@ -1041,6 +1046,9 @@
     const res = R.scoreGame(g);
     eq(res.winners.length, 1, 'one winner after the cards tiebreak');
     eq(res.winners[0], 'P1', 'most cards takes it');
+    eq(res.tiebreak.how, 'cards', 'the explainer names the cards stage');
+    eq(res.tiebreak.winner, 'P1', 'the explainer names the winner');
+    eq(res.tiebreak.tied.join(','), 'P0,P1', 'the explainer names who was level');
   });
 
   test('TIEBREAK: level on points, spades AND cards — the two-hands DECIDER is called', () => {
@@ -1052,6 +1060,19 @@
     const res = R.scoreGame(g);
     eq(res.pendingDecider && res.pendingDecider.join(','), '0,1', 'the two tied seats fight a decider');
     eq(res.winners.length, 2, 'both still stand as winners until the decider speaks');
+    eq(res.tiebreak.how, 'decider', 'the explainer knows only the decider can settle it');
+    eq(res.tiebreak.winner, null, 'no winner spoken yet');
+  });
+
+  test('TIEBREAK: an outright win speaks nothing — no tiebreak, no note', () => {
+    const g = mkState(3, {});
+    g.players[0].pile = ['S1', 'H4', 'D10'];
+    g.players[1].pile = ['C2'];
+    g.players[2].pile = ['C3'];
+    g.players[0].hand = []; g.players[1].hand = []; g.players[2].hand = [];
+    const res = R.scoreGame(g);
+    eq(res.winners.length, 1, 'one outright winner');
+    eq(res.tiebreak, null, 'nothing to explain — the points spoke for themselves');
   });
 
   /* ============ THE SCORE-RANKED SEATING (owner 2026-09-28, corrected

@@ -1436,19 +1436,34 @@
     /* (owner's law 2026-09-22) A THREE-HANDS TIE FOR FIRST breaks by MOST
        SPADES, then MOST CARDS, then a two-hands DECIDER between the two —
        the pairs games never tie (the sweep IS the score), so this chain is
-       singles-only. Spades and cards stay TIEBREAKERS, never points */
+       singles-only. Spades and cards stay TIEBREAKERS, never points.
+       (owner 2026-09-30) the chain now SPEAKS: res.tiebreak carries who was
+       level and which stage decided, so the results sheet can explain the
+       crown in plain words */
     let pendingDecider = null;
+    let tiebreak = null;
     if (!teamMode && top.length > 1) {
-      const bySpades = Math.max(...top.map((t) => t.spades));
-      top = top.filter((t) => t.spades === bySpades);
-      if (top.length > 1) {
-        const byCards = Math.max(...top.map((t) => t.cards));
-        top = top.filter((t) => t.cards === byCards);
+      const tied = top.slice();
+      const bySpades = Math.max(...tied.map((t) => t.spades));
+      top = tied.filter((t) => t.spades === bySpades);
+      if (top.length === 1) {
+        tiebreak = { how: 'spades', tied: tied.map((t) => t.name), winner: top[0].name,
+          counts: tied.map((t) => t.spades), level: tied[0].total };
+      } else {
+        const spadesLevel = top.slice();
+        const byCards = Math.max(...spadesLevel.map((t) => t.cards));
+        top = spadesLevel.filter((t) => t.cards === byCards);
+        if (top.length === 1) {
+          tiebreak = { how: 'cards', tied: tied.map((t) => t.name), winner: top[0].name,
+            counts: spadesLevel.map((t) => t.cards), level: tied[0].total };
+        } else if (top.length > 1) {
+          pendingDecider = top.map((t) => t.members[0]);   /* the two seats */
+          tiebreak = { how: 'decider', tied: tied.map((t) => t.name), winner: null, level: tied[0].total };
+        }
       }
-      if (top.length > 1) pendingDecider = top.map((t) => t.members[0]);   /* the two seats */
     }
     const winners = top.map((t) => t.name);
-    return { teamMode, totalInPlay: teamMode ? 11 : 7, stats, winners, tie: winners.length > 1, pendingDecider };
+    return { teamMode, totalInPlay: teamMode ? 11 : 7, stats, winners, tie: winners.length > 1, pendingDecider, tiebreak };
   }
   function awardMost(stats, key, field) {
     const max = Math.max(...stats.map((t) => t[key]));

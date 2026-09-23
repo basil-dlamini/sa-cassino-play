@@ -2752,7 +2752,11 @@
       const origSeat = deciderMode.seats[deciderIdx];
       orig.winners = [orig.stats[origSeat].name];
       orig.tie = false;
-      orig.deciderNote = winnerName + ' won the two-hands decider';
+      /* the crowning explains itself (owner 2026-09-30): who was level, and
+         that the decider settled it */
+      orig.deciderNote = (orig.tiebreak && orig.tiebreak.tied
+        ? orig.tiebreak.tied.join(' and ') : 'The two') +
+        ' were level on points, spades and cards — ' + winnerName + ' won the two-hands decider';
       /* the tally follows the PERSON (owner 2026-09-28): seats now trade
          corners between games, so a seat-keyed credit would land on whoever
          sits there next */
@@ -2801,6 +2805,22 @@
     saveSession();
     const humanIn = seats.includes(HUMAN);
     newGame({ decider: seats, demo: !humanIn });
+  }
+
+  /* the tie explainer's sentence (owner 2026-09-30): who was level, and
+     which stage of the chain crowned the winner — the winner's number leads
+     the count */
+  function tieExplainer(tb) {
+    const wi = tb.tied.indexOf(tb.winner);
+    const nums = tb.counts.slice();
+    const wnum = nums.splice(wi, 1)[0];
+    const vs = wnum + ' vs ' + nums.join(' vs ');
+    if (tb.how === 'spades') {
+      return tb.tied.join(' and ') + ' were level on ' + tb.level + ' points — ' +
+        tb.winner + ' takes it with more spades (' + vs + ').';
+    }
+    return tb.tied.join(' and ') + ' were level on ' + tb.level + ' points and on spades — ' +
+      tb.winner + ' takes it with more cards (' + vs + ').';
   }
 
   function showResults(res) {
@@ -2860,6 +2880,13 @@
     let html = '<div class="verdict ' + vClass + '">' +
       '<div class="verdict-title">' + title + '</div>' +
       '<div class="verdict-score">' + stats.map((t) => t.total).join('<small>&ndash;</small>') + '</div>' +
+      /* (owner 2026-09-30) THE TIE EXPLAINER — when the crown came through
+         the tiebreak chain, the sheet says WHO was level and WHY the winner
+         took it, in plain words. The decider case speaks through the
+         deciderNote line under this one */
+      (res.tiebreak && res.tiebreak.how !== 'decider'
+        ? '<div class="verdict-note">' + escapeHtml(tieExplainer(res.tiebreak)) + '</div>'
+        : '') +
       (res.deciderNote ? '<div class="verdict-decider">' + escapeHtml(res.deciderNote) + '</div>' : '') +
       '<div class="verdict-session">Session: ' + escapeHtml(sessionTallyText()) + '</div>' +
       '</div>';

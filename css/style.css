@@ -998,6 +998,11 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
 .verdict-decider {
   margin-top: 3px; font-size: .82rem; color: #ffd682; letter-spacing: .4px;
 }
+/* the tie explainer (owner 2026-09-30) — the quiet ivory sibling of the
+   gold decider line: who was level, and why the crown moved */
+.verdict-note {
+  margin-top: 3px; font-size: .82rem; color: var(--ivory); opacity: .88; letter-spacing: .4px;
+}
 /* the counter badge carries its side's colour (owner: "and his counter") */
 #opp-side .build-val {
   background: linear-gradient(180deg, #A62B2F, #6E1014); color: #f4efe2;
