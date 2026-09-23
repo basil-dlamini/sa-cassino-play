@@ -1064,6 +1064,10 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
    retires so a scaffold's count badge overhangs the slot UNcut */
 #screen-game.p3 #discard-grid-wrap { overflow: visible; }
 #screen-game.p3 #table-middle { flex-direction: row-reverse; margin-top: 8px; }
+/* (owner 2026-09-25) my areas stand at the FAR LEFT — the 4-wide grid takes
+   everything beside them. NOTE: the row is REVERSED, so packing to the LEFT
+   edge is justify-content: flex-END here */
+#screen-game.p3 #table-middle { justify-content: flex-end; }
 /* ---------------- THE THREE HANDS WEAR THEIR COLOURS (owner 2026-09-20) ----------------
    The phone's three-hands screen joins the colour law: SIPHO keeps his dark
    crimson on his RIGHT corner (banner comes free from the unscoped rule

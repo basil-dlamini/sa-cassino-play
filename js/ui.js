@@ -151,7 +151,11 @@
          The overhead now carries honest margins — every gap keeps real
          breathing room at any width (measured ≥8px grid↔column, ≥16px
          between the corner groups) */
-      const wBand = Math.floor((col.clientWidth - 70) / 4);
+      /* (owner 2026-09-25) THE FOURTH COLUMN: my area column + a 4-wide grid
+         now share the band — FIVE card widths where four stood before. The
+         same honest overhead keeps every margin real; the cards pay for the
+         eighth slot by coming down (~85px → ~68px on the 412px phone) */
+      const wBand = Math.floor((col.clientWidth - 70) / 5);
       /* (owner's correction 2026-09-21) the HEIGHT budget is honest now:
          the true fixed furniture (both banners, the zone and middle pads,
          the hand row's slack) measures ~165px, and equality IS collision —
@@ -721,8 +725,11 @@
          (owner 2026-09-18: the wide table returned to the original 5×2 too —
          the v119 single staggered row is retired; ten slots, the same slot
          identities as the phone, no translation)
-         (owner 2026-09-20) THREE HANDS run a fixed 3×2 — six slots */
-      const cols = g.numPlayers === 2 ? (p2FiveCols() || p2Wide() ? 5 : 4) : (g.numPlayers === 3 ? 3 : 4);
+         (owner 2026-09-20) THREE HANDS ran a fixed 3×2 — six slots
+         (owner 2026-09-25) the seventh discard overflowed it in play, so the
+         grid is now the owner's 4×2 — EIGHT slots; my areas stand far left
+         and the width budget carries the fourth column (fitCards /5) */
+      const cols = g.numPlayers === 2 ? (p2FiveCols() || p2Wide() ? 5 : 4) : 4;
       area.classList.remove('cols-10w');
       area.classList.toggle('cols-3', cols === 3);
       area.classList.toggle('cols-4', cols === 4);
@@ -730,7 +737,7 @@
       const minRows = g.numPlayers === 2 ? 2 : (g.numPlayers === 3 ? 2 : 3);
       const rows = (p2Wide() || g.numPlayers === 3) ? 2 : Math.max(minRows, Math.floor((wrap.clientHeight - 8) / ch));
       /* cell floor: two full rows of whatever the column count is */
-      const floor = g.numPlayers === 2 ? cols * 2 : (g.numPlayers === 3 ? 6 : 9);
+      const floor = g.numPlayers === 2 ? cols * 2 : (g.numPlayers === 3 ? 8 : 9);
       const cells = Math.max(rows * cols, Math.ceil(Math.max(n, floor) / cols) * cols);
       for (let i = 0; i < cells; i++) slots.push(Math.floor(i / cols) + 1 + ' / ' + (i % cols + 1));
     }
