@@ -1262,7 +1262,7 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
 #screen-game.p3.w3 .opp-corner.left,
 #screen-game.p3.w3 .opp-corner.right {
   position: absolute; top: 46px;
-  bottom: calc(var(--card-w) * 1.4 + 116px);   /* the ribbon + hand band */
+  bottom: 4px;   /* (owner 2026-10-06) the cards and ribbons run to the screen's foot, covering the corners beside my ribbon */
   width: calc(var(--card-w) * 2.8 + 60px);
   display: flex; flex-direction: row; align-items: stretch; gap: 6px;
   padding: 6px 4px;
@@ -1316,13 +1316,20 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
 }
 #screen-game.p3.w3 .opp-fan .card:first-child { margin-top: 0; }
 .opp-fan .card.deal-wait { visibility: hidden; }
-/* the centre: the grid, my areas row just above my ribbon at its left */
+/* the centre: the grid centred; my areas row drops to ALMOST TOUCH my
+   ribbon (owner 2026-10-06) — pinned to the table's foot at its left */
 #screen-game.p3.w3 #table-middle {
   flex-direction: column; justify-content: center; align-items: center;
-  padding: 10px 14px;
+  padding: 10px 14px 4px;
   margin-left: calc(var(--card-w) * 2.8 + 72px);
   margin-right: calc(var(--card-w) * 2.8 + 72px);
 }
-#screen-game.p3.w3 #my-side { width: 100%; align-items: flex-start; }
+#screen-game.p3.w3 #my-side { width: 100%; align-items: flex-start; margin-top: auto; }
 #screen-game.p3.w3 #my-side .area-row.vertical { flex-direction: row-reverse; justify-content: flex-end; }
 #screen-game.p3.w3 #my-side .area-row.vertical .area-box { flex: 0 0 auto; }
+/* (owner 2026-10-06) my ribbon and hand sit BETWEEN the full-height flanks */
+#screen-game.p3.w3 #bottom-row,
+#screen-game.p3.w3 #my-row {
+  margin-left: calc(var(--card-w) * 2.8 + 74px);
+  margin-right: calc(var(--card-w) * 2.8 + 74px);
+}
