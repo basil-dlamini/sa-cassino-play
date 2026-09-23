@@ -527,6 +527,21 @@
       row.appendChild(cornerOf(2, 'left'));
       row.appendChild(cornerOf(1, 'right'));
       zone.appendChild(row);
+      /* (owner 2026-10-08) THE CARDS FILL THE FLANK EXACTLY: the spread is
+         fitted to the MEASURED column after layout — the stack spans top to
+         bottom, precisely aligned with the ribbon alongside it */
+      if (p3Wide()) {
+        const cw = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--card-w')) || 70;
+        for (const fan of zone.querySelectorAll('.opp-fan')) {
+          const cnt = fan.children.length;
+          if (cnt < 2) continue;
+          const h = fan.clientHeight;
+          /* the exact (unfloored) sliver lands the last back on the column's
+             foot — flooring it sheds ~9px down a thirteen-card stack */
+          const sliver = Math.max(cw * 0.24, Math.min((h - cw) / (cnt - 1), cw));
+          fan.style.setProperty('--fan-shift-v', (sliver - cw) + 'px');
+        }
+      }
     } else {
       /* FOUR HANDS — four corners, anticlockwise: partner Thandi (seat 2)
          top-left, Sipho (seat 1) top-right (he plays right after me), Naledi
