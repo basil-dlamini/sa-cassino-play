@@ -1266,9 +1266,10 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
 #screen-game.p3.w3 .opp-corner.right {
   position: absolute; top: 46px;
   bottom: calc(var(--card-w) * 1.4 + 84px);   /* (owner 2026-10-07) the cards stop AT my ribbon's top line */
-  width: calc(var(--card-w) * 2.8 + 60px);
-  display: flex; flex-direction: row; align-items: stretch; gap: 6px;
-  padding: 6px 4px;
+  /* (owner 2026-10-10) the chrome slimmed — the freed width goes to the cards */
+  width: calc(var(--card-w) * 2.8 + 44px);
+  display: flex; flex-direction: row; align-items: stretch; gap: 4px;
+  padding: 4px 2px;
 }
 #screen-game.p3.w3 .opp-corner.left { left: 92px; }
 #screen-game.p3.w3 .opp-corner.right { right: 92px; flex-direction: row-reverse; }
@@ -1278,7 +1279,7 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
 #screen-game.p3.w3 .opp-corner .namebar.vribbon {
   writing-mode: vertical-rl; text-orientation: mixed;
   flex: 0 0 auto; align-self: stretch;
-  gap: 8px; padding: 12px 4px;
+  gap: 8px; padding: 8px 2px;
   margin: 0; min-width: 0; border-radius: 10px; letter-spacing: 1.5px;
 }
 /* their areas — the column beyond their ribbon, INTO the table, at the TOP
@@ -1288,7 +1289,7 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
 #screen-game.p3.w3 .opp-corner .area-row {
   flex: 0 0 auto; width: calc(var(--card-w) * 1.4);
   flex-direction: column; align-items: center; justify-content: flex-start;
-  padding: 0; gap: 6px;
+  padding: 0; gap: 4px;
 }
 #screen-game.p3.w3 .opp-corner .area-row .area-box {
   width: calc(var(--card-w) * 1.4); height: var(--card-w);
@@ -1320,15 +1321,21 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
 }
 #screen-game.p3.w3 .opp-fan .card:first-child { margin-top: 0; }
 .opp-fan .card.deal-wait { visibility: hidden; }
-/* the centre: the grid centred; my areas row drops to ALMOST TOUCH my
-   ribbon (owner 2026-10-06) — pinned to the table's foot at its left */
+/* the centre: (owner 2026-10-10) the grid carries the full span between the
+   slimmed flanks, at BOTH axes' centre of the table — my areas row leaves
+   the flow (pinned to the foot) so the grid centres in the whole play area */
+#screen-game.p3.w3 #table-cards { gap: 4px; }
 #screen-game.p3.w3 #table-middle {
+  position: relative;
   flex-direction: column; justify-content: center; align-items: center;
   padding: 10px 8px 4px;
-  margin-left: calc(var(--card-w) * 2.8 + 70px);
-  margin-right: calc(var(--card-w) * 2.8 + 70px);
+  margin-left: calc(var(--card-w) * 2.8 + 56px);
+  margin-right: calc(var(--card-w) * 2.8 + 56px);
 }
-#screen-game.p3.w3 #my-side { width: 100%; align-items: flex-start; margin-top: auto; }
+#screen-game.p3.w3 #my-side {
+  position: absolute; bottom: 4px; left: 8px; width: auto;
+  align-items: flex-start; margin-top: 0;
+}
 #screen-game.p3.w3 #my-side .area-row.vertical { flex-direction: row-reverse; justify-content: flex-end; }
 #screen-game.p3.w3 #my-side .area-row.vertical .area-box { flex: 0 0 auto; }
 /* (owner 2026-10-07) my ribbon and hand span the table's FULL width again —
