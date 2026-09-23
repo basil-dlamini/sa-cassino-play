@@ -1024,6 +1024,14 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
    short one; a short screen spaces itself out instead of stacking overlaps */
 #screen-game.p3 .area-row.vertical .area-box { flex: 0 0 auto; }
 #screen-game.p3 .area-row.vertical { flex: 0 0 auto; }
+/* (owner 2026-09-25) FILL THE SPACES: the cards grew to the width ceiling,
+   and the column now STANDS THE TABLE'S FULL HEIGHT — build box at the top,
+   pile at the bottom — framing the grid and owning the column's empty air.
+   The boxes stay exactly card size (no-pile law untouched); only their
+   placing spreads. The keep-bottom pin retires for three hands */
+#screen-game.p3 #my-side { width: calc(var(--card-w) + 12px); justify-content: flex-start; }
+#screen-game.p3 #my-side .area-row.vertical { flex: 1 1 auto; justify-content: space-between; }
+#screen-game.p3 #opp-side { display: none; }   /* empty in three hands — its phantom gap went to the cards */
 /* (owner 2026-09-21, corrected) THE THREE-HANDS RIBBON IS THE TWO-HANDS
    RIBBON — a FIXED strip copied from the mobile two-hands bar: nothing
    wraps, nothing grows, only prompt words ellipsize. The words themselves

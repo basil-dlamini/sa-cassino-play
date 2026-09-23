@@ -154,8 +154,11 @@
       /* (owner 2026-09-25) THE FOURTH COLUMN: my area column + a 4-wide grid
          now share the band — FIVE card widths where four stood before. The
          same honest overhead keeps every margin real; the cards pay for the
-         eighth slot by coming down (~85px → ~68px on the 412px phone) */
-      const wBand = Math.floor((col.clientWidth - 70) / 5);
+         eighth slot by coming down (~85px → ~68px on the 412px phone).
+         (owner 2026-09-26) FILL THE SPACES: the column's fat +24 padding
+         slimmed to +12 and the phantom empty opp-side column (with its gap)
+         is gone — 14px of dead width went back to the cards: 68 → 71 */
+      const wBand = Math.floor((col.clientWidth - 56) / 5);
       /* (owner's correction 2026-09-21) the HEIGHT budget is honest now:
          the true fixed furniture (both banners, the zone and middle pads,
          the hand row's slack) measures ~165px, and equality IS collision —
