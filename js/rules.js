@@ -1460,16 +1460,18 @@
     else best.forEach((t) => { t[field] = 1; });
   }
 
-  /* THE SCORE-RANKED SEATING (owner's law 2026-09-28, three hands): the next
-     game's playing order follows the game just ended — the WINNER plays last;
-     the two losers ranked between them by points, then spades, then cards
-     (the winner's tiebreak chain, but never a decider game); a dead level
-     keeps everyone exactly where they sat. prevSeats maps person→seat
-     (person 0 is the human — pinned to seat 0, the bottom of his own screen,
-     so every human always sees their own hand at the bottom); ranking carries
-     one entry per person { person, total, spades, cards, winner }. The turn
-     cycle 0→1→2 — the anticlockwise direction — never changes: only WHO sits
-     where, so the callers seat the players and the dealer accordingly */
+  /* THE SCORE-RANKED SEATING (owner's law 2026-09-28, corrected 2026-09-29,
+     three hands): the next game's playing order follows the game just ended,
+     WORST TO BEST — the player who finished THIRD plays first, second place
+     follows, the WINNER plays last. Ties between the losers use the winner's
+     chain (points, then spades, then cards — never a decider game), the one
+     ranking higher playing later; a dead level keeps everyone seated.
+     prevSeats maps person→seat (person 0 is the human — pinned to seat 0,
+     the bottom of his own screen, so every human always sees their own hand
+     at the bottom); ranking carries one entry per person { person, total,
+     spades, cards, winner }. The turn cycle 0→1→2 — the anticlockwise
+     direction — never changes: only WHO sits where, so the callers seat the
+     players and the dealer accordingly */
   function nextSeating(prevSeats, ranking) {
     const same = prevSeats.slice();
     if (!Array.isArray(ranking) || ranking.length !== 3) return same;
@@ -1480,9 +1482,12 @@
     if (losers[0].total === losers[1].total &&
         losers[0].spades === losers[1].spades &&
         losers[0].cards === losers[1].cards) return same;
-    /* the better loser leads: points, then spades, then cards */
+    /* (owner's correction 2026-09-29) WORST TO BEST: the player who finished
+       THIRD leads, second place follows, the winner closes. A tie between the
+       losers uses the winner's chain — points, then spades, then cards — and
+       the one ranking HIGHER by it plays LATER */
     const [first, second] = losers.slice()
-      .sort((a, b) => (b.total - a.total) || (b.spades - a.spades) || (b.cards - a.cards));
+      .sort((a, b) => (a.total - b.total) || (a.spades - b.spades) || (a.cards - b.cards));
     /* order around the table: first loser, second loser, winner LAST. The
        human's position pins the start seat S (he never leaves seat 0), and
        position k sits at seat (S + k) % 3 */

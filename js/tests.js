@@ -1054,6 +1054,63 @@
     eq(res.winners.length, 2, 'both still stand as winners until the decider speaks');
   });
 
+  /* ============ THE SCORE-RANKED SEATING (owner 2026-09-28, corrected
+     2026-09-29, three hands) ============
+     WORST TO BEST: third place plays first, second place second, the winner
+     last. person 0 = the human (always seat 0, bottom of his own screen),
+     1 = Sipho, 2 = Thandi. The turn cycle 0→1→2 (anticlockwise) never
+     changes; the ORDER comes from who sits where, and play starts after the
+     dealer (= winner's new seat, so the winner plays last) */
+  const seatTest = (name, prev, ranking, wantSeats, wantFirstPerson) => {
+    test('SEATING: ' + name, () => {
+      const seats = R.nextSeating(prev, ranking);
+      eq(seats.join(','), wantSeats.join(','), 'person→seat map');
+      eq(seats[0], 0, 'the human never leaves the bottom of his screen');
+      const dealer = seats[ranking.find((r) => r.winner).person];   // the winner deals
+      const firstSeat = (dealer + 1) % 3;
+      eq(seats.indexOf(firstSeat), wantFirstPerson, 'the player who moves first');
+    });
+  };
+  /* the owner's exact example (You 4, Sipho 3, Thandi 0) under the corrected
+     law: THANDI finished third — she leads; Sipho second; You close. The
+     opponents swap corners to keep the cycle anticlockwise */
+  seatTest('the owner\'s case (You 4, Sipho 3, Thandi 0) — Thandi leads',
+    [0, 1, 2],
+    [{ person: 0, total: 4, spades: 3, cards: 12, winner: true },
+     { person: 1, total: 3, spades: 2, cards: 10, winner: false },
+     { person: 2, total: 0, spades: 1, cards: 8,  winner: false }],
+    [0, 2, 1], 2);
+  /* Sipho wins, Thandi finished third → Thandi leads, I am second, Sipho
+     closes — the classic seats already deliver this order: no swap */
+  seatTest('Sipho wins, Thandi third — classic seats, no swap',
+    [0, 1, 2],
+    [{ person: 0, total: 3, spades: 2, cards: 10, winner: false },
+     { person: 1, total: 4, spades: 3, cards: 12, winner: true },
+     { person: 2, total: 0, spades: 1, cards: 8,  winner: false }],
+    [0, 1, 2], 2);
+  /* Thandi wins, I finished third → I lead, Sipho second, Thandi closes */
+  seatTest('Thandi wins, I finished third — I lead',
+    [0, 1, 2],
+    [{ person: 0, total: 1, spades: 1, cards: 9,  winner: false },
+     { person: 1, total: 3, spades: 2, cards: 10, winner: false },
+     { person: 2, total: 4, spades: 3, cards: 12, winner: true }],
+    [0, 1, 2], 0);
+  /* losers level on points — the winner's chain orders them: more spades
+     ranks higher and plays LATER */
+  seatTest('losers level on points — spades orders them',
+    [0, 1, 2],
+    [{ person: 0, total: 4, spades: 3, cards: 12, winner: true },
+     { person: 1, total: 2, spades: 1, cards: 14, winner: false },
+     { person: 2, total: 2, spades: 5, cards: 8,  winner: false }],
+    [0, 1, 2], 1);
+  /* a DEAD level (points, spades AND cards equal) — no play-off, no swap */
+  seatTest('dead level keeps the seats (even after a past swap)',
+    [0, 2, 1],
+    [{ person: 0, total: 4, spades: 3, cards: 12, winner: true },
+     { person: 1, total: 2, spades: 2, cards: 10, winner: false },
+     { person: 2, total: 2, spades: 2, cards: 10, winner: false }],
+    [0, 2, 1], 2);
+
   /* ============ the pairs reservation — a pair summing to a live own-side build ============ */
   test('v6 PAIRS: a 4+4 pair with a live own 8 is reserved — no Capture 4, only Build 8', () => {
     const g = mkState(2, { table: ['S4'] });
