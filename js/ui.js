@@ -157,8 +157,11 @@
          eighth slot by coming down (~85px → ~68px on the 412px phone).
          (owner 2026-09-26) FILL THE SPACES: the column's fat +24 padding
          slimmed to +12 and the phantom empty opp-side column (with its gap)
-         is gone — 14px of dead width went back to the cards: 68 → 71 */
-      const wBand = Math.floor((col.clientWidth - 56) / 5);
+         is gone — 14px of dead width went back to the cards: 68 → 71.
+         (owner 2026-09-27) A LITTLE MORE: the column's padding is a hairline
+         +6 now — 71 → 73; every between-element gap keeps its honest 8px,
+         the grid's edge margin stays ~10 */
+      const wBand = Math.floor((col.clientWidth - 47) / 5);
       /* (owner's correction 2026-09-21) the HEIGHT budget is honest now:
          the true fixed furniture (both banners, the zone and middle pads,
          the hand row's slack) measures ~165px, and equality IS collision —
