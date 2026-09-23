@@ -1082,39 +1082,42 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
    edge is justify-content: flex-END here */
 #screen-game.p3 #table-middle { justify-content: flex-end; }
 /* ---------------- THE THREE HANDS WEAR THEIR COLOURS (owner 2026-09-20) ----------------
-   The phone's three-hands screen joins the colour law: SIPHO keeps his dark
-   crimson on his RIGHT corner (banner comes free from the unscoped rule
-   above — his areas and counter gain it here), and THANDI takes her own
-   colour on the LEFT corner. THANDI'S GREEN IS PROVISIONAL — the owner
-   picks colours BY EYE on the shades page; swap this one block when he
-   rules. My areas stay blue via #my-side (the three-hand column). */
-#screen-game #opp-zone.mode-3 .opp-corner.left .namebar {
+   The phone's three-hands screen joins the colour law — but since the
+   score-ranked seating (owner 2026-09-28) the seats TRADE CORNERS between
+   games: the colours key to the PERSON class the corner carries
+   (corner-sipho / corner-thandi), never to the corner itself. SIPHO's dark
+   crimson banner comes free from the unscoped #opp-zone rule above — his
+   areas and counter gain it here; THANDI takes her own colour wherever she
+   sits. THANDI'S GREEN IS PROVISIONAL — the owner picks colours BY EYE on
+   the shades page; swap this one block when he rules. My areas stay blue via
+   #my-side (the three-hand column). */
+#screen-game #opp-zone.mode-3 .opp-corner.corner-thandi .namebar {
   background: linear-gradient(180deg, #2E7D46, #1F5B35 45%, #0E3A1F);
 }
-#screen-game #opp-zone.mode-3 .opp-corner.left .namebar.active {
+#screen-game #opp-zone.mode-3 .opp-corner.corner-thandi .namebar.active {
   background: linear-gradient(180deg, #37904F, #236839 45%, #134726);
   border-color: rgba(244,239,226,.55);
 }
-#opp-zone.mode-3 .opp-corner.right .area-box {
+#opp-zone.mode-3 .opp-corner.corner-sipho .area-box {
   border-color: rgba(156,37,41,.5);
   background: rgba(87,14,18,.28);
 }
-#opp-zone.mode-3 .opp-corner.right .area-box.has-build {
+#opp-zone.mode-3 .opp-corner.corner-sipho .area-box.has-build {
   border-color: rgba(176,42,47,.85);
   background: rgba(87,14,18,.42);
 }
-#opp-zone.mode-3 .opp-corner.right .build-val {
+#opp-zone.mode-3 .opp-corner.corner-sipho .build-val {
   background: linear-gradient(180deg, #A62B2F, #6E1014); color: #f4efe2;
 }
-#opp-zone.mode-3 .opp-corner.left .area-box {
+#opp-zone.mode-3 .opp-corner.corner-thandi .area-box {
   border-color: rgba(46,125,70,.5);
   background: rgba(14,58,31,.28);
 }
-#opp-zone.mode-3 .opp-corner.left .area-box.has-build {
+#opp-zone.mode-3 .opp-corner.corner-thandi .area-box.has-build {
   border-color: rgba(62,150,94,.85);
   background: rgba(14,58,31,.42);
 }
-#opp-zone.mode-3 .opp-corner.left .build-val {
+#opp-zone.mode-3 .opp-corner.corner-thandi .build-val {
   background: linear-gradient(180deg, #358853, #1C4A2A); color: #f4efe2;
 }
 #opp-zone.mode-3 .opp-corner .area-box.highlight { border-color: var(--ivory); }

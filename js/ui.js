@@ -27,7 +27,7 @@
 
   /* ---------------- persistent session ---------------- */
   /* the deal is drawn at random when a session begins — no seat is born to lead */
-  function freshSession() { return { numPlayers: 2, mode: 'competitive', dealer: Math.floor(Math.random() * 4), wins: [0, 0, 0, 0], games: 0 }; }
+  function freshSession() { return { numPlayers: 2, mode: 'competitive', dealer: Math.floor(Math.random() * 4), wins: [0, 0, 0, 0], games: 0, p3Seats: null }; }
   function loadSession() {
     try {
       const s = JSON.parse(localStorage.getItem('sacassino.session'));
@@ -430,26 +430,31 @@
       }
       zone.appendChild(nameBar(g, 1, {}));
     } else if (g.numPlayers === 3) {
-      /* Anticlockwise play: seat 1 (Sipho) sits RIGHT, seat 2 (Thandi) LEFT.
-         Each opponent's areas run horizontally under their own banner — the
-         captured pile at the far edge of the screen, build box beside it. */
+      /* Anticlockwise play: seat 1 sits RIGHT, seat 2 LEFT — WHO that is
+         follows the score-ranked seating (owner 2026-09-28): the seats stay
+         put and the players trade corners, so the corner wears a PERSON class
+         for its colour (corner-sipho crimson / corner-thandi green — the
+         colours belong to the players, never the chairs). Each opponent's
+         areas run horizontally under their own banner — the captured pile at
+         the far edge of the screen, build box beside it. */
+      const personCls = (seat) => ' corner-' + (g.players[seat].name === 'Thandi' ? 'thandi' : 'sipho');
       const row = document.createElement('div');
       row.className = 'corner-row';
-      const thandi = document.createElement('div');
-      thandi.className = 'opp-corner left';
-      thandi.appendChild(nameBar(g, 2, {}));
-      const thandiAreas = areaRow(2);
-      thandiAreas.classList.toggle('active', g.phase === 'play' && g.turn === 2);
-      thandi.appendChild(thandiAreas);
-      row.appendChild(thandi);
-      const sipho = document.createElement('div');
-      sipho.className = 'opp-corner right';
-      sipho.appendChild(nameBar(g, 1, {}));
-      const siphoAreas = areaRow(1);
-      siphoAreas.classList.add('mirror'); // pile lands at the far right
-      siphoAreas.classList.toggle('active', g.phase === 'play' && g.turn === 1);
-      sipho.appendChild(siphoAreas);
-      row.appendChild(sipho);
+      const left = document.createElement('div');
+      left.className = 'opp-corner left' + personCls(2);
+      left.appendChild(nameBar(g, 2, {}));
+      const leftAreas = areaRow(2);
+      leftAreas.classList.toggle('active', g.phase === 'play' && g.turn === 2);
+      left.appendChild(leftAreas);
+      row.appendChild(left);
+      const right = document.createElement('div');
+      right.className = 'opp-corner right' + personCls(1);
+      right.appendChild(nameBar(g, 1, {}));
+      const rightAreas = areaRow(1);
+      rightAreas.classList.add('mirror'); // pile lands at the far right
+      rightAreas.classList.toggle('active', g.phase === 'play' && g.turn === 1);
+      right.appendChild(rightAreas);
+      row.appendChild(right);
       zone.appendChild(row);
     } else {
       /* FOUR HANDS — four corners, anticlockwise: partner Thandi (seat 2)
@@ -1885,8 +1890,17 @@
         ? { name: 'You', isHuman: true }
         : Object.assign({}, AI_SEATS[s], { isHuman: false }));
     } else {
+      /* (owner's law 2026-09-28) THREE HANDS SEAT BY THE LAST SCORE: the
+         plan maps person→seat — person 0 (the human) is pinned to seat 0,
+         and the two opponents sit wherever the ranking put them, so the
+         anticlockwise cycle delivers the ordered play. No plan (fresh
+         session) keeps the classic seats: Sipho right, Thandi left */
+      const plan = n === 3 && session.p3Seats ? session.p3Seats : null;
       players = [{ name: 'You', isHuman: true }];
-      for (let i = 1; i < n; i++) players.push(Object.assign({}, AI_SEATS[i], { isHuman: false }));
+      for (let i = 1; i < n; i++) {
+        const person = plan ? plan.indexOf(i) : i;
+        players.push(Object.assign({}, AI_SEATS[person], { isHuman: false }));
+      }
     }
     g = R.createGame({ numPlayers: n, players, dealer: session.dealer % n });
     clearSelection();
@@ -2739,7 +2753,12 @@
       orig.winners = [orig.stats[origSeat].name];
       orig.tie = false;
       orig.deciderNote = winnerName + ' won the two-hands decider';
-      session.wins[origSeat] = (session.wins[origSeat] || 0) + 1;
+      /* the tally follows the PERSON (owner 2026-09-28): seats now trade
+         corners between games, so a seat-keyed credit would land on whoever
+         sits there next */
+      const wperson = orig.stats[origSeat].name === 'You' ? 0
+        : AI_SEATS.findIndex((a) => a && a.name === orig.stats[origSeat].name);
+      session.wins[wperson] = (session.wins[wperson] || 0) + 1;
       deciderMode = null;
       session.numPlayers = 3;
       saveSession();
@@ -2762,7 +2781,12 @@
     const teams = R.teamsOf(g) || g.players.map((p) => [p.id]);
     res.stats.forEach((t, i) => {
       if (res.winners.includes(t.name)) {
-        for (const seat of teams[i]) session.wins[seat] = (session.wins[seat] || 0) + 1;
+        /* the tally follows the PERSON, never the seat (owner 2026-09-28) */
+        for (const seat of teams[i]) {
+          const nm = g.players[seat].name;
+          const p = nm === 'You' ? 0 : AI_SEATS.findIndex((a) => a && a.name === nm);
+          session.wins[p] = (session.wins[p] || 0) + 1;
+        }
       }
     });
     saveSession();
@@ -2791,6 +2815,26 @@
        menu path carries it too */
     if (lastWinnerSeat != null) {
       session.dealer = lastWinnerSeat;
+      saveSession();
+    }
+    /* (owner's law 2026-09-28) THE SCORE-RANKED SEATING — a finished three-
+       hands game seats the NEXT one: the winner plays last; the two losers
+       rank between them by points, then spades, then cards (the winner's
+       tiebreak chain, never a decider); a dead level keeps everyone seated.
+       The human never leaves seat 0 — every human always sees their own hand
+       at the bottom of their screen — so at most the two opponents trade
+       corners, and the dealer moves to the winner's NEW seat so play starts
+       after him. Colours and the sheet follow the PERSON from here on */
+    if (res.stats.length === 3 && res.winners.length === 1) {
+      const personByName = (nm) => (nm === 'You' ? 0 : AI_SEATS.findIndex((a) => a && a.name === nm));
+      const ranking = res.stats.map((t) => ({
+        person: personByName(t.name), total: t.total, spades: t.spades, cards: t.cards,
+        winner: res.winners.includes(t.name)
+      }));
+      const prev = session.p3Seats || [0, 1, 2];
+      session.p3Seats = R.nextSeating(prev, ranking);
+      const wp = personByName(res.winners[0]);
+      if (wp >= 0 && session.p3Seats[wp] != null) session.dealer = session.p3Seats[wp];
       saveSession();
     }
     /* (owner 2026-09-21) PLAY AGAIN is a two- AND three-hand privilege now —
@@ -2871,8 +2915,11 @@
     if (stats.length === 3) {
       /* (owner 2026-09-22) THE THREE-HANDS SHEET: ONE table — each name and
          score sits EXACTLY over its own columns, and every column wears its
-         player's colour (me navy, Sipho crimson, Thandi green) */
-      const colCls = ['c-me', 'c-opp', 'c-thandi'];
+         player's colour (me navy, Sipho crimson, Thandi green).
+         (owner 2026-09-28) the colour follows the PERSON — seats trade
+         corners between games now, so the column classes map by name */
+      const colCls = stats.map((t) =>
+        t.members.includes(HUMAN) ? 'c-me' : (t.name === 'Thandi' ? 'c-thandi' : 'c-opp'));
       html += '<div class="versus three"><table class="vs-table three">';
       html += '<tr><th class="t-corner"></th>' + stats.map((t, i) =>
         '<th class="t-head ' + colCls[i] + (res.winners.includes(t.name) ? ' win' : '') + '" colspan="2">' +
@@ -3181,7 +3228,11 @@
 
     $('btn-again').addEventListener('click', () => {
       $('modal-results').classList.add('hidden');   /* the sheet CLOSES — restored (my v157 typo left it open, hiding the new game) */
-      if (session.numPlayers !== 4 && lastWinnerSeat != null) {
+      if (session.numPlayers === 3) {
+        /* the score-ranked seating (owner 2026-09-28) already set the dealer
+           to the winner's NEW seat — the old-seat stamp here would deal from
+           the wrong chair and break the ranked order */
+      } else if (session.numPlayers !== 4 && lastWinnerSeat != null) {
         session.dealer = lastWinnerSeat;   // the winner deals — and plays last next game
       } else {
         session.dealer = (session.dealer + 1) % session.numPlayers;

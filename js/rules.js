@@ -1460,10 +1460,45 @@
     else best.forEach((t) => { t[field] = 1; });
   }
 
+  /* THE SCORE-RANKED SEATING (owner's law 2026-09-28, three hands): the next
+     game's playing order follows the game just ended — the WINNER plays last;
+     the two losers ranked between them by points, then spades, then cards
+     (the winner's tiebreak chain, but never a decider game); a dead level
+     keeps everyone exactly where they sat. prevSeats maps person→seat
+     (person 0 is the human — pinned to seat 0, the bottom of his own screen,
+     so every human always sees their own hand at the bottom); ranking carries
+     one entry per person { person, total, spades, cards, winner }. The turn
+     cycle 0→1→2 — the anticlockwise direction — never changes: only WHO sits
+     where, so the callers seat the players and the dealer accordingly */
+  function nextSeating(prevSeats, ranking) {
+    const same = prevSeats.slice();
+    if (!Array.isArray(ranking) || ranking.length !== 3) return same;
+    const winner = ranking.find((r) => r.winner) || null;
+    const losers = ranking.filter((r) => !r.winner);
+    if (!winner || losers.length !== 2) return same;
+    /* a DEAD LEVEL keeps the current seats — no play-off, no swap */
+    if (losers[0].total === losers[1].total &&
+        losers[0].spades === losers[1].spades &&
+        losers[0].cards === losers[1].cards) return same;
+    /* the better loser leads: points, then spades, then cards */
+    const [first, second] = losers.slice()
+      .sort((a, b) => (b.total - a.total) || (b.spades - a.spades) || (b.cards - a.cards));
+    /* order around the table: first loser, second loser, winner LAST. The
+       human's position pins the start seat S (he never leaves seat 0), and
+       position k sits at seat (S + k) % 3 */
+    const order = [first, second, winner];
+    const myPos = order.findIndex((r) => r.person === 0);
+    if (myPos < 0) return same;
+    const S = (3 - myPos) % 3;
+    const seats = new Array(3);
+    order.forEach((r, k) => { seats[r.person] = (S + k) % 3; });
+    return seats;
+  }
+
   const Rules = {
     DEAL, createGame, legalActions, applyAction, scoreGame, isTeammate, sameSide, teammate,
     teamsOf, pileStats, canSum, allSubsets, sameAction, mulberry32,
-    maxSlots, buildsOwned, resolutionExists, claimMoves
+    maxSlots, buildsOwned, resolutionExists, claimMoves, nextSeating
   };
   root.Rules = Rules;
   if (typeof module !== 'undefined' && module.exports) module.exports = Rules;
