@@ -976,7 +976,12 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
    own columns, every column wearing its player's colour — me navy, Sipho
    crimson, Thandi green (Thandi's green is PROVISIONAL until her pick) */
 .vs-table.three { width: 100%; border-collapse: collapse; table-layout: fixed; }
-.vs-table.three th.t-corner { width: 17%; }
+/* (owner 2026-09-27) THE TITLES COLUMN was too small for the sweep labels —
+   the corner takes a fuller quarter of the sheet and every title sits on
+   ONE line, no letter-spacing tax (the abbreviated P. SWEEP / C. SWEEP
+   comes from ui.js) */
+.vs-table.three th.t-corner { width: 24%; }
+.vs-table.three .t-lab { white-space: nowrap; letter-spacing: 0; }
 .vs-table.three th.t-head {
   font-size: 12px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase;
   padding: 7px 2px 5px; text-align: center; border-bottom: 1px solid rgba(244,239,226,.3);

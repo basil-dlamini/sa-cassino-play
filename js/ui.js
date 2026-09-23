@@ -2856,9 +2856,11 @@
     rows.push(
       { name: 'Spades', val: (t) => String(t.spades), pts: (t) => t.mostSpades },
       { name: 'Cards', val: (t) => String(t.cards), pts: (t) => t.mostCards },
-      { name: 'Points sweep', val: (t) => allPoints(t) ? '1' : '0',
+      /* (owner 2026-09-27) the label column could not fit the full words —
+         the sweeps read P. SWEEP and C. SWEEP now */
+      { name: 'P. SWEEP', val: (t) => allPoints(t) ? '1' : '0',
         pts: (t) => (t.sweep && t.sweep < cleanPts2) ? pointSweepPts : 0 },
-      { name: 'Cards sweep', val: (t) => allCards(t) ? '1' : '0',
+      { name: 'C. SWEEP', val: (t) => allCards(t) ? '1' : '0',
         pts: (t) => t.sweep >= cleanPts2 ? t.sweep : 0 }
     );
     const sheetCard = document.querySelector('#modal-results .modal-card');
