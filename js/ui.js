@@ -101,6 +101,15 @@
   }
   let p2WideOn = false;
   let p2FiveOn = false;
+  /* (owner 2026-10-01) THE THREE-HANDS WIDE TABLE — same trigger as the
+     two-hand wide (the viewport itself, never the widening element): at
+     900 CSS px the phone table turns landscape — the grid grows to the
+     owner's 5×2, both opponents' hands stand face-down as fans under their
+     banners, and the screen caps at exactly 900 like the two-hand felt */
+  function p3Wide() {
+    return session.numPlayers === 3 && window.innerWidth >= 900;
+  }
+  let p3WideOn = false;
 
   function fitCards() {
     const n = R.DEAL[session.numPlayers].per;
@@ -145,6 +154,32 @@
     }
     const wW = Math.floor(availW / (1 + (n - 1) / 3));
     if (session.numPlayers === 3) {
+      /* (owner 2026-10-01) THE WIDE TWIN: crossing 900 turns the table
+         landscape — the class itself widens the screen, so the VIEWPORT is
+         the test (the two-hand law). The crossing re-renders the whole table
+         judged on the new viewport: the grid becomes the owner's 5×2, the
+         opponents' fans appear, and everything keeps its slot by reading
+         order of the new grid */
+      const wide = window.innerWidth >= 900;
+      if (wide !== p3WideOn) {
+        p3WideOn = wide;
+        col.classList.toggle('w3', wide);
+        if (g && !dealSeq) { renderOppZone(); renderSides(); renderTable(); }
+      }
+      if (wide) {
+        /* five grid columns + my area column share exactly 900 (the v118
+           law): 6 card widths + honest margins; the HEIGHT budget carries
+           the fans — measured on the real stack (equality IS collision): the
+           opponents' zone stacks banner + fan + areas (3.0 card heights),
+           the grid two rows (2.8), my hand row (1.4) — 7.2 card heights on
+           ~200px of true furniture at every width */
+        const wGrid5 = Math.floor((900 - 62) / 6);
+        const wH3w = Math.floor((col.clientHeight - 244) / 7.2);
+        const w = Math.max(44, Math.min(104, Math.min(wGrid5, wH3w)));
+        document.documentElement.style.setProperty('--card-w', w + 'px');
+        if (g && !dealSeq) renderHand();
+        return;
+      }
       /* (owner 2026-09-20) FILL THE SCREEN — then TRIMMED BACK (owner's
          correction, same day): the first cut left the grid-to-column gap a
          razor 4-6px, which a real phone's scaling closes into an overlap.
@@ -436,25 +471,41 @@
          for its colour (corner-sipho crimson / corner-thandi green — the
          colours belong to the players, never the chairs). Each opponent's
          areas run horizontally under their own banner — the captured pile at
-         the far edge of the screen, build box beside it. */
+         the far edge of the screen, build box beside it.
+         (owner 2026-10-01) THE WIDE TABLE SHOWS THEIR HANDS: under each
+         banner stands a fan of backs — every back visible, thinning as they
+         play, plays lifting from their own fan (the two-hand wide law). The
+         backs carry no ids: hidden information never enters the page */
       const personCls = (seat) => ' corner-' + (g.players[seat].name === 'Thandi' ? 'thandi' : 'sipho');
+      const fanOf = (seat) => {
+        const fan = document.createElement('div');
+        fan.className = 'opp-fan';
+        const cw = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--card-w')) || 70;
+        const cnt = g.players[seat].hand.length;
+        for (let i = 0; i < cnt; i++) fan.appendChild(cardBack());
+        const avail = Math.min(380, cw * 6 + 40);   /* a fan never crowds the banner row */
+        if (cnt > 1 && avail > cw) {
+          const slice = Math.floor((avail - cw) / (cnt - 1));
+          fan.style.setProperty('--fan-shift', (Math.min(slice, cw) - cw) + 'px');
+        }
+        return fan;
+      };
+      const cornerOf = (seat, side) => {
+        const c = document.createElement('div');
+        c.className = 'opp-corner ' + side + personCls(seat);
+        c.dataset.seat = seat;                      /* flights find this seat's fan */
+        c.appendChild(nameBar(g, seat, {}));
+        if (p3Wide()) c.appendChild(fanOf(seat));
+        const areas = areaRow(seat);
+        if (side === 'right') areas.classList.add('mirror');  // pile lands at the far right
+        areas.classList.toggle('active', g.phase === 'play' && g.turn === seat);
+        c.appendChild(areas);
+        return c;
+      };
       const row = document.createElement('div');
       row.className = 'corner-row';
-      const left = document.createElement('div');
-      left.className = 'opp-corner left' + personCls(2);
-      left.appendChild(nameBar(g, 2, {}));
-      const leftAreas = areaRow(2);
-      leftAreas.classList.toggle('active', g.phase === 'play' && g.turn === 2);
-      left.appendChild(leftAreas);
-      row.appendChild(left);
-      const right = document.createElement('div');
-      right.className = 'opp-corner right' + personCls(1);
-      right.appendChild(nameBar(g, 1, {}));
-      const rightAreas = areaRow(1);
-      rightAreas.classList.add('mirror'); // pile lands at the far right
-      rightAreas.classList.toggle('active', g.phase === 'play' && g.turn === 1);
-      right.appendChild(rightAreas);
-      row.appendChild(right);
+      row.appendChild(cornerOf(2, 'left'));
+      row.appendChild(cornerOf(1, 'right'));
       zone.appendChild(row);
     } else {
       /* FOUR HANDS — four corners, anticlockwise: partner Thandi (seat 2)
@@ -739,8 +790,12 @@
          (owner 2026-09-20) THREE HANDS ran a fixed 3×2 — six slots
          (owner 2026-09-25) the seventh discard overflowed it in play, so the
          grid is now the owner's 4×2 — EIGHT slots; my areas stand far left
-         and the width budget carries the fourth column (fitCards /5) */
-      const cols = g.numPlayers === 2 ? (p2FiveCols() || p2Wide() ? 5 : 4) : 4;
+         and the width budget carries the fourth column (fitCards /5)
+         (owner 2026-10-01) THE WIDE TABLE grows to the owner's 5×2 — ten
+         slots, the same reading order, cards re-flowing to the new grid when
+         the screen turns */
+      const cols = g.numPlayers === 2 ? (p2FiveCols() || p2Wide() ? 5 : 4)
+        : (g.numPlayers === 3 ? (p3Wide() ? 5 : 4) : 4);
       area.classList.remove('cols-10w');
       area.classList.toggle('cols-3', cols === 3);
       area.classList.toggle('cols-4', cols === 4);
@@ -748,7 +803,7 @@
       const minRows = g.numPlayers === 2 ? 2 : (g.numPlayers === 3 ? 2 : 3);
       const rows = (p2Wide() || g.numPlayers === 3) ? 2 : Math.max(minRows, Math.floor((wrap.clientHeight - 8) / ch));
       /* cell floor: two full rows of whatever the column count is */
-      const floor = g.numPlayers === 2 ? cols * 2 : (g.numPlayers === 3 ? 8 : 9);
+      const floor = g.numPlayers === 2 ? cols * 2 : (g.numPlayers === 3 ? cols * 2 : 9);
       const cells = Math.max(rows * cols, Math.ceil(Math.max(n, floor) / cols) * cols);
       for (let i = 0; i < cells; i++) slots.push(Math.floor(i / cols) + 1 + ' / ' + (i % cols + 1));
     }
@@ -1781,6 +1836,18 @@
     const tableCard = g.table[0] || null;
     const tableEl = tableCard ? document.querySelector('#table-cards .card[data-id="' + tableCard + '"]') : null;
     if (tableEl) tableEl.classList.add('deal-wait');
+    /* the wide table shows their hands (owner 2026-10-01): both fans stand
+       drawn and hidden — every one of their cards LANDS on its own back,
+       exactly as Sipho's do on the two-hand wide table */
+    const oppStaged = { 1: [], 2: [] };
+    if (p3Wide()) {
+      renderOppZone();
+      for (const seat of [1, 2]) {
+        oppStaged[seat] = Array.prototype.slice.call(
+          document.querySelectorAll('.opp-corner[data-seat="' + seat + '"] .opp-fan .card'));
+        oppStaged[seat].forEach((el) => el.classList.add('deal-wait'));
+      }
+    }
     const deckEl = document.createElement('div');
     deckEl.id = 'deal-deck';
     for (let i = 0; i < 6; i++) {
@@ -1828,11 +1895,11 @@
       if (seat === HUMAN) {
         target = myStaged[mi++];
       } else if (seat === 1) {
-        dy = -(dr.top - sr.top + dr.height + 60);   /* off-screen, his corner: top right */
-        dx = sr.right - dr.right - 4;
+        target = oppStaged[1].shift() || null;
+        if (!target) { dy = -(dr.top - sr.top + dr.height + 60); dx = sr.right - dr.right - 4; }   /* off-screen, his corner: top right */
       } else if (seat === 2) {
-        dy = -(dr.top - sr.top + dr.height + 60);   /* off-screen, her corner: top left */
-        dx = sr.left - dr.left + 4;
+        target = oppStaged[2].shift() || null;
+        if (!target) { dy = -(dr.top - sr.top + dr.height + 60); dx = sr.left - dr.left + 4; }     /* off-screen, her corner: top left */
       }
       if (target) {
         const tr = target.getBoundingClientRect();
@@ -1919,6 +1986,8 @@
     $('screen-game').classList.toggle('p3', n === 3);   // …the three-hand twin (uniform card-size slots)
     $('screen-game').classList.toggle('w2', p2Wide());  // …and its wide twin at ≥900px
     p2WideOn = p2Wide();
+    $('screen-game').classList.toggle('w3', p3Wide());  // …and the three-hands wide twin (owner 2026-10-01)
+    p3WideOn = p3Wide();
     fitCards();
     render();
     lastHandLen = g.players[HUMAN].hand.length;
@@ -2101,10 +2170,13 @@
        seen sliding down into the play area */
     const origin = (id, to) => {
       if (prev.cards[id]) return prev.cards[id];
-      /* the wide table shows his hand (owner 2026-09-17): a card Sipho plays
-         lifts from his standing fan. His backs carry no ids, so the fan's own
+      /* the wide tables show the opponents' hands (owner 2026-09-17, and
+         2026-10-01 for three hands): a card an opponent plays lifts from
+         THEIR OWN standing fan — the backs carry no ids, so the fan's own
          last back stands in as the take-off spot */
-      const back = document.querySelector('#opp-fan .card:last-child');
+      const back = g.numPlayers === 3
+        ? document.querySelector('.opp-corner[data-seat="' + actor + '"] .opp-fan .card:last-child')
+        : document.querySelector('#opp-fan .card:last-child');
       if (back) {
         const r = back.getBoundingClientRect();
         if (r.width) return r;
@@ -2937,8 +3009,9 @@
     const sheetCard = document.querySelector('#modal-results .modal-card');
     /* (owner 2026-09-19, refined same day) THE FORMAT NEVER CHANGES — the
        classic ledger on every screen; on the wide PC felt only the CARD
-       turns landscape (land-sheet) so the sheet reads wide, not tall */
-    sheetCard.classList.toggle('land-sheet', p2Wide() && stats.length === 2);
+       turns landscape (land-sheet) so the sheet reads wide, not tall —
+       both wides now (the two-hand pair, and three columns at 2026-10-01) */
+    sheetCard.classList.toggle('land-sheet', (p2Wide() && stats.length === 2) || (p3Wide() && stats.length === 3));
     if (stats.length === 3) {
       /* (owner 2026-09-22) THE THREE-HANDS SHEET: ONE table — each name and
          score sits EXACTLY over its own columns, and every column wears its

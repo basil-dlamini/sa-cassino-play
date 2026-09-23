@@ -1215,3 +1215,26 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
    edge-to-edge when they thin out; the fixed overlap stays as the fallback */
 #screen-game.p2.w2 #opp-fan .card { margin-left: var(--fan-shift, calc(var(--card-w) * -0.6)); }
 #screen-game.p2.w2 #opp-fan .card:first-child { margin-left: 0; }
+
+/* ---------------- THE THREE-HANDS WIDE TABLE (owner 2026-10-01) ----------------
+   The same doctrine as the two-hand wide: at 900 CSS px the phone table
+   turns landscape — EXACTLY 900 wide on every landscape screen (the owner's
+   v118 law), the discard grid grows to the owner's 5×2, and BOTH opponents'
+   hands stand face-down under their banners, plays lifting from their own
+   fans (the two-hand wide law). The score-ranked seating keeps trading
+   corners — colours and areas travel with the players. No info rails on
+   this table (the owner's old-task mockup): the strip floats as on the
+   phone, and the 86/728 locks of the two-hand wide are untouched */
+#screen-game.p3.w3 { max-width: 900px; }
+#screen-game.p3.w3 #opp-zone { padding: 10px 20px 4px; }
+#screen-game.p3.w3 .corner-row { justify-content: space-between; padding: 0; gap: 24px; }
+#screen-game.p3.w3 .opp-corner { min-width: 40%; }
+#screen-game.p3.w3 .opp-corner .namebar { min-width: 190px; }
+#screen-game.p3.w3 #table-middle { justify-content: center; padding: 10px 20px; }
+/* their fans: a held fan under each banner, thinning as they play; the
+   ceremony hides the backs and lands every card onto its own */
+.opp-fan { display: flex; justify-content: center; margin: 8px 0 2px; }
+.opp-fan:empty { display: none; }
+.opp-fan .card { margin-left: var(--fan-shift, calc(var(--card-w) * -0.62)); }
+.opp-fan .card:first-child { margin-left: 0; }
+.opp-fan .card.deal-wait { visibility: hidden; }
