@@ -60,6 +60,7 @@
   let tutorialMode = false;    // coach on: guidance, hints, AI explanations
   let coachMsg = null;         // the AI's last move, explained (tutorial)
   let oppNote = null;          // Sipho's last move, one line (two hands)
+  let oppNotes = { 1: '', 2: '' };   // (owner 2026-10-09) the three-hand rails' teaching lines, per seat
   let lastWinnerSeat = null;   // the last game's solo winner — the loser leads the rematch
   let deciderMode = null;      // { seats:[a,b], res } — a tie-breaker two-hands game in progress (owner's law 2026-09-22)
   let turnArmed = false;       // the human's moves are computed — the turn is LIVE
@@ -167,12 +168,10 @@
         if (g && !dealSeq) { renderOppZone(); renderSides(); renderTable(); }
       }
       if (wide) {
-        /* (owner 2026-10-05, option 2) THE PURE FLANKS: each side carries
-           lying cards (1.4cw) + vertical ribbon + their own areas column
-           (1.4cw) inside the table, the 86px rails live beyond it — the
-           grid shares the rest of the 728: TEN POINT SIX card widths +
-           honest margins → cards ~55px (the owner's chosen trade) */
-        const wSide = Math.floor((900 - 374) / 10.6);
+        /* (owner 2026-10-09) the margins slim to their honest minimum and
+           the cards grow JUST ENOUGH for everything to fit — the grid fills
+           the centre, the hand spans the banner: ~51px cards */
+        const wSide = Math.floor((900 - 356) / 10.6);
         const wH3w = Math.floor((col.clientHeight - 110) / 4.2);
         const w = Math.max(44, Math.min(96, Math.min(wSide, wH3w)));
         document.documentElement.style.setProperty('--card-w', w + 'px');
@@ -659,13 +658,13 @@
       const railOf = (seat) => {
         const el = document.createElement('div');
         el.className = 'rail-panel';
-        const nm = document.createElement('div');
-        nm.className = 'rail-name';
-        nm.textContent = g.players[seat].name;
-        el.appendChild(nm);
+        /* (owner 2026-10-09) THE RAILS TEACH, HORIZONTALLY: no names (they
+           live on the ribbons) — the seat's turn state, then their last
+           move in words, the way the two-hand rails carry theirs */
         const st = document.createElement('div');
         st.className = 'rail-status';
-        st.textContent = (g.phase === 'play' && g.turn === seat) ? 'to play\u2026' : '';
+        st.textContent = (g.phase === 'play' && g.turn === seat)
+          ? 'to play\u2026' : (oppNotes[seat] || '');
         el.appendChild(st);
         return el;
       };
@@ -945,11 +944,15 @@
     if ((g.numPlayers === 2 || g.numPlayers === 3) && box.children.length > 1) {
       const row = $('my-row');
       if (row) {
-        const avail = row.clientWidth - 16;   // the row's 8px side padding
+        const avail = row.clientWidth - (p3Wide() ? 0 : 16);   // wide: the hand touches the banner's very edges; phone keeps its 8px air
         const w = box.children[0].offsetWidth;
         if (w > 0 && avail > w) {
-          const slice = Math.floor((avail - w) / (box.children.length - 1));
-          const s = Math.min(slice, w);       // spread at most to zero overlap
+          const slice = (avail - w) / (box.children.length - 1);
+          /* (owner 2026-10-09) THE WIDE HAND SPANS THE BANNER EXACTLY: gaps
+             grow as the hand thins — the first card at the banner's left
+             edge, the last at its right. The phone keeps the compressed fan
+             with its zero-overlap ceiling */
+          const s = p3Wide() ? slice : Math.min(slice, w);
           box.style.setProperty('--fan-shift', (s - w) + 'px');
         }
       }
@@ -2041,6 +2044,7 @@
     lastAction = null; humanActions = [];
     turnArmed = false;
     oppNote = null;
+    oppNotes = { 1: '', 2: '' };
     tableSlots = {};          // fresh discard grid
     /* the fly corridor starts clean — a finished game's sweep pins must
        never float over the new one (found in verification 2026-09-15) */
@@ -2144,9 +2148,12 @@
       if (!g || g.phase === 'gameover') return;
       const a = AI.chooseAction(g);
       if (!a) { reportDeadlock(); return; }
-      if (g.numPlayers === 2 && !g.players[g.turn].isHuman && a.type !== 'endturn' && a.type !== 'skip') {
+      if ((g.numPlayers === 2 || g.numPlayers === 3) && !g.players[g.turn].isHuman && a.type !== 'endturn' && a.type !== 'skip') {
         const note = aiNote(a);
-        if (note) oppNote = note;
+        if (note) {
+          if (g.numPlayers === 2) oppNote = note;
+          else oppNotes[g.turn] = note;   /* the wide rails teach each seat's last move */
+        }
       }
       /* tutorial: explain the move while the board still shows the "before" */
       const why = tutorialMode && !['skip', 'shiya'].includes(a.type)
