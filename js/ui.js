@@ -167,13 +167,12 @@
         if (g && !dealSeq) { renderOppZone(); renderSides(); renderTable(); }
       }
       if (wide) {
-        /* (owner 2026-10-02) THE SIDE ZONES redraw the budget: two full-height
-           opponent zones (areas row + ribbon + lying backs) flank the table,
-           each two card widths wide — the grid's five columns and my bottom-
-           left areas row share what remains of exactly 900 (the v118 law):
-           ELEVEN card widths + honest margins. Height carries only the grid,
-           the ribbon and the hand now — the fans run down the sides */
-        const wSide = Math.floor((900 - 104) / 11);
+        /* (owner 2026-10-03) THE FLANKS redraw the budget: each opponent's
+           edge carries lying backs (1.4cw) + vertical ribbon + the 86px info
+           rail (~144 fixed), and the centre holds my bottom-left areas row +
+           the 5×2 grid — NINE POINT EIGHT card widths + honest margins share
+           exactly 900 (the owner's ruling: option 1, cards ~56px) */
+        const wSide = Math.floor((900 - 354) / 9.8);
         const wH3w = Math.floor((col.clientHeight - 110) / 4.2);
         const w = Math.max(44, Math.min(96, Math.min(wSide, wH3w)));
         document.documentElement.style.setProperty('--card-w', w + 'px');
@@ -495,16 +494,48 @@
         }
         return fan;
       };
+      /* (owner 2026-10-03) THE FLANK, from the player's own chair: their
+         lying backs nearest them at the edge, their ribbon BEYOND the hand
+         (a vertical bar standing between their cards and the table), then
+         their 86px INFO RAIL at the table side — the same size as the
+         two-hand PC rails — carrying their areas stacked at the top (their
+         right, from their chair) and their status below */
+      const vRibbon = (seat) => {
+        const bar = nameBar(g, seat, {});
+        bar.classList.add('vribbon');
+        return bar;
+      };
+      const railOf = (seat) => {
+        const rail = document.createElement('div');
+        rail.className = 'opp-rail';
+        const areas = areaRow(seat);
+        areas.classList.add('stack');
+        areas.classList.toggle('active', g.phase === 'play' && g.turn === seat);
+        rail.appendChild(areas);
+        const info = document.createElement('div');
+        info.className = 'rail-info';
+        info.textContent = (g.phase === 'play' && g.turn === seat)
+          ? g.players[seat].name + ' is thinking\u2026' : '';
+        rail.appendChild(info);
+        return rail;
+      };
       const cornerOf = (seat, side) => {
         const c = document.createElement('div');
         c.className = 'opp-corner ' + side + personCls(seat);
         c.dataset.seat = seat;                      /* flights find this seat's fan */
-        c.appendChild(nameBar(g, seat, {}));
-        if (p3Wide()) c.appendChild(fanOf(seat));
-        const areas = areaRow(seat);
-        if (side === 'right') areas.classList.add('mirror');  // pile lands at the far right
-        areas.classList.toggle('active', g.phase === 'play' && g.turn === seat);
-        c.appendChild(areas);
+        if (p3Wide()) {
+          /* the flank: edge → [lying backs][vertical ribbon][86px rail] */
+          c.appendChild(fanOf(seat));
+          c.appendChild(vRibbon(seat));
+          c.appendChild(railOf(seat));
+        } else {
+          /* the phone keeps the corner: banner, areas under it */
+          c.appendChild(nameBar(g, seat, {}));
+          const areas = areaRow(seat);
+          if (side === 'right') areas.classList.add('mirror');  // pile lands at the far right
+          areas.classList.toggle('active', g.phase === 'play' && g.turn === seat);
+          c.appendChild(areas);
+        }
         return c;
       };
       const row = document.createElement('div');
