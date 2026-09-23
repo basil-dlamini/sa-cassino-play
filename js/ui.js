@@ -167,12 +167,12 @@
         if (g && !dealSeq) { renderOppZone(); renderSides(); renderTable(); }
       }
       if (wide) {
-        /* (owner 2026-10-03) THE FLANKS redraw the budget: each opponent's
-           edge carries lying backs (1.4cw) + vertical ribbon + the 86px info
-           rail (~144 fixed), and the centre holds my bottom-left areas row +
-           the 5×2 grid — NINE POINT EIGHT card widths + honest margins share
-           exactly 900 (the owner's ruling: option 1, cards ~56px) */
-        const wSide = Math.floor((900 - 354) / 9.8);
+        /* (owner 2026-10-05, option 2) THE PURE FLANKS: each side carries
+           lying cards (1.4cw) + vertical ribbon + their own areas column
+           (1.4cw) inside the table, the 86px rails live beyond it — the
+           grid shares the rest of the 728: TEN POINT SIX card widths +
+           honest margins → cards ~55px (the owner's chosen trade) */
+        const wSide = Math.floor((900 - 374) / 10.6);
         const wH3w = Math.floor((col.clientHeight - 110) / 4.2);
         const w = Math.max(44, Math.min(96, Math.min(wSide, wH3w)));
         document.documentElement.style.setProperty('--card-w', w + 'px');
@@ -487,47 +487,30 @@
            the side zone's height while the backs are many and the sliver
            never closes below a readable rim */
         const screenH = ($('screen-game') || {}).clientHeight || 720;
-        const avail = Math.max(cw * 2, screenH - 2.8 * cw - 230);
+        const avail = Math.max(cw * 2, screenH - 1.4 * cw - 174);
         if (cnt > 1) {
           const sliver = Math.max(Math.floor(cw * 0.24), Math.min(Math.floor((avail - cw) / (cnt - 1)), cw));
           fan.style.setProperty('--fan-shift-v', (sliver - cw) + 'px');
         }
         return fan;
       };
-      /* (owner 2026-10-03) THE FLANK, from the player's own chair: their
-         lying backs nearest them at the edge, their ribbon BEYOND the hand
-         (a vertical bar standing between their cards and the table), then
-         their 86px INFO RAIL at the table side — the same size as the
-         two-hand PC rails — carrying their areas stacked at the top (their
-         right, from their chair) and their status below */
-      const vRibbon = (seat) => {
-        const bar = nameBar(g, seat, {});
-        bar.classList.add('vribbon');
-        return bar;
-      };
-      const railOf = (seat) => {
-        const rail = document.createElement('div');
-        rail.className = 'opp-rail';
-        const areas = areaRow(seat);
-        areas.classList.add('stack');
-        areas.classList.toggle('active', g.phase === 'play' && g.turn === seat);
-        rail.appendChild(areas);
-        const info = document.createElement('div');
-        info.className = 'rail-info';
-        info.textContent = (g.phase === 'play' && g.turn === seat)
-          ? g.players[seat].name + ' is thinking\u2026' : '';
-        rail.appendChild(info);
-        return rail;
-      };
+      /* (owner 2026-10-05) THE FLANK from the player's own chair, the pure
+         reading (their choice of option 2): their lying cards nearest them,
+         their ribbon BEYOND the hand — the vertical bar alongside — and
+         their areas JUST ABOVE the ribbon, in their own column toward the
+         table, lying landscape facing the same way as their cards */
       const cornerOf = (seat, side) => {
         const c = document.createElement('div');
         c.className = 'opp-corner ' + side + personCls(seat);
         c.dataset.seat = seat;                      /* flights find this seat's fan */
         if (p3Wide()) {
-          /* the flank: edge → [lying backs][vertical ribbon][86px rail] */
           c.appendChild(fanOf(seat));
-          c.appendChild(vRibbon(seat));
-          c.appendChild(railOf(seat));
+          const bar = nameBar(g, seat, {});
+          bar.classList.add('vribbon');
+          c.appendChild(bar);
+          const areas = areaRow(seat);
+          areas.classList.toggle('active', g.phase === 'play' && g.turn === seat);
+          c.appendChild(areas);
         } else {
           /* the phone keeps the corner: banner, areas under it */
           c.appendChild(nameBar(g, seat, {}));
@@ -648,6 +631,38 @@
     mine3.classList.add('vertical', 'keep-bottom');
     mine3.classList.toggle('active', isHumanTurn());
     mySide.appendChild(mine3);
+    /* (owner 2026-10-04/05) THE TWO-HAND PC CONSTRUCTION, applied whole on
+       the wide table: the opponents' info areas are RAILS — 86px, the
+       screen's full height, OUTSIDE the table (Thandi's left, Sipho's
+       right; seat-keyed, colours travel with the players). Their ribbons
+       live in their flanks (vertical, beside their cards) and my bottom
+       band carries my ribbon alone. The phone keeps its corners and its
+       floating strip untouched */
+    if (p3Wide()) {
+      const personCls = (seat) => 'corner-' + (g.players[seat].name === 'Thandi' ? 'thandi' : 'sipho');
+      const railOf = (seat) => {
+        const el = document.createElement('div');
+        el.className = 'rail-panel';
+        const nm = document.createElement('div');
+        nm.className = 'rail-name';
+        nm.textContent = g.players[seat].name;
+        el.appendChild(nm);
+        const st = document.createElement('div');
+        st.className = 'rail-status';
+        st.textContent = (g.phase === 'play' && g.turn === seat) ? 'to play\u2026' : '';
+        el.appendChild(st);
+        return el;
+      };
+      const rl = $('rail-l'), rr = $('rail-r');
+      rl.innerHTML = ''; rr.innerHTML = '';
+      rl.className = 'side-rail ' + personCls(2);
+      rr.className = 'side-rail ' + personCls(1);
+      rl.appendChild(railOf(2));
+      rr.appendChild(railOf(1));
+    } else {
+      $('rail-l').className = ''; $('rail-r').className = '';
+      $('rail-l').innerHTML = ''; $('rail-r').innerHTML = '';
+    }
   }
 
   /* ---------------- four hands: corner triangles + bottom-left opponent ---------------- */
@@ -2024,6 +2039,9 @@
     p2WideOn = p2Wide();
     $('screen-game').classList.toggle('w3', p3Wide());  // …and the three-hands wide twin (owner 2026-10-01)
     p3WideOn = p3Wide();
+    /* (owner 2026-10-04) MY INFO AREA starts MINIMIZED on the wide table —
+       the toggle button opens it as on the phone */
+    if (p3Wide()) localStorage.setItem('sacassino.minInfo3', '1');
     fitCards();
     render();
     lastHandLen = g.players[HUMAN].hand.length;

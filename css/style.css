@@ -1220,68 +1220,88 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
    At 900 CSS px the phone table turns landscape — EXACTLY 900 wide on every
    landscape screen (the owner's v118 law), the discard grid grows to the
    owner's 5×2, the results sheet goes landscape.
-   (owner 2026-10-02) THE OPPONENTS SIT AT THE SIDES — the two-hand PC rail
-   doctrine come to three hands: Thandi's full-height zone at the LEFT edge,
-   Sipho's at the RIGHT (the seats stay put; the players trade sides per the
-   score-ranked seating and their colours travel with them). Each zone reads
-   top-to-bottom: their AREAS in a line, their RIBBON, then their card backs
-   LYING SIDEWAYS stacked down the edge — like real side players facing each
-   other across the table. Their areas sit toward the table (Sipho's far
-   left, Thandi's far right). My areas stay in the bottom-left band: captured
-   pile at my far left, build to its right. My ribbon and hand span the full
-   width below. The 86/728 locks of the two-hand wide are untouched */
-#screen-game.p3.w3 { max-width: 900px; }
-/* the corner row collapses — its corners become the full-height flanks */
+   (owner 2026-10-04) THE TWO-HAND PC CONSTRUCTION APPLIED WHOLE: the info
+   areas are RAILS — 86px, the FULL height of the screen, OUTSIDE the table
+   (Thandi's at the left edge, Sipho's at the right; the table lives in the
+   728 between). The three ribbons form ONE bottom line edge to edge: theirs
+   stretch from mine to the rails. Their cards lie sideways filling the side
+   columns upward from the ribbon line; their areas sit just above their
+   ribbons, lying landscape — facing the same way as their cards. My areas
+   hug my ribbon's left. My info strip stays minimized until toggled */
+#screen-game.p3.w3 { max-width: 900px; position: relative; padding: 0 86px; }
+#screen-game.p3.w3 .side-rail {
+  display: flex; flex-direction: column; gap: 5px; padding: 6px 5px;
+  position: absolute; top: 0; bottom: 0; width: 86px; z-index: 5;
+  border: 1px solid rgba(244,239,226,.35);
+  background: rgba(9,15,38,.8);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+#screen-game.p3.w3 #rail-l { left: 0; border-radius: 23px 0 0 23px; border-right: none; }
+#screen-game.p3.w3 #rail-r { right: 0; border-radius: 0 23px 23px 0; border-left: none; }
+#screen-game.p3.w3 .side-rail.corner-thandi {
+  background: linear-gradient(180deg, rgba(46,125,70,.92), rgba(31,91,53,.92) 45%, rgba(14,58,31,.94));
+}
+#screen-game.p3.w3 .side-rail.corner-sipho {
+  background: linear-gradient(180deg, rgba(156,37,41,.92), rgba(140,29,34,.92) 45%, rgba(87,14,18,.94));
+}
+#screen-game.p3.w3 .rail-name {
+  text-align: center; font-size: 11px; font-weight: 800; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--ivory); padding: 8px 0 4px;
+  writing-mode: vertical-rl; text-orientation: mixed; margin: 0 auto;
+}
+#screen-game.p3.w3 .rail-status {
+  margin-top: auto; text-align: center; font-size: 10px; color: var(--ivory);
+  opacity: .85; writing-mode: vertical-rl; text-orientation: mixed;
+  margin-inline: auto; letter-spacing: .6px; padding: 6px 0;
+}
+/* the flanks: from each player's own chair — lying cards nearest them at
+   the edge, their vertical ribbon alongside, their areas in their own
+   column beyond it toward the table (the owner's option 2) */
 #screen-game.p3.w3 #opp-zone.mode-3 { height: 0; min-height: 0; padding: 0; }
 #screen-game.p3.w3 #opp-zone.mode-3 .corner-row { padding: 0; gap: 0; }
-/* (owner 2026-10-03) THE FLANK from the player's own chair: lying backs at
-   the edge, the vertical ribbon beyond the hand, the 86px info rail at the
-   table side — areas stacked at the rail's top (their right, from their
-   chair), status below */
 #screen-game.p3.w3 .opp-corner.left,
 #screen-game.p3.w3 .opp-corner.right {
   position: absolute; top: 46px;
-  bottom: calc(var(--card-w) * 1.4 + 118px);   /* the ribbon + hand band */
-  width: calc(var(--card-w) * 1.4 + 144px);
+  bottom: calc(var(--card-w) * 1.4 + 116px);   /* the ribbon + hand band */
+  width: calc(var(--card-w) * 2.8 + 60px);
   display: flex; flex-direction: row; align-items: stretch; gap: 6px;
-  padding: 8px 6px;
+  padding: 6px 4px;
 }
-#screen-game.p3.w3 .opp-corner.left { left: 0; }
-#screen-game.p3.w3 .opp-corner.right { right: 0; }
-/* the vertical ribbon: the player's own name bar standing on its side —
-   the person colour rules (.corner-thandi/.corner-sipho .namebar) apply.
-   NOTE: in vertical writing the flex axes rotate — plain ROW stacks the
-   emblems and name DOWNWARD (column would spread it sideways) */
+#screen-game.p3.w3 .opp-corner.left { left: 92px; }
+#screen-game.p3.w3 .opp-corner.right { right: 92px; flex-direction: row-reverse; }
+/* their ribbon: the namebar stood on its side, spanning their hand. NOTE:
+   vertical writing ROTATES the flex axes — plain ROW stacks the emblems and
+   name downward (a column override spreads it sideways) */
 #screen-game.p3.w3 .opp-corner .namebar.vribbon {
   writing-mode: vertical-rl; text-orientation: mixed;
   flex: 0 0 auto; align-self: stretch;
   gap: 8px; padding: 12px 4px;
   margin: 0; min-width: 0; border-radius: 10px; letter-spacing: 1.5px;
 }
-/* THE 86px INFO RAILS — the same size as the two-hand PC version */
-#screen-game.p3.w3 .opp-rail {
-  flex: 0 0 86px; width: 86px;
-  display: flex; flex-direction: column; gap: 6px; padding: 6px 5px;
-  border-radius: 12px; border: 1px solid rgba(244,239,226,.2);
-  background: rgba(0,0,0,.12);
+/* their areas — the column JUST ABOVE their ribbon (toward the table),
+   lying landscape facing the same way as their cards; the box turns
+   sideways and its card centres and rotates inside */
+#screen-game.p3.w3 .opp-corner .area-row {
+  flex: 0 0 auto; width: calc(var(--card-w) * 1.4);
+  flex-direction: column; align-items: center; justify-content: flex-end;
+  padding: 0; gap: 6px;
 }
-#opp-zone.mode-3 .opp-corner.corner-thandi .opp-rail {
-  background: linear-gradient(180deg, rgba(46,125,70,.38), rgba(14,58,31,.3));
-  border-color: rgba(62,150,94,.5);
+#screen-game.p3.w3 .opp-corner .area-row .area-box {
+  width: calc(var(--card-w) * 1.4); height: var(--card-w);
+  min-height: var(--card-w); position: relative; flex: 0 0 auto;
 }
-#opp-zone.mode-3 .opp-corner.corner-sipho .opp-rail {
-  background: linear-gradient(180deg, rgba(156,37,41,.38), rgba(87,14,18,.3));
-  border-color: rgba(176,42,47,.5);
+#screen-game.p3.w3 .opp-corner.left .area-box .card {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%) rotate(90deg);
 }
-#screen-game.p3.w3 .opp-rail .area-row { flex-direction: column; align-items: stretch; padding: 0; }
-#screen-game.p3.w3 .opp-rail .area-row .area-box { flex: 0 0 auto; }
-#screen-game.p3.w3 .opp-rail .rail-info {
-  font-size: 11px; text-align: center; opacity: .85; padding: 4px 2px; letter-spacing: .4px;
+#screen-game.p3.w3 .opp-corner.right .area-box .card {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%) rotate(-90deg);
 }
 /* their backs LIE SIDEWAYS (owner: like real side players): the card box
    itself turns landscape — width the card's height, height its width — and
-   the stack runs DOWN the edge, thinning as they play; the ceremony hides
-   the backs and lands every card onto its own */
+   the stack fills the flank's height, thinning as they play; the ceremony
+   hides the backs and lands every card onto its own */
 #screen-game.p3.w3 .opp-fan {
   flex: 0 0 auto; width: calc(var(--card-w) * 1.4);
   min-height: 0; overflow: hidden;
@@ -1296,13 +1316,13 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
 }
 #screen-game.p3.w3 .opp-fan .card:first-child { margin-top: 0; }
 .opp-fan .card.deal-wait { visibility: hidden; }
-/* the centre column sits between the side zones; my areas turn to the
-   bottom-left band row: captured pile far left, build to its right */
+/* the centre: the grid, my areas row just above my ribbon at its left */
 #screen-game.p3.w3 #table-middle {
-  justify-content: center; padding: 10px 20px;
-  margin-left: calc(var(--card-w) * 1.4 + 152px);
-  margin-right: calc(var(--card-w) * 1.4 + 152px);
+  flex-direction: column; justify-content: center; align-items: center;
+  padding: 10px 14px;
+  margin-left: calc(var(--card-w) * 2.8 + 72px);
+  margin-right: calc(var(--card-w) * 2.8 + 72px);
 }
-#screen-game.p3.w3 #my-side { width: calc(var(--card-w) * 2 + 8px); }
+#screen-game.p3.w3 #my-side { width: 100%; align-items: flex-start; }
 #screen-game.p3.w3 #my-side .area-row.vertical { flex-direction: row-reverse; justify-content: flex-end; }
 #screen-game.p3.w3 #my-side .area-row.vertical .area-box { flex: 0 0 auto; }
