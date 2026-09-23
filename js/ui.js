@@ -167,15 +167,15 @@
         if (g && !dealSeq) { renderOppZone(); renderSides(); renderTable(); }
       }
       if (wide) {
-        /* five grid columns + my area column share exactly 900 (the v118
-           law): 6 card widths + honest margins; the HEIGHT budget carries
-           the fans — measured on the real stack (equality IS collision): the
-           opponents' zone stacks banner + fan + areas (3.0 card heights),
-           the grid two rows (2.8), my hand row (1.4) — 7.2 card heights on
-           ~200px of true furniture at every width */
-        const wGrid5 = Math.floor((900 - 62) / 6);
-        const wH3w = Math.floor((col.clientHeight - 244) / 7.2);
-        const w = Math.max(44, Math.min(104, Math.min(wGrid5, wH3w)));
+        /* (owner 2026-10-02) THE SIDE ZONES redraw the budget: two full-height
+           opponent zones (areas row + ribbon + lying backs) flank the table,
+           each two card widths wide — the grid's five columns and my bottom-
+           left areas row share what remains of exactly 900 (the v118 law):
+           ELEVEN card widths + honest margins. Height carries only the grid,
+           the ribbon and the hand now — the fans run down the sides */
+        const wSide = Math.floor((900 - 104) / 11);
+        const wH3w = Math.floor((col.clientHeight - 110) / 4.2);
+        const w = Math.max(44, Math.min(96, Math.min(wSide, wH3w)));
         document.documentElement.style.setProperty('--card-w', w + 'px');
         if (g && !dealSeq) renderHand();
         return;
@@ -483,10 +483,15 @@
         const cw = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--card-w')) || 70;
         const cnt = g.players[seat].hand.length;
         for (let i = 0; i < cnt; i++) fan.appendChild(cardBack());
-        const avail = Math.min(380, cw * 6 + 40);   /* a fan never crowds the banner row */
-        if (cnt > 1 && avail > cw) {
-          const slice = Math.floor((avail - cw) / (cnt - 1));
-          fan.style.setProperty('--fan-shift', (Math.min(slice, cw) - cw) + 'px');
+        /* (owner 2026-10-02) the side players' backs LIE SIDEWAYS, stacked
+           down their edge — the spread law turned vertical: the column fills
+           the side zone's height while the backs are many and the sliver
+           never closes below a readable rim */
+        const screenH = ($('screen-game') || {}).clientHeight || 720;
+        const avail = Math.max(cw * 2, screenH - 2.8 * cw - 230);
+        if (cnt > 1) {
+          const sliver = Math.max(Math.floor(cw * 0.24), Math.min(Math.floor((avail - cw) / (cnt - 1)), cw));
+          fan.style.setProperty('--fan-shift-v', (sliver - cw) + 'px');
         }
         return fan;
       };
