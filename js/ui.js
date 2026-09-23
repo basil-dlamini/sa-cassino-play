@@ -487,31 +487,31 @@
            the side zone's height while the backs are many and the sliver
            never closes below a readable rim */
         const screenH = ($('screen-game') || {}).clientHeight || 720;
-        /* (owner 2026-10-06) the cards run the FULL height of the screen now */
-        const avail = Math.max(cw * 2, screenH - 60);
+        /* (owner 2026-10-07) the cards run from the TOP of the screen down TO
+           my ribbon — the flank stops at the ribbon's top line */
+        const avail = Math.max(cw * 2, screenH - 1.4 * cw - 160);
         if (cnt > 1) {
           const sliver = Math.max(Math.floor(cw * 0.24), Math.min(Math.floor((avail - cw) / (cnt - 1)), cw));
           fan.style.setProperty('--fan-shift-v', (sliver - cw) + 'px');
         }
         return fan;
       };
-      /* (owner 2026-10-06) THE FLANK SETTLES: their AREAS move to the OUTER
-         side (between their lying cards and the screen edge, by their rail);
-         the cards and the vertical ribbon run the FULL height of the screen,
-         covering the corners beside my ribbon — my ribbon and hand sit
-         between the two flanks */
+      /* (owner 2026-10-07) THE FLANK FINAL SHAPE: their AREAS return into
+         the table — the column beyond their vertical ribbon, at the TOP of
+         the screen; their lying cards run from the top down TO my ribbon
+         (never past it); my ribbon and hand span the full table width */
       const cornerOf = (seat, side) => {
         const c = document.createElement('div');
         c.className = 'opp-corner ' + side + personCls(seat);
         c.dataset.seat = seat;                      /* flights find this seat's fan */
         if (p3Wide()) {
-          const areas = areaRow(seat);
-          areas.classList.toggle('active', g.phase === 'play' && g.turn === seat);
-          c.appendChild(areas);                     /* outermost — by the rail */
           c.appendChild(fanOf(seat));
           const bar = nameBar(g, seat, {});
           bar.classList.add('vribbon');
-          c.appendChild(bar);                       /* beyond the hand, toward the table */
+          c.appendChild(bar);                       /* alongside the cards, toward the table */
+          const areas = areaRow(seat);
+          areas.classList.toggle('active', g.phase === 'play' && g.turn === seat);
+          c.appendChild(areas);                     /* the table side, at the top of the screen */
         } else {
           /* the phone keeps the corner: banner, areas under it */
           c.appendChild(nameBar(g, seat, {}));

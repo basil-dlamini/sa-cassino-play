@@ -1262,7 +1262,7 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
 #screen-game.p3.w3 .opp-corner.left,
 #screen-game.p3.w3 .opp-corner.right {
   position: absolute; top: 46px;
-  bottom: 4px;   /* (owner 2026-10-06) the cards and ribbons run to the screen's foot, covering the corners beside my ribbon */
+  bottom: calc(var(--card-w) * 1.4 + 84px);   /* (owner 2026-10-07) the cards stop AT my ribbon's top line */
   width: calc(var(--card-w) * 2.8 + 60px);
   display: flex; flex-direction: row; align-items: stretch; gap: 6px;
   padding: 6px 4px;
@@ -1278,12 +1278,13 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
   gap: 8px; padding: 12px 4px;
   margin: 0; min-width: 0; border-radius: 10px; letter-spacing: 1.5px;
 }
-/* their areas — the column JUST ABOVE their ribbon (toward the table),
-   lying landscape facing the same way as their cards; the box turns
-   sideways and its card centres and rotates inside */
+/* their areas — the column beyond their ribbon, INTO the table, at the TOP
+   of the screen (owner 2026-10-07); lying landscape facing the same way as
+   their cards; the box turns sideways and its card centres and rotates
+   inside */
 #screen-game.p3.w3 .opp-corner .area-row {
   flex: 0 0 auto; width: calc(var(--card-w) * 1.4);
-  flex-direction: column; align-items: center; justify-content: flex-end;
+  flex-direction: column; align-items: center; justify-content: flex-start;
   padding: 0; gap: 6px;
 }
 #screen-game.p3.w3 .opp-corner .area-row .area-box {
@@ -1327,9 +1328,5 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
 #screen-game.p3.w3 #my-side { width: 100%; align-items: flex-start; margin-top: auto; }
 #screen-game.p3.w3 #my-side .area-row.vertical { flex-direction: row-reverse; justify-content: flex-end; }
 #screen-game.p3.w3 #my-side .area-row.vertical .area-box { flex: 0 0 auto; }
-/* (owner 2026-10-06) my ribbon and hand sit BETWEEN the full-height flanks */
-#screen-game.p3.w3 #bottom-row,
-#screen-game.p3.w3 #my-row {
-  margin-left: calc(var(--card-w) * 2.8 + 74px);
-  margin-right: calc(var(--card-w) * 2.8 + 74px);
-}
+/* (owner 2026-10-07) my ribbon and hand span the table's FULL width again —
+   the flanks stop at the ribbon's top line */
