@@ -355,9 +355,10 @@
       if (b.augmented) el.appendChild(Object.assign(document.createElement('span'),
         { className: 'build-lock', textContent: '🔒' }));
       cards.appendChild(el);
-      if (tutorialMode) {
-        /* same trio as the pile strip — what the build's cards are worth
-           (they only score once the build is captured into the pile) */
+      /* (owner 2026-09-25) the count strip lives on the WIDE table too —
+         always, not only in tutorials: cards · spades · points, what the
+         build's cards are worth (they only score once captured into the pile) */
+      if (tutorialMode || p3Wide()) {
         const st = R.pileStats(b.cards);
         const cnt = document.createElement('span');
         cnt.className = 'pile-stats';
@@ -381,7 +382,8 @@
       const el = cardEl(top);
       el.style.boxShadow = stackShadow(p.pile.length);
       wrap.appendChild(el);
-      if (tutorialMode) {
+      /* (owner 2026-09-25) the pile's live counts ride the WIDE table too */
+      if (tutorialMode || p3Wide()) {
         const st = R.pileStats(p.pile);
         const cnt = document.createElement('span');
         cnt.className = 'pile-stats';
