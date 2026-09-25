@@ -1972,15 +1972,29 @@
         target = oppStaged[2].shift() || null;
         if (!target) { dy = -(dr.top - sr.top + dr.height + 60); dx = sr.left - dr.left + 4; }     /* off-screen, her corner: top left */
       }
+      let landTransform = null;
       if (target) {
         const tr = target.getBoundingClientRect();
-        dx = tr.left - dr.left; dy = tr.top - dr.top;
+        if (tr.width > tr.height) {
+          /* (owner 2026-10-11) a lying fan back: the deal card flies centre-to-centre
+             and TURNS in the air, landing lying — never stretched over the slot */
+          flyer.style.transformOrigin = 'center center';
+          const fw = flyer.offsetWidth, fh = flyer.offsetHeight;
+          const fl = dr.left - sr.left, ft = dr.top - sr.top;
+          const scr2 = document.querySelector('#screen-game').getBoundingClientRect();
+          landTransform = 'translate(' +
+            ((tr.left + tr.width / 2) - (fl + fw / 2)) + 'px,' +
+            ((tr.top + tr.height / 2) - (ft + fh / 2)) + 'px) rotate(' +
+            ((tr.left + tr.width / 2) < (scr2.left + scr2.width / 2) ? 90 : -90) + 'deg)';
+        } else {
+          dx = tr.left - dr.left; dy = tr.top - dr.top;
+        }
       } else if (isTable) {
         const tr = (tableEl || {}).getBoundingClientRect ? tableEl.getBoundingClientRect() : null;
         if (tr) { dx = tr.left - dr.left; dy = tr.top - dr.top; }
       }
       void flyer.offsetWidth;   /* commit the launch position */
-      flyer.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+      flyer.style.transform = landTransform || 'translate(' + dx + 'px,' + dy + 'px)';
       timers.push(setTimeout(() => {
         flyer.remove();
         if (target) { target.classList.remove('deal-wait'); target.classList.add('deal-land'); }
@@ -2432,6 +2446,34 @@
     parts.splice(0, parts.length, ...parts.filter((p) => p && p.id && p.rect));
     if (!parts.length || !dest) return 0;
 
+    /* (owner 2026-10-11) THE FLIGHT LEARNS ORIENTATION: the opponents'
+      cards and boxes LIE sideways on the wide table — a flyer that only
+      slides would land on a lying slot as an upright card stretched to fit
+      (the distortion the owner reported). Every card now takes off wearing
+      its origin's orientation and lands wearing its destination's, the 90°
+      turn playing out DURING the flight; ghosts, pins and holders all
+      place by card CENTRE so upright and lying shapes meet exactly */
+    const orientOf = (rect) => {
+      if (!rect || !(rect.width > rect.height)) return 0;   // portrait — no turn
+      const scr = document.querySelector('#screen-game');
+      const srb = scr ? scr.getBoundingClientRect() : null;
+      const mid = srb ? srb.left + srb.width / 2 : (rect.left + rect.width / 2);
+      return (rect.left + rect.width / 2) < mid ? 90 : -90;   // the left flank lies one way, the right the other
+    };
+    const placeCard = (el, rect, z) => {
+      const rot = orientOf(rect);
+      const pw = rot ? rect.height : (rect.width || 1);
+      const ph = rot ? rect.width : (rect.height || 1);
+      Object.assign(el.style, {
+        position: 'fixed', margin: 0, zIndex: z,
+        left: (rect.left + rect.width / 2 - pw / 2) + 'px',
+        top: (rect.top + rect.height / 2 - ph / 2) + 'px',
+        width: pw + 'px', height: ph + 'px',
+        transformOrigin: 'center center',
+        transform: rot ? 'rotate(' + rot + 'deg)' : 'none'
+      });
+    };
+
     const layer = flyLayer();
     /* every card hides from the renders while its journey plays — the table
        shows pins where each waiting card lay */
@@ -2465,11 +2507,7 @@
       const pin = cardEl(p.id);
       pin.style.visibility = 'visible';   /* a pin SHOWS the waiting card — the in-flight rule must not hide it */
       decorate(pin, p.deco);
-      Object.assign(pin.style, {
-        position: 'fixed', margin: 0, zIndex: 55,
-        left: p.rect.left + 'px', top: p.rect.top + 'px',
-        width: p.rect.width + 'px', height: p.rect.height + 'px'
-      });
+      placeCard(pin, p.rect, 55);
       layer.appendChild(pin);
       pins.set(p.id, pin);
     }
@@ -2482,11 +2520,7 @@
       const pin = cardEl(oldId);
       pin.style.visibility = 'visible';
       decorate(pin, deco);
-      Object.assign(pin.style, {
-        position: 'fixed', margin: 0, zIndex: z,
-        left: rect.left + 'px', top: rect.top + 'px',
-        width: rect.width + 'px', height: rect.height + 'px'
-      });
+      placeCard(pin, rect, z);
       layer.appendChild(pin);
       holders.push(pin);
     };
@@ -2616,27 +2650,25 @@
     }
 
     /* the carrier: a perfect stack of ghosts — joiners slot BENEATH, so the
-       mover rides on top (owner's rule) */
-    const makeGhost = (id, rect, transform0) => {
+       mover rides on top (owner's rule). Each ghost tracks its own CENTRE
+       and orientation: hops translate centre-to-centre and END in the
+       target's orientation — the turn plays out in the air (owner
+       2026-10-11), never a snap or a stretch at landing */
+    const makeGhost = (id, rect) => {
       const el = cardEl(id);
       el.classList.add('flying');
       el.style.visibility = 'visible';
-      Object.assign(el.style, {
-        position: 'fixed', margin: 0, zIndex: 95,
-        left: rect.left + 'px', top: rect.top + 'px',
-        width: rect.width + 'px', height: rect.height + 'px',
-        transformOrigin: 'top left', transition: 'none', opacity: '1'
-      });
-      el.style.transform = transform0 || 'none';
+      el.style.opacity = '1';
+      el.style.transition = 'none';
+      const rot = orientOf(rect);
+      const pw = rot ? rect.height : (rect.width || 1);
+      const ph = rot ? rect.width : (rect.height || 1);
+      placeCard(el, rect, 95);
       /* the card remembers only its OWN start — every hop tells it exactly
-        where to stand (target minus own start), so a card collected
-        mid-journey joins the stack precisely where it stands (2026-09-15) */
-      /* THE missing line (found 2026-09-16): the mover was created but never
-         placed on the corridor — it flew its whole journey off-screen while
-         every later joiner was inserted properly. The discard's ghost, the
-         build's hand card, every departure: all invisible for this one gap */
+         where to stand (target minus own start), so a card collected
+         mid-journey joins the stack precisely where it stands (2026-09-15) */
       layer.appendChild(el);
-      return { el, id, bx: rect.left, by: rect.top, w: rect.width || 1, h: rect.height || 1 };
+      return { el, id, cx: rect.left + rect.width / 2, cy: rect.top + rect.height / 2, w: pw, h: ph };
     };
     let carrier = [makeGhost(parts[0].id, parts[0].rect)];
     let curL = parts[0].rect.left, curT = parts[0].rect.top;
@@ -2645,10 +2677,15 @@
       if (!to) { done(); return; }
       flyLayer();   /* self-heal: if anything detached the corridor, its flying cards return with it */
       curL = to.left; curT = to.top; curW = to.width || curW; curH = to.height || curH;
+      const trot = orientOf(to);
+      const tw = trot ? (to.height || curH) : (to.width || curW);
+      const th = trot ? (to.width || curW) : (to.height || curH);
+      const tcx = to.left + to.width / 2, tcy = to.top + to.height / 2;
       carrier.forEach((gh) => {
         gh.el.style.transition = 'transform ' + dur + 'ms cubic-bezier(.25,.7,.3,1)';
-        gh.el.style.transform = 'translate(' + (to.left - gh.bx) + 'px,' + (to.top - gh.by) +
-          'px) scale(' + (curW / gh.w) + ',' + (curH / gh.h) + ')';
+        gh.el.style.transform = 'translate(' + (tcx - gh.cx) + 'px,' + (tcy - gh.cy) + 'px)' +
+          ' scale(' + (tw / gh.w) + ',' + (th / gh.h) + ')' +
+          (trot ? ' rotate(' + trot + 'deg)' : '');
       });
       setTimeout(done, dur + 20);
     };
