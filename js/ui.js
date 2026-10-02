@@ -168,11 +168,10 @@
         if (g && !dealSeq) { renderOppZone(); renderSides(); renderTable(); }
       }
       if (wide) {
-        /* (owner 2026-10-10) THE STALE BUDGET CORRECTED: my areas row left
-           the grid's side two versions ago — the centre now holds the grid
-           ALONE between the slimmed flanks, and the cards take the freed
-           width honestly: ~55px */
-        const wSide = Math.floor((900 - 308) / 10.6);
+        /* (owner 2026-09-26) THE AREAS STOOD UPRIGHT: each flank slims to
+           lying cards (1.4cw) + vertical ribbon + ONE card-width of upright
+           areas (2.4cw) — the freed width goes back to the cards: ~57px */
+        const wSide = Math.floor((900 - 340) / 9.8);
         const wH3w = Math.floor((col.clientHeight - 110) / 4.2);
         const w = Math.max(44, Math.min(96, Math.min(wSide, wH3w)));
         document.documentElement.style.setProperty('--card-w', w + 'px');
