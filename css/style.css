@@ -1229,6 +1229,17 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
    ribbons, lying landscape — facing the same way as their cards. My areas
    hug my ribbon's left. My info strip stays minimized until toggled */
 #screen-game.p3.w3 { max-width: 900px; position: relative; padding: 0 86px; }
+/* (owner 2026-10-03) THE FIXED-ASPECT TABLE: on the wide screen the table
+   is a FIXED 900×562 design — the whole thing scales uniformly with the
+   window (never re-flowing, cards never shifting), aspect ratio locked;
+   when the window's ratio differs the excess is CROPPED at the edges
+   (the body already hides overflow). fitCards drives the scale; the
+   motion system reads design pixels through designRect() */
+#screen-game.p3.w3 {
+  position: fixed; left: 50%; top: 50%;
+  width: 900px; height: 562px; max-height: none;
+  transform-origin: center center;
+}
 #screen-game.p3.w3 .side-rail {
   display: flex; flex-direction: column; gap: 5px; padding: 6px 5px;
   position: absolute; top: 0; bottom: 0; width: 86px; z-index: 5;
@@ -1273,6 +1284,10 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
 }
 #screen-game.p3.w3 .opp-corner.left { left: 92px; }
 #screen-game.p3.w3 .opp-corner.right { right: 92px; flex-direction: row-reverse; }
+/* (owner 2026-10-03) THANDI'S RIBBON READS FROM HER CHAIR: the left-side
+   player's name bar stands upside down to ours — the text rotated 180° so
+   it reads bottom-to-top from the table's view, the way she would read it */
+#screen-game.p3.w3 .opp-corner.left .namebar.vribbon { transform: rotate(180deg); }
 /* their ribbon: the namebar stood on its side, spanning their hand. NOTE:
    vertical writing ROTATES the flex axes — plain ROW stacks the emblems and
    name downward (a column override spreads it sideways) */
@@ -1328,7 +1343,9 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
 #screen-game.p3.w3 #table-middle {
   position: relative;
   flex-direction: column; justify-content: center; align-items: center;
-  padding: 10px 8px 4px;
+  /* (owner 2026-10-03) the grid centres in the space ABOVE my areas row —
+     lifted clear of it, never touching */
+  padding: 10px 8px calc(var(--card-w) * 1.4 + 28px);
   margin-left: calc(var(--card-w) * 2.4 + 56px);
   margin-right: calc(var(--card-w) * 2.4 + 56px);
 }

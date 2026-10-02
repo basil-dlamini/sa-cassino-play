@@ -15,6 +15,19 @@
 (function (root) {
   const C = root.Cards, R = root.Rules, AI = root.AI, Ads = root.Ads, Snd = root.Sound;
   const $ = (id) => document.getElementById(id);
+  /* (owner 2026-10-03) THE FIXED-ASPECT TABLE: on the wide screen the whole
+     screen scales uniformly — the browser reports VISUAL (scaled) pixels
+     from getBoundingClientRect, but every position the motion system writes
+     is interpreted in DESIGN pixels inside the scaled screen. RB() reads a
+     rect and speaks design pixels, so flights land exactly at any scale */
+  function RB(el) {
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    const s = window.__w3Scale || 1;
+    if (s === 1) return r;
+    return { left: r.left / s, top: r.top / s, right: r.right / s, bottom: r.bottom / s,
+      width: r.width / s, height: r.height / s };
+  }
 
   const AI_SEATS = [
     null,
@@ -116,6 +129,13 @@
     const n = R.DEAL[session.numPlayers].per;
     const col = $('screen-game');
     const availW = col.clientWidth - 24;
+    /* (owner 2026-10-03) THE FIXED-ASPECT TABLE: the wide three-hands screen
+       is a FIXED 900×562 design that scales as one with the window — cards
+       never re-flow or shift, the aspect ratio holds, and when the window's
+       ratio differs the excess crops at the edges. Applied here so every
+       resize crossing rides it; cleared for every other screen */
+    col.style.transform = '';
+    window.__w3Scale = 1;
     if (session.numPlayers === 2) {
       /* crossing the 900px floor dresses/undresses the wide table (his fan),
          and either grid crossing (900 wide↔narrow, or the 560 column change)
@@ -168,11 +188,15 @@
         if (g && !dealSeq) { renderOppZone(); renderSides(); renderTable(); }
       }
       if (wide) {
-        /* (owner 2026-09-26) THE AREAS STOOD UPRIGHT: each flank slims to
-           lying cards (1.4cw) + vertical ribbon + ONE card-width of upright
-           areas (2.4cw) — the freed width goes back to the cards: ~57px */
-        const wSide = Math.floor((900 - 340) / 9.8);
-        const wH3w = Math.floor((col.clientHeight - 110) / 4.2);
+        /* (owner 2026-10-03) THE FIXED DESIGN: 900×562, scaled as one with
+           the window (max-ratio cover: the table fills what it can and the
+           excess crops). Inside the design the cards sit at their honest
+           ceiling — the grid fills the centre, touching nothing */
+        const s = Math.max(window.innerWidth / 900, window.innerHeight / 562);
+        col.style.transform = 'translate(-50%, -50%) scale(' + s + ')';
+        window.__w3Scale = s;
+        const wSide = Math.floor((900 - 328) / 9.8);
+        const wH3w = Math.floor((562 - 110) / 4.2);
         const w = Math.max(44, Math.min(96, Math.min(wSide, wH3w)));
         document.documentElement.style.setProperty('--card-w', w + 'px');
         if (g && !dealSeq) renderHand();
@@ -1789,8 +1813,8 @@
       return { seat, target: null };
     });
     const flyCard = (f) => {
-      const dr = deckEl.getBoundingClientRect();
-      const sr = screen.getBoundingClientRect();
+      const dr = RB(deckEl);
+      const sr = RB(screen);
       const flyer = cardBack();
       flyer.classList.add('deal-fly');
       flyer.style.left = (dr.left - sr.left) + 'px';
@@ -1799,7 +1823,7 @@
       flyers.push(flyer);
       let dx = 0, dy = 0;
       if (f.target) {
-        const tr = f.target.getBoundingClientRect();
+        const tr = RB(f.target);
         dx = tr.left - dr.left; dy = tr.top - dr.top;
       } else {
         dy = -(dr.top - sr.top + dr.height + 60);   /* off-screen, toward his edge */
@@ -1846,8 +1870,8 @@
         /* round one: the leftover stock flies out to the second player's edge */
         timers.push(setTimeout(() => {
           Snd.deal();
-          const dr = deckEl.getBoundingClientRect();
-          const sr = screen.getBoundingClientRect();
+          const dr = RB(deckEl);
+          const sr = RB(screen);
           const dy = stockDir < 0
             ? -(dr.top - sr.top + dr.height + 70)
             : (sr.bottom - dr.top + 70);
@@ -1864,8 +1888,8 @@
       /* round two: the stock returns from the second player's edge — the
          start state is committed with a forced reflow, then the transition
          carries it home (no animation-frame race) */
-      const dr0 = deckEl.getBoundingClientRect();
-      const sr0 = screen.getBoundingClientRect();
+      const dr0 = RB(deckEl);
+      const sr0 = RB(screen);
       const offY = stockDir < 0
         ? -(dr0.top - sr0.top + dr0.height + 70)
         : (sr0.bottom - dr0.top + 70);
@@ -1955,8 +1979,8 @@
     flights.push(-1);   /* -1 = the face-up table card */
     let mi = 0;
     const flyCard = (seat, isTable) => {
-      const dr = deckEl.getBoundingClientRect();
-      const sr = screen.getBoundingClientRect();
+      const dr = RB(deckEl);
+      const sr = RB(screen);
       const flyer = isTable ? cardEl(tableCard, {}) : cardBack();
       flyer.classList.add('deal-fly');
       flyer.style.left = (dr.left - sr.left) + 'px';
@@ -1975,14 +1999,14 @@
       }
       let landTransform = null;
       if (target) {
-        const tr = target.getBoundingClientRect();
+        const tr = RB(target);
         if (tr.width > tr.height) {
           /* (owner 2026-10-11) a lying fan back: the deal card flies centre-to-centre
              and TURNS in the air, landing lying — never stretched over the slot */
           flyer.style.transformOrigin = 'center center';
           const fw = flyer.offsetWidth, fh = flyer.offsetHeight;
           const fl = dr.left - sr.left, ft = dr.top - sr.top;
-          const scr2 = document.querySelector('#screen-game').getBoundingClientRect();
+          const scr2 = RB(document.querySelector('#screen-game'));
           landTransform = 'translate(' +
             ((tr.left + tr.width / 2) - (fl + fw / 2)) + 'px,' +
             ((tr.top + tr.height / 2) - (ft + fh / 2)) + 'px) rotate(' +
@@ -1991,7 +2015,7 @@
           dx = tr.left - dr.left; dy = tr.top - dr.top;
         }
       } else if (isTable) {
-        const tr = (tableEl || {}).getBoundingClientRect ? tableEl.getBoundingClientRect() : null;
+        const tr = (tableEl || {}).getBoundingClientRect ? RB(tableEl) : null;
         if (tr) { dx = tr.left - dr.left; dy = tr.top - dr.top; }
       }
       void flyer.offsetWidth;   /* commit the launch position */
@@ -2213,16 +2237,16 @@
     const cards = {}, piles = {}, builds = {}, buildFaces = {}, pileTops = {};
     const buildRendered = {}, pileTopRendered = {};
     document.querySelectorAll('#screen-game .card[data-id]').forEach((el) => {
-      const r = el.getBoundingClientRect();
+      const r = RB(el);
       if (r.width && !cards[el.dataset.id]) cards[el.dataset.id] = r;
     });
     document.querySelectorAll('.pile-box[data-seat]').forEach((el) => {
-      piles[el.dataset.seat] = el.getBoundingClientRect();
+      piles[el.dataset.seat] = RB(el);
       const c = el.querySelector('.pile-top .card[data-id]');
       if (c) pileTopRendered[el.dataset.seat] = c.dataset.id;
     });
     document.querySelectorAll('.build-box.has-build[data-idx]').forEach((el) => {
-      builds[Number(el.dataset.idx)] = el.getBoundingClientRect();
+      builds[Number(el.dataset.idx)] = RB(el);
       const c = el.querySelector('.card[data-id]');
       if (c) buildRendered[Number(el.dataset.idx)] = c.dataset.id;
     });
@@ -2249,7 +2273,7 @@
   function playMotion(prev, a, actor, onCatch) {
     const dur = motionDur();
     const pause = 70;   /* a breath between hops so each collection reads */
-    const rectOf = (sel) => { const el = document.querySelector(sel); return el ? el.getBoundingClientRect() : null; };
+    const rectOf = (sel) => { const el = document.querySelector(sel); return el ? RB(el) : null; };
     const cardRect = (id) => rectOf('#screen-game .card[data-id="' + id + '"]:not(.flying)');
     const buildRect = (idx) => rectOf('.build-box.has-build[data-idx="' + idx + '"]');
     const buildRectByValue = (v) => {
@@ -2271,24 +2295,24 @@
         ? document.querySelector('.opp-corner[data-seat="' + actor + '"] .opp-fan .card:last-child')
         : document.querySelector('#opp-fan .card:last-child');
       if (back) {
-        const r = back.getBoundingClientRect();
+        const r = RB(back);
         if (r.width) return r;
       }
       const w = (to && to.width) || 60, h = (to && to.height) || 84;
       let cx = null, top = null;
       if (g.numPlayers === 2) {
         const bar = document.querySelector('#opp-zone .namebar');
-        if (bar) { const r = bar.getBoundingClientRect(); cx = r.left + r.width / 2; top = r.top; }
+        if (bar) { const r = RB(bar); cx = r.left + r.width / 2; top = r.top; }
       } else if (g.numPlayers === 3) {
         /* (owner 2026-09-21) each opponent's cards ENTER FROM THEIR OWN
            corner: Sipho's from the top right, Thandi's from the top left —
            born fully above the edge, sliding down into the play area */
-        const sg = $('screen-game').getBoundingClientRect();
+        const sg = RB($('screen-game'));
         cx = actor === 1 ? sg.right - w / 2 - 6 : sg.left + w / 2 + 6;
         top = sg.top;
         return { left: cx - w / 2, top: top - h, width: w, height: h };
       }
-      const sg = $('screen-game').getBoundingClientRect();
+      const sg = RB($('screen-game'));
       if (cx == null) { cx = sg.left + sg.width / 2; top = sg.top; }
       return { left: cx - w / 2, top: top - h, width: w, height: h };   /* fully above the edge — it enters, it does not appear */
     };
@@ -2457,7 +2481,7 @@
     const orientOf = (rect) => {
       if (!rect || !(rect.width > rect.height)) return 0;   // portrait — no turn
       const scr = document.querySelector('#screen-game');
-      const srb = scr ? scr.getBoundingClientRect() : null;
+      const srb = scr ? RB(scr) : null;
       const mid = srb ? srb.left + srb.width / 2 : (rect.left + rect.width / 2);
       return (rect.left + rect.width / 2) < mid ? 90 : -90;   // the left flank lies one way, the right the other
     };
@@ -2532,7 +2556,7 @@
       if (!box || !oldId || !top) return;
       /* the slant never collapses (owner 2026-09-17): the stand-in wears
          the pile's edge, so a capture only ever thickens it at landing */
-      makeHolder(top.getBoundingClientRect(), oldId, 58, { count: prev.pileLens[seat] });
+      makeHolder(RB(top), oldId, 58, { count: prev.pileLens[seat] });
     };
     const holdDest = () => {
       let boxSel = null, oldId = null, deco = null;
@@ -2562,7 +2586,7 @@
       if (!box) return;
       const now = box.querySelector('.card[data-id]');
       if (!now || !flyingIds.has(now.dataset.id)) return;   // occupant visible — hold nothing
-      makeHolder(now.getBoundingClientRect(), oldId, 60, deco);
+      makeHolder(RB(now), oldId, 60, deco);
     };
     if (a.type === 'capture') holdPile(actor);
     else if (a.type === 'endturn' && g.phase === 'gameover' && g.lastCapturer != null) holdPile(g.lastCapturer);
