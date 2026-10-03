@@ -188,11 +188,14 @@
         if (g && !dealSeq) { renderOppZone(); renderSides(); renderTable(); }
       }
       if (wide) {
-        /* (owner 2026-10-03) THE FIXED DESIGN: 900×562, scaled as one with
-           the window (max-ratio cover: the table fills what it can and the
-           excess crops). Inside the design the cards sit at their honest
-           ceiling — the grid fills the centre, touching nothing */
-        const s = Math.max(window.innerWidth / 900, window.innerHeight / 562);
+        /* (owner 2026-10-03, corrected same day) THE FIXED DESIGN: 900×562,
+           scaled as one with the window so the ENTIRE table is always
+           visible — the HEIGHT decides the scale (a taller window grows the
+           whole table, the width following to hold the ratio); a
+           narrower-than-table window caps it so nothing is ever cropped.
+           Inside the design the cards sit at their honest ceiling — the
+           grid fills the centre, touching nothing */
+        const s = Math.min(window.innerWidth / 900, window.innerHeight / 562);
         col.style.transform = 'translate(-50%, -50%) scale(' + s + ')';
         window.__w3Scale = s;
         const wSide = Math.floor((900 - 328) / 9.8);
