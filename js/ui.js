@@ -188,16 +188,13 @@
         if (g && !dealSeq) { renderOppZone(); renderSides(); renderTable(); }
       }
       if (wide) {
-        /* (owner 2026-10-03, corrected same day) THE FIXED DESIGN: 900×562,
-           scaled as one with the window so the ENTIRE table is always
-           visible — the HEIGHT decides the scale (a taller window grows the
-           whole table, the width following to hold the ratio); a
-           narrower-than-table window caps it so nothing is ever cropped.
-           Inside the design the cards sit at their honest ceiling — the
-           grid fills the centre, touching nothing */
-        const s = Math.min(window.innerWidth / 900, window.innerHeight / 562);
-        col.style.transform = 'translate(-50%, -50%) scale(' + s + ')';
-        window.__w3Scale = s;
+        /* (owner 2026-10-04) THE TABLE IS FIXED: its default 900×562 stands
+           permanently — no scaling, no fitting, no adjustment. A bigger
+           window only adds space around it; a window shorter than the table
+           crops it (never shrinks it). The motion system reads raw pixels
+           again (scale is always 1) */
+        col.style.transform = 'translate(-50%, -50%)';
+        window.__w3Scale = 1;
         const wSide = Math.floor((900 - 328) / 9.8);
         const wH3w = Math.floor((562 - 110) / 4.2);
         const w = Math.max(44, Math.min(96, Math.min(wSide, wH3w)));
