@@ -191,9 +191,11 @@
         /* (owner 2026-10-04) THE TABLE IS FIXED: its default 900×562 stands
            permanently — no scaling, no fitting, no adjustment. A bigger
            window only adds space around it; a window shorter than the table
-           crops it (never shrinks it). The motion system reads raw pixels
-           again (scale is always 1) */
-        col.style.transform = 'translate(-50%, -50%)';
+           crops it (never shrinks it). (owner 2026-11-24) THE FLIGHT CURE:
+           NO inline transform, ever — the CSS centres the box with plain
+           margins, so every position:fixed flight ghost keeps speaking
+           window coordinates and lands exactly on its slot; the motion
+           system reads raw pixels (scale is always 1) */
         window.__w3Scale = 1;
         const wSide = Math.floor((900 - 328) / 9.8);
         const wH3w = Math.floor((562 - 110) / 4.2);

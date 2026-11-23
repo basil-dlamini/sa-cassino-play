@@ -1229,16 +1229,17 @@ details.score-law p { margin: 8px 0 0; line-height: 1.45; opacity: .85; }
    ribbons, lying landscape — facing the same way as their cards. My areas
    hug my ribbon's left. My info strip stays minimized until toggled */
 #screen-game.p3.w3 { max-width: 900px; position: relative; padding: 0 86px; }
-/* (owner 2026-10-03) THE FIXED-ASPECT TABLE: on the wide screen the table
-   is a FIXED 900×562 design — the whole thing scales uniformly with the
-   window (never re-flowing, cards never shifting), aspect ratio locked;
-   when the window's ratio differs the excess is CROPPED at the edges
-   (the body already hides overflow). fitCards drives the scale; the
-   motion system reads design pixels through designRect() */
+/* (owner 2026-10-03; THE FLIGHT CURE 2026-11-24) THE FIXED TABLE sits
+   centred by PLAIN MARGINS — never a transform. A transform, however
+   harmless it looks, silently re-parents every position:fixed flight
+   ghost from the window to the table's own corner, so each flying card
+   shifted by the centre margin before snapping home (the owner's report).
+   Margins centre the same 900×562 box with zero side-effects: the flight
+   system's window coordinates are true again */
 #screen-game.p3.w3 {
   position: fixed; left: 50%; top: 50%;
+  margin-left: -450px; margin-top: -281px;
   width: 900px; height: 562px; max-height: none;
-  transform-origin: center center;
 }
 #screen-game.p3.w3 .side-rail {
   display: flex; flex-direction: column; gap: 5px; padding: 6px 5px;
